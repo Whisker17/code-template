@@ -3,17 +3,22 @@
 A project template for process-standardized, agent-driven development. Every new
 project starts from this skeleton and inherits the same workflow: **PRD-first specs,
 Linear-tracked issues, worktree-per-issue git flow, and a vendored suite of engineering
-skills** for Claude Code / Codex.
+skills**.
+
+**Runtime-neutral by design.** Nothing in the workflow names a model. Skills name a
+*role* (`REVIEWER`, `ESCALATOR`, `EXPLORER`); `config/agent-roles.conf` maps roles to
+commands and `scripts/agent-dispatch.sh` dispatches them, so the same process runs under
+Claude Code, Codex, or an agent that only has a terminal. See `docs/agents/runtime.md`.
 
 Extracted and generalized from `pm-arbitrage-bot`, where this process was battle-tested.
 
 ## How to use
 
 1. Create a new repo from this template (GitHub "Use this template", or clone + re-init).
-2. Open it in Claude Code and say: **"Read SETUP.md and execute it."**
+2. Open it in any coding agent and say: **"Read SETUP.md and execute it."**
    The agent interviews you (project name, Linear project, high-risk paths, stack,
-   Docker), replaces every placeholder marker, wires up git/GitHub merge policy,
-   verifies the skeleton, and deletes `SETUP.md`.
+   Docker, agent roles), replaces every placeholder marker, wires up git/GitHub merge
+   policy, verifies the skeleton, and deletes `SETUP.md`.
 3. Produce the spec of record: `/grill-me <your idea>` → `/to-spec` fills
    `docs/DESIGN.md`.
 4. Break it down: `/to-tickets` publishes blocked/blocking Linear issues.
@@ -28,6 +33,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 | Layer | Contents |
 |-------|----------|
 | **Agent guidance** | `AGENTS.md` (canonical; `CLAUDE.md` is a symlink) |
+| **Runtime adapter** | `docs/agents/runtime.md` (role contract, degraded mode), `config/agent-roles.conf` (role → command), `scripts/agent-dispatch.sh` (dispatch + `--probe`) |
 | **Skills** (22, vendored from `mattpocock/skills`) | implement, code-review, handoff, tdd, diagnosing-bugs, prototype, wayfinder, grill-me, grill-with-docs, grilling, triage, improve-codebase-architecture, research, resolving-merge-conflicts, setup-matt-pocock-skills, to-spec, to-tickets, domain-modeling, codebase-design, teach, writing-great-skills, ask-matt + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template) |
 | **Git workflow** | main ≡ production + dev + worktree-per-issue; per-lane merge strategy (squash → `dev`, merge commit → `main`); release vs hotfix decision rule; version axis (tracker Release ↔ tag ↔ GitHub Release); mandatory post-merge cleanup; Linear state lockstep; agent self-merge with human-review exceptions; `.githooks/pre-push` guard |
@@ -46,8 +52,13 @@ auto-sync).
 
 Skills are pinned by `skills-lock.json`; upgrade them here deliberately, not per-project.
 
-> ⚠️ **Two skills are locally customized**: `implement/SKILL.md` (three-round review loop
-> bounded by an Opus 5 escalation pass; self-merge authorization) and `code-review/SKILL.md`
-> (review sub-agents pinned to `model: "opus"`). `skills-lock.json` records the *upstream*
-> hash, so it cannot detect these edits — **re-vendoring via `/setup-matt-pocock-skills`
-> will silently overwrite them.** Diff before accepting any skill upgrade to those two.
+> ⚠️ **Locally customized skills** — `skills-lock.json` records the *upstream* hash, so it
+> cannot detect these edits and **re-vendoring via `/setup-matt-pocock-skills` will
+> silently overwrite them.** Diff before accepting any skill upgrade to:
+>
+> - `implement/SKILL.md` — three-round review loop + escalation pass; self-merge
+>   authorization; `REVIEWER`/`ESCALATOR` role dispatch
+> - `code-review/SKILL.md` — `REVIEWER` role dispatch on both axes
+> - `improve-codebase-architecture/`, `codebase-design/DESIGN-IT-TWICE.md`,
+>   `wayfinder/SKILL.md` — `EXPLORER` role dispatch with a documented serial fallback
+> - `ask-matt/SKILL.md` — runtime-neutral compaction wording

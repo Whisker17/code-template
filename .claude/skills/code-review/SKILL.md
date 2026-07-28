@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/PRD asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to "review since X".
+description: Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/PRD asked for?). Runs both reviews in separate fresh-context reviewers and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to "review since X".
 ---
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
@@ -8,7 +8,7 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 - **Standards** — does the code conform to this repo's documented coding standards?
 - **Spec** — does the code faithfully implement the originating issue / PRD / spec?
 
-Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
+Both axes run in **separate fresh contexts** so they don't pollute each other, then this skill aggregates their findings. How those contexts are obtained in your runtime is defined by `docs/agents/runtime.md` — see step 4.
 
 The issue tracker should have been provided to you — run `/setup-matt-pocock-skills` if `docs/agents/issue-tracker.md` is missing.
 
@@ -55,23 +55,42 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 - **Middle Man** — a class or function that mostly just delegates onward. → cut it, call the real target direct.
 - **Refused Bequest** — a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
 
-### 4. Spawn both sub-agents in parallel
+### 4. Dispatch both reviews in parallel
 
-Send a single message with two `Agent` tool calls. Use the `general-purpose` subagent for both, and pass `model: "opus"` on **both** calls (intent: Claude Opus 5 — the strongest reviewer available, regardless of what model the calling session runs on; `"opus"` is the alias that resolves to the current Opus generation). Do not omit the override even when invoked from another skill such as `/implement`.
+Both axes run as the **`REVIEWER` role** defined in `docs/agents/runtime.md` — a fresh
+context, at least as capable as whatever implemented the code. Never review in the
+implementing context, and do not skip the role dispatch when invoked from another skill
+such as `/implement`.
 
-**Standards sub-agent prompt** — include:
+Probe the role first: `scripts/agent-dispatch.sh --probe REVIEWER`. Exit `3` means the
+reviewer is unavailable — follow § Degraded mode in `docs/agents/runtime.md` (stop at
+`In Review`, do not self-review). Then dispatch, by whichever mechanism your runtime has:
+
+- **Native sub-agent** (Claude Code): a single message with two `Agent` tool calls, the
+  `general-purpose` subagent for both, `model:` set to `REVIEWER_MODEL` from
+  `config/agent-roles.conf` on **both** calls.
+- **Subprocess** (any runtime): write each prompt to its own file and run
+  `scripts/agent-dispatch.sh REVIEWER <prompt-file>` twice — concurrently if you can,
+  serially if you cannot. Serial is fine; context isolation is what matters, and each
+  subprocess starts clean. Say so if you ran serially.
+
+Either way the two axes stay in **separate** contexts. Do not merge them into one
+dispatch to save a call — that reintroduces the cross-contamination this skill exists to
+prevent.
+
+**Standards reviewer prompt** — include:
 
 - The full diff command and commit list.
-- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full — the sub-agent has no other access to it.
+- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full — the reviewer has no other access to it.
 - The brief: "Report — per file/hunk where relevant — (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls — documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
-**Spec sub-agent prompt** — include:
+**Spec reviewer prompt** — include:
 
 - The diff command and commit list.
 - The path or fetched contents of the spec.
 - The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
 
-If the spec is missing, skip the Spec sub-agent and note this in the final report.
+If the spec is missing, skip the Spec reviewer and note this in the final report.
 
 ### 5. Aggregate
 

@@ -80,11 +80,14 @@ branch name on the issue.
 If the tracker suggests a branch name (e.g. Linear's `gitBranchName`), you may use it —
 but the base **must** be the latest `origin/dev`, never a stale tip.
 
-> ⚠️ **Base trap.** Claude Code's `EnterWorktree` branches from
-> `origin/<default-branch>` — which is `main` in this layout. That is **wrong for the
-> issue lane** (you want `dev`) and coincidentally **right for the hotfix lane**. Never
-> assume the default; run the `merge-base` / `rev-parse` check above right after creating
-> any worktree and confirm they match the base you intended.
+> ⚠️ **Base trap.** Never assume your tooling's default base. Run the `merge-base` /
+> `rev-parse` check above right after creating **any** worktree and confirm the two values
+> match the base you intended.
+>
+> *Runtime aside:* Claude Code's `EnterWorktree` branches from
+> `origin/<default-branch>` — which is `main` in this layout, so it is **wrong for the
+> issue lane** (you want `dev`) and coincidentally **right for the hotfix lane**. Other
+> wrappers have other defaults, which is precisely why the check is unconditional.
 
 ### 2. Implement
 
@@ -128,11 +131,17 @@ PR conventions:
 ### 4. Review, merge → Done
 
 **Fast path — PRs that went through `/implement`'s full three-round review loop** (two
-review sub-agents per round on the Standards + Spec axes, three fix-and-verify rounds;
-findings still open after round 3 get an escalation fix pass, and only findings that are
-genuinely out of the issue's scope go to `docs/DEFERRED_ISSUES.md`): that loop **is** the
-review. Once the PR reads MERGEABLE/CLEAN and the full test + lint gate passes, the
-implementing agent squash-merges and runs cleanup itself — no separate human approval.
+independent reviewers per round on the Standards + Spec axes, each in a fresh context
+outside the implementing one, three fix-and-verify rounds; findings still open after round
+3 get an escalation fix pass, and only findings that are genuinely out of the issue's
+scope go to `docs/DEFERRED_ISSUES.md`): that loop **is** the review. Once the PR reads
+MERGEABLE/CLEAN and the full test + lint gate passes, the implementing agent
+squash-merges and runs cleanup itself — no separate human approval.
+
+Which model fills the reviewer seat is per-runtime and defined by
+`docs/agents/runtime.md`. The requirement this fast path rests on is not a specific model
+but the **separation**: reviewed by a different context, at least as capable as the
+implementer. A self-review inside the implementing context does not open the fast path.
 
 **Exceptions that always stop at `In Review` for a human:**
 
@@ -374,7 +383,10 @@ Implementing agents (including unattended ones) **must**:
 4. Treat a completed `/implement` three-round review loop (plus the escalation pass when
    round 3 left findings open) as pre-authorization to self-squash-merge, run post-merge
    cleanup, and set the tracker to `Done`. PRs produced any other way — or that skipped
-   the loop — stop at `In Review` for a human
+   the loop — stop at `In Review` for a human. **The reviewer must be a context other than
+   the implementing one** (`docs/agents/runtime.md`); if the configured reviewer is
+   unavailable, the loop did not run and this pre-authorization does not apply — stop at
+   `In Review` and say which role was missing
 5. Respect module isolation when several issues run in parallel (see
    [§ Parallel issues](#parallel-issues))
 6. **Never** self-merge or deploy a change touching **{{HIGH_RISK_PATHS}}**, even with a

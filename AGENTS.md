@@ -61,9 +61,10 @@ Do **not** implement issues in the primary clone working tree.
    (`fix/{{ISSUE_PREFIX_LOWER}}-NNN-topic` or `feat/{{ISSUE_PREFIX_LOWER}}-NNN-topic`).
    **Check the issue's labels first** — an issue labelled `hotfix` branches off
    `origin/main` instead and targets `main` (see **Promotion lanes** below). Verify the
-   base right after creating the worktree: `git merge-base HEAD origin/dev` must equal
-   `git rev-parse origin/dev`. Claude Code's `EnterWorktree` defaults to
-   `origin/main` — wrong for this lane.
+   base right after creating the worktree — `git merge-base HEAD origin/dev` must equal
+   `git rev-parse origin/dev` — whatever tooling created it. *(Runtime aside: Claude
+   Code's `EnterWorktree` defaults to `origin/main`, wrong for this lane. Any wrapper may
+   have its own default; the check above is what settles it.)*
 2. Implement only that issue; tracker state → **`In Progress`**.
 3. `gh pr create --base dev` (title/body include `{{ISSUE_PREFIX}}-NNN`); tracker →
    **`In Review`**. Any review finding you intentionally leave unfixed goes in
@@ -128,13 +129,45 @@ convention worth standardizing — tell the user explicitly so they can port it 
 the template repo (and its `CHANGELOG.md`). Project-specific learnings stay here;
 process-level learnings flow back.
 
+## Agent runtime (any agent, any vendor)
+
+This repo is runtime-neutral: Claude Code, Codex, or anything else. Nothing in the
+workflow names a model. Instead, skills name a **role** — `REVIEWER`, `ESCALATOR`,
+`EXPLORER` — mapped to real commands in `config/agent-roles.conf` and dispatched through
+`scripts/agent-dispatch.sh`. Full contract: **`docs/agents/runtime.md`**.
+
+Two rules matter more than the mechanism:
+
+- **Review happens in a different context than implementation**, with a model at least as
+  capable (cross-vendor preferred). Check the path before relying on it:
+  `scripts/agent-dispatch.sh --probe`.
+- **If the reviewer is unavailable, the review loop did not run** — finish the work, open
+  the PR, and stop at `In Review` for a human. Self-review in the implementing context
+  never authorizes a self-merge.
+
+When a model generation turns over, edit `config/agent-roles.conf` and nothing else.
+
 ## Agent skills
+
+Skills live in `.claude/skills/<name>/SKILL.md`. Runtimes that auto-discover them expose
+each as `/<name>`; **in a runtime with no skill loader, read the file directly** — a skill
+is just markdown. The load-bearing ones:
+
+| Skill | Path |
+|-------|------|
+| `/implement` | `.claude/skills/implement/SKILL.md` |
+| `/code-review` | `.claude/skills/code-review/SKILL.md` |
+| `/grill-me` → `/to-spec` → `/to-tickets` | `.claude/skills/{grill-me,to-spec,to-tickets}/SKILL.md` |
+| `/tdd`, `/diagnosing-bugs`, `/handoff`, `/triage` | `.claude/skills/<name>/SKILL.md` |
+| `/ask-matt` (which skill do I want?) | `.claude/skills/ask-matt/SKILL.md` |
 
 ### Issue tracker
 
 Issues and PRDs live in **Linear** (project `{{LINEAR_PROJECT}}`, team
-`{{LINEAR_TEAM}}`), accessed via the Linear MCP tools (through the `slim-tools`
-gateway). External PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+`{{LINEAR_TEAM}}`). Access is a fallback ladder — MCP tools, else the GraphQL API with
+`LINEAR_API_KEY` — and reaching the tracker is mandatory, not optional: workflow state
+moves in lockstep with the PR. External PRs are not a triage surface. See
+`docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

@@ -1,18 +1,37 @@
 # Issue tracker: Linear
 
 Issues and PRDs for this repo live in **Linear**, project **"{{LINEAR_PROJECT}}"**, team
-`{{LINEAR_TEAM}}`. Skills reach Linear through the **Linear MCP tools**, which are
-exposed via the `slim-tools` gateway rather than as top-level tools.
+`{{LINEAR_TEAM}}`.
 
-## How to call Linear
+## How to reach Linear
 
-1. Discover the tool you need:
-   `discover_tools({ query: "linear <capability>", detail: "typescript" })`
-   (e.g. `"linear create issue"`, `"linear list issues"`, `"linear comment"`).
-2. Call it from `execute_code` using the returned `codeApi.path`. Aggregate/filter in
-   the sandbox; return only the final shape.
+Tracker state moves in lockstep with the PR (below), so this access path is **mandatory,
+not a convenience** — a runtime that cannot reach the tracker cannot complete the git
+workflow. Take the first rung of this ladder that your runtime actually offers:
 
-Core tools (namespace `linear`):
+1. **Linear MCP tools.** In this template's reference setup they are exposed via the
+   `slim-tools` gateway rather than as top-level tools:
+   - Discover the tool you need:
+     `discover_tools({ query: "linear <capability>", detail: "typescript" })`
+     (e.g. `"linear create issue"`, `"linear list issues"`, `"linear comment"`).
+   - Call it from `execute_code` using the returned `codeApi.path`. Aggregate/filter in
+     the sandbox; return only the final shape.
+
+   If your runtime has the Linear MCP server mounted directly, the tool names below apply
+   without the gateway indirection.
+2. **Linear GraphQL API** over plain HTTP, with `LINEAR_API_KEY` from `.env`. Every
+   operation named below exists as a GraphQL mutation/query (`issueCreate`,
+   `issueUpdate`, `commentCreate`, `issues`, `workflowStates`). Use this when your runtime
+   has shell/network access but no MCP.
+3. **Neither available:** stop and tell the user. Do **not** silently switch to a
+   local-markdown tracker or `gh issue` — the tracker is shared state, and a divergent
+   local copy is worse than an honest block. If the project genuinely has no Linear
+   access, re-run `/setup-matt-pocock-skills` to install a different tracker binding
+   (`issue-tracker-github.md` / `-gitlab.md` / `-local.md`) so *all* skills agree on
+   where issues live.
+
+The rest of this file names Linear MCP tools (namespace `linear`); under rung 2, read each
+as its GraphQL equivalent. Core tools:
 
 - **Create / update an issue**: `linear.save_issue({...})`. When creating, `title` and
   `team` are required; also set `project` to `"{{LINEAR_PROJECT}}"` so it's scoped

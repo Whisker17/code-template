@@ -1,7 +1,8 @@
 # SETUP.md — Project bootstrap runbook (self-destructing)
 
-> **To the human:** after cloning this template, open the repo in Claude Code and say
-> *"Read SETUP.md and execute it."* That's the whole setup.
+> **To the human:** after cloning this template, open the repo in any coding agent
+> (Claude Code, Codex, …) and say *"Read SETUP.md and execute it."* That's the whole
+> setup.
 >
 > **To the agent:** this file is an executable runbook. Work through the steps in
 > order. Steps marked **[interview]** require asking the user one question at a time and
@@ -36,6 +37,15 @@ Ask **one at a time** ([interview]):
 7. **Docker** — keep `Dockerfile` + `docker-compose.yml` skeletons, or delete both?
 8. **Template repo URL** (for the feedback-loop pointer; default to the URL in
    `git remote -v` before you change it) → `TEMPLATE_REPO_URL`
+9. **Agent roles** — which runtime is implementing, and which agent reviews it. Read
+   `docs/agents/runtime.md` § Choosing a reviewer first, then ask. The default in
+   `config/agent-roles.conf` assumes Claude Code implementing with `claude -p --model
+   opus` reviewing. Two things to settle with the user:
+   - Their implementing runtime → `IMPLEMENTER_LABEL`
+   - Their reviewer. **Push for cross-vendor** (e.g. Codex implements, `claude` CLI
+     reviews) — independent failure modes catch more than a stronger same-vendor model.
+     Correct `REVIEWER_CMD` / `ESCALATOR_CMD` / `EXPLORER_CMD` accordingly, and verify
+     each CLI's real flags with `--help` rather than trusting the commented examples.
 
 ## 2. Replace placeholders
 
@@ -50,10 +60,15 @@ Then verify (SETUP.md itself is exempt — it gets deleted in step 6):
 
 ```bash
 grep -rn '{{' --include='*.md' --include='*.toml' --include='*.yml' --include='*.py' \
-  --exclude=SETUP.md --exclude-dir=.claude .
+  --exclude=SETUP.md --exclude-dir=.git . \
+  | grep -v 'improve-codebase-architecture/HTML-REPORT.md'
 ```
 
-This must return nothing.
+This must return nothing. **`.claude/` is deliberately in scope** — vendored skills
+carry `{{ISSUE_PREFIX}}` / `{{HIGH_RISK_PATHS}}` markers too, and excluding that
+directory is how unported values survive bootstrap. The single legitimate exception is
+`HTML-REPORT.md`'s `{{repo name}}`, which is a report template placeholder, not a
+bootstrap marker.
 
 Also:
 
@@ -99,6 +114,17 @@ uv run ruff check .
 ```
 
 (Adjust if the stack was replaced in step 1.6.)
+
+Then verify the agent role mapping from step 1.9 resolves:
+
+```bash
+scripts/agent-dispatch.sh --probe
+```
+
+Every role must report `ok`. A `UNUSABLE` role means `/implement`'s review loop cannot run
+in this environment — fix the mapping now, or tell the user plainly that PRs will have to
+stop at `In Review` for human review until it is fixed (`docs/agents/runtime.md`
+§ Degraded mode).
 
 ## 5. Hand off to the design phase
 
