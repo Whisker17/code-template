@@ -66,13 +66,15 @@ Probe the role first: `scripts/agent-dispatch.sh --probe REVIEWER`. Exit `3` mea
 reviewer is unavailable — follow § Degraded mode in `docs/agents/runtime.md` (stop at
 `In Review`, do not self-review). Then dispatch, by whichever mechanism your runtime has:
 
-- **Native sub-agent** (Claude Code): a single message with two `Agent` tool calls, the
-  `general-purpose` subagent for both, `model:` set to `REVIEWER_MODEL` from
-  `config/agent-roles.conf` on **both** calls.
-- **Subprocess** (any runtime): write each prompt to its own file and run
-  `scripts/agent-dispatch.sh REVIEWER <prompt-file>` twice — concurrently if you can,
-  serially if you cannot. Serial is fine; context isolation is what matters, and each
-  subprocess starts clean. Say so if you ran serially.
+- **Native sub-agent** (Codex App): dispatch both calls as the
+  `lazycodex-code-reviewer` agent, configured as `gpt-5.6-terra` at `xhigh` effort.
+- **Native sub-agent** (Claude Code): use the `general-purpose` subagent with
+  `model:` set to `REVIEWER_MODEL` from `config/agent-roles.conf` on both calls.
+- **Subprocess** (any runtime without a native reviewer): write each prompt to its own
+  file and run the configured `REVIEWER` role twice. `scripts/agent-dispatch.sh` detects
+  the current runtime on each call: Claude Code uses Opus/xhigh, Codex uses Terra/xhigh,
+  and Grok uses Claude Opus/xhigh. If runtime detection is ambiguous or unavailable, stop
+  and report it; never choose a default mapping.
 
 Either way the two axes stay in **separate** contexts. Do not merge them into one
 dispatch to save a call — that reintroduces the cross-contamination this skill exists to

@@ -13,8 +13,8 @@ the mapping must have exactly one edit point.
 ## The invariant
 
 > Review must be performed by a **different context** than the one that wrote the code,
-> running a model **at least as capable** as the implementer, and **preferably from a
-> different vendor**.
+> running a model **at least as capable** as the implementer. Vendor selection follows
+> the active runtime policy.
 
 Everything below is machinery for holding that invariant in whatever runtime you happen
 to be in. `model: "opus"` hardcoded in a skill is *one encoding* of the invariant, valid
@@ -31,33 +31,35 @@ only inside Claude Code — not the invariant itself.
 
 ## Two dispatch mechanisms
 
-**1. Subprocess (canonical).** `scripts/agent-dispatch.sh <ROLE> <prompt-file>` shells out
-to a non-interactive CLI. Works in every runtime, including ones with no sub-agent
-primitive. It is the *definition* of what dispatching a role means: the prompt contract
-and the output contract are identical everywhere, so a skill written against it behaves
-the same under Claude Code, Codex, or a chat-only agent driving a terminal.
+**1. Subprocess.** `scripts/agent-dispatch.sh <ROLE> <prompt-file>` detects the active
+runtime on every call and selects that runtime's configured non-interactive role command.
+Claude Code resolves to Sonnet -> Opus; Codex resolves to Luna -> Terra; Grok resolves to
+Grok -> Claude Opus. All configured paths use `xhigh` effort and preserve the same
+prompt/output contract and fresh-context invariant.
 
 **2. Native sub-agent (optimization).** A runtime with its own fresh-context primitive may
-use it instead — Claude Code's `Agent` tool with `model:` set to the role's `_MODEL` from
-`config/agent-roles.conf`. Saves a process launch and keeps tool output in-band. Use it
-when available; it is not a different design, just a faster path to the same contract.
+use it instead. In Codex App, use the `lazycodex-code-reviewer` agent for both review
+axes; its source configuration pins Terra at `xhigh`. In Claude Code, use the native
+`Agent` tool with the role's `_MODEL` from `config/agent-roles.conf`. Native dispatch is
+only a faster path to the same review contract.
 
 Do **not** write a skill with a three-way branch on runtime. Write it against the role,
 note that a native primitive may substitute, and let this file hold the details.
 
 ## Choosing a reviewer
 
-Cross-vendor is the **preferred** configuration, not a fallback:
+The runtime-specific reviewer policies are:
 
-- Implementer Claude Sonnet → reviewer Claude Opus: stronger, but shares the
-  implementer's training-induced blind spots.
-- Implementer Codex or Grok → reviewer Claude Opus (or the reverse): independent failure
-  modes. A blind spot in one is not systematically a blind spot in the other.
+- Claude Code: implementation `sonnet`/`xhigh`; review and escalation `opus`/`xhigh`;
+- Codex App: implementation `gpt-5.6-luna`/`xhigh`; review and escalation
+  `gpt-5.6-terra`/`xhigh`;
+- Grok: implementation `grok-4.5`/`xhigh`; review and escalation Claude `opus`/`xhigh`.
 
-So a runtime with no strong sibling model is not disadvantaged — installing the `claude`
-CLI purely as a review sidecar gives you the *better* arrangement. Whatever you pick,
-`IMPLEMENTER_LABEL` in the conf should say who is implementing, so `--probe` can warn
-when both sides of the review are the same vendor.
+The reviewer remains a fresh context. Native agents are preferred when available;
+otherwise `scripts/agent-dispatch.sh` detects the current runtime on every call and picks
+the matching mapping. Grok detection uses its runtime environment when available and
+otherwise walks the parent process chain for the `grok` executable. Unknown or ambiguous
+runtime is a hard error, not permission to use a default vendor.
 
 ## Preflight
 
@@ -112,9 +114,10 @@ masking the other.
 
 | Runtime | Native sub-agent | Skill loading | Notes |
 |---------|------------------|---------------|-------|
-| Claude Code | `Agent` tool, `model:` override | `.claude/skills/` auto-loaded, `/name` | `EnterWorktree` defaults to `origin/<default-branch>` — see the base trap in `docs/GIT_WORKFLOW.md` |
-| Codex | none equivalent | reads `AGENTS.md`; each skill ships `agents/openai.yaml` interface metadata | Use the subprocess path for all roles |
-| Any other | assume none | may have no skill loader — see below | Use the subprocess path for all roles |
+| Claude Code | `Agent` tool, `model:` override | `.claude/skills/` auto-loaded, `/name` | Use the role mapping for model and effort selection |
+| Codex | `multi_agent_v1`/flat `spawn_agent` when exposed | reads `AGENTS.md`; each skill ships `agents/openai.yaml` interface metadata | Use `lazycodex-code-reviewer` natively; otherwise use the runtime-detecting dispatcher |
+| Grok | Grok agent/subprocess | reads `AGENTS.md`; no assumption of a skill loader | Use Grok for implementation and the configured Claude Opus reviewer via the dispatcher |
+| Any other | assume none | may have no skill loader — see below | Use the configured subprocess path |
 
 **Runtimes with no skill loader.** A skill is just a markdown file. If yours does not
 auto-discover `.claude/skills/`, it can still be told the path: *"read
@@ -123,7 +126,6 @@ auto-discover `.claude/skills/`, it can still be told the path: *"read
 
 ## Changing models
 
-When a generation turns over (`opus` → whatever supersedes it), edit
-`config/agent-roles.conf` and nothing else. If you find yourself editing a model name
-inside `.claude/skills/`, that skill has drifted back to hardcoding — fix the skill to
-name a role instead.
+When a generation turns over, edit the mapping for that runtime and nothing else. If you
+find yourself editing a model name inside a skill, that skill has drifted back to
+hardcoding — fix the skill to name a role instead.

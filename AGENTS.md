@@ -131,21 +131,27 @@ process-level learnings flow back.
 
 ## Agent runtime (any agent, any vendor)
 
-This repo is runtime-neutral: Claude Code, Codex, or anything else. Nothing in the
-workflow names a model. Instead, skills name a **role** — `REVIEWER`, `ESCALATOR`,
-`EXPLORER` — mapped to real commands in `config/agent-roles.conf` and dispatched through
-`scripts/agent-dispatch.sh`. Full contract: **`docs/agents/runtime.md`**.
+This repo is runtime-neutral: Claude Code, Codex, Grok, or anything else. Skills name a
+**role** — `REVIEWER`, `ESCALATOR`, `EXPLORER` — and the runtime-specific dispatch path is
+defined in **`docs/agents/runtime.md`**. Native Codex agents are preferred when exposed;
+otherwise `scripts/agent-dispatch.sh` detects the runtime and selects the matching
+mapping in `config/agent-roles.conf`.
 
 Two rules matter more than the mechanism:
 
 - **Review happens in a different context than implementation**, with a model at least as
-  capable (cross-vendor preferred). Check the path before relying on it:
-  `scripts/agent-dispatch.sh --probe`.
+  capable. The dispatcher detects the active runtime on every call: Claude Code keeps the
+  Sonnet -> Opus mapping, Codex App uses Luna at `xhigh` for implementation and Terra at
+  `xhigh` for review, and Grok uses Grok at `xhigh` for implementation with Claude Opus
+  at `xhigh` for review. Unknown or ambiguous runtime must fail closed rather than
+  selecting a default model.
 - **If the reviewer is unavailable, the review loop did not run** — finish the work, open
   the PR, and stop at `In Review` for a human. Self-review in the implementing context
   never authorizes a self-merge.
 
-When a model generation turns over, edit `config/agent-roles.conf` and nothing else.
+When a model generation turns over, edit the mapping for that runtime and nothing else:
+`config/agent-roles.conf` for subprocess roles or the Codex agent TOML/config for Codex
+native roles.
 
 ## Agent skills
 

@@ -10,10 +10,17 @@ Use /tdd where possible, at pre-agreed seams.
 
 Run typechecking regularly, single test files regularly, and the full test suite once at the end.
 
-Before you start reviewing, confirm the review path exists:
-`scripts/agent-dispatch.sh --probe REVIEWER ESCALATOR`. Exit `3` means the loop below
-cannot run — go straight to § Degraded mode in `docs/agents/runtime.md` (finish the
-implementation, open the PR, stop at `In Review`). Do not substitute self-review.
+The implementing session stays in the active runtime: Codex App uses Luna/xhigh, Claude
+Code uses Sonnet/xhigh, and Grok uses grok-4.5/xhigh. Keep implementation in the main
+session; do not dispatch it to another vendor's subprocess.
+
+Before you start reviewing, select the runtime-specific path. Native Codex App uses the
+`lazycodex-code-reviewer` agent when exposed. Otherwise, probe and use
+`scripts/agent-dispatch.sh --probe REVIEWER ESCALATOR`; the dispatcher detects Codex,
+Claude Code, or Grok on every call and selects Terra/xhigh, Opus/xhigh, or Grok ->
+Opus/xhigh respectively. If the selected path is unavailable or runtime detection fails,
+go straight to § Degraded mode in `docs/agents/runtime.md` and stop at `In Review`. Do
+not substitute self-review.
 
 Once done, use /code-review to review the work (it dispatches the `REVIEWER` role in a fresh context — no separate manual review pass is needed afterwards).
 

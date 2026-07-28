@@ -17,6 +17,11 @@
 #   scripts/agent-dispatch.sh --probe                  # check every role
 #   scripts/agent-dispatch.sh --probe REVIEWER         # check one role
 #
+# Runtime selection is automatic. Override it explicitly when needed:
+#   AGENT_RUNTIME=codex scripts/agent-dispatch.sh --probe
+#   AGENT_RUNTIME=claude-code scripts/agent-dispatch.sh --probe
+#   AGENT_RUNTIME=grok scripts/agent-dispatch.sh --probe
+#
 # Exit codes:
 #   0  success
 #   2  usage error
@@ -39,16 +44,88 @@ fi
 # shellcheck disable=SC1090
 . "$CONF"
 
+# Resolve the current host before looking up any role. Ambiguity is an error:
+# silently choosing one vendor would make the review policy depend on PATH order.
+has_env() {
+    local name
+    for name in "$@"; do
+        if [ -n "${!name:-}" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Grok does not currently publish a stable runtime environment variable to the
+# shell used by its Bash tool. Walk the process ancestry as a fallback signal.
+# An explicit AGENT_RUNTIME always takes precedence over this detection.
+has_ancestor_process() {
+    local pid="${PPID:-}" name parent
+    while [ -n "$pid" ] && [ "$pid" -gt 1 ] 2>/dev/null; do
+        name="$(ps -p "$pid" -o comm= 2>/dev/null | tr -d '[:space:]')"
+        case "$name" in
+            grok|grok-*) return 0 ;;
+        esac
+        parent="$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d '[:space:]')"
+        [ -n "$parent" ] || break
+        [ "$parent" != "$pid" ] || break
+        pid="$parent"
+    done
+    return 1
+}
+
+if [ -n "${AGENT_RUNTIME:-}" ]; then
+    case "$AGENT_RUNTIME" in
+        codex|codex-app|codex-cli) RUNTIME="codex" ;;
+        claude|claude-code) RUNTIME="claude-code" ;;
+        grok) RUNTIME="grok" ;;
+        *) die "unknown AGENT_RUNTIME '$AGENT_RUNTIME' (expected codex, claude-code, or grok)" ;;
+    esac
+else
+    codex_detected=0
+    claude_detected=0
+    grok_detected=0
+    has_env CODEX_SHELL CODEX_CI CODEX_THREAD_ID CODEX_INTERNAL_ORIGINATOR_OVERRIDE && codex_detected=1
+    has_env CLAUDECODE CLAUDE_CODE CLAUDE_CODE_ENTRYPOINT && claude_detected=1
+    if has_env GROK_CLI GROK_RUNTIME GROK_SESSION_ID || has_ancestor_process; then
+        grok_detected=1
+    fi
+
+    detected_count=$((codex_detected + claude_detected + grok_detected))
+    if [ "$detected_count" -gt 1 ]; then
+        die "runtime is ambiguous; set AGENT_RUNTIME=codex, claude-code, or grok"
+    elif [ "$codex_detected" -eq 1 ]; then
+        RUNTIME="codex"
+    elif [ "$claude_detected" -eq 1 ]; then
+        RUNTIME="claude-code"
+    elif [ "$grok_detected" -eq 1 ]; then
+        RUNTIME="grok"
+    else
+        die "runtime is unknown; set AGENT_RUNTIME=codex, claude-code, or grok"
+    fi
+fi
+
+case "$RUNTIME" in
+    codex) RUNTIME_PREFIX="CODEX" ;;
+    claude-code) RUNTIME_PREFIX="CLAUDE_CODE" ;;
+    grok) RUNTIME_PREFIX="GROK" ;;
+esac
+
+config_value() {
+    local key="$1"
+    eval "printf '%s' \"\${${RUNTIME_PREFIX}_${key}:-}\""
+}
+
 # Resolve a role to its command, or fail with code 3.
 resolve() {
     local role="$1" cmd
-    cmd="$(eval "printf '%s' \"\${${role}_CMD:-}\"")"
+    cmd="$(config_value "${role}_CMD")"
     if [ -z "$cmd" ]; then
         cat >&2 <<MSG
 agent-dispatch: role $role is not configured.
 
-  ${role}_CMD is unset in $CONF.
-  Fill it in, then re-run: scripts/agent-dispatch.sh --probe $role
+  ${RUNTIME_PREFIX}_${role}_CMD is unset in $CONF.
+  Fill it in for runtime '$RUNTIME', then re-run: scripts/agent-dispatch.sh --probe $role
 MSG
         return 3
     fi
@@ -58,9 +135,9 @@ MSG
         cat >&2 <<MSG
 agent-dispatch: role $role is configured but unreachable.
 
-  ${role}_CMD = $cmd
+  ${RUNTIME_PREFIX}_${role}_CMD = $cmd
   '$bin' is not on PATH. Install or authenticate it, or point $role at a
-  runtime you do have (config/agent-roles.conf).
+  runtime '$RUNTIME' (config/agent-roles.conf).
 MSG
         return 3
     fi
@@ -80,15 +157,11 @@ if [ "${1:-}" = "--probe" ]; then
             failed=1
         fi
     done
-    impl="${IMPLEMENTER_LABEL:-<unset>}"
+    echo "runtime: $RUNTIME"
+    impl="$(config_value IMPLEMENTER_LABEL)"
     echo "implementer: $impl"
-    # Same vendor on both sides of the review is legal but weaker -- flag it.
-    rev="$(eval "printf '%s' \"\${REVIEWER_CMD:-}\"")"
-    if [ -n "$rev" ] && [ "$impl" != "<unset>" ] && \
-       [ "${impl%%:*}" = "claude-code" ] && [ "${rev%% *}" = "claude" ]; then
-        echo "note: implementer and reviewer are the same vendor -- acceptable," \
-             "but a cross-vendor reviewer catches more (docs/agents/runtime.md)."
-    fi
+    effort="$(config_value IMPLEMENTER_EFFORT)"
+    [ -n "$effort" ] && echo "implementer-effort: $effort"
     if [ "$failed" -eq 1 ]; then
         echo "" >&2
         echo "One or more roles are unusable. Work that needs them must stop at" >&2
