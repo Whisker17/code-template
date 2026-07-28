@@ -15,11 +15,15 @@ for: pulling `dev`/`main`, creating worktrees, and post-merge verification.
 
 | Branch | Role | Who writes |
 |--------|------|------------|
-| `main` | Stable release line. Only accepts release merges from `dev` and hotfixes. | PR only |
-| `dev` | Active integration branch for the current version. The **only** PR target for day-to-day work. | PR from issue branches |
+| `main` | **Equals production.** Always equals the last deployed tag. Only accepts merges from `release/*` and `hotfix/*`. | PR only |
+| `dev` | Active integration branch for the next version. **May contain changes not yet validated in production.** The **only** PR target for day-to-day work. | PR from issue branches |
 | `feat/*` `fix/*` `chore/*` | Single-issue implementation branches (inside worktrees) | Short-lived |
 | `hotfix/*` | Emergency production fixes (branched from `main`) | Sync back to `dev` after merging to `main` |
 | `release/*` | Temporary promotion branches (cut from `dev`, PR → `main`) | Short-lived |
+
+`main` ≡ production is what makes the two promotion lanes distinguishable: a release
+ships everything on `dev`, a hotfix ships *only* your fix on top of what is already
+live. Treat `origin/main` as the definition of "the code currently running".
 
 ## Issue lifecycle (mandatory)
 
@@ -64,6 +68,10 @@ WT="../{{PROJECT_NAME}}-wt/${ISSUE}"
 
 git worktree add -b "$BRANCH" "$WT" origin/dev
 cd "$WT"
+
+# Verify the base immediately — these two values must be equal
+git merge-base HEAD origin/dev
+git rev-parse origin/dev
 ```
 
 Tracker: set the issue to **`In Progress`**. Optionally note the worktree path and
@@ -71,6 +79,12 @@ branch name on the issue.
 
 If the tracker suggests a branch name (e.g. Linear's `gitBranchName`), you may use it —
 but the base **must** be the latest `origin/dev`, never a stale tip.
+
+> ⚠️ **Base trap.** Claude Code's `EnterWorktree` branches from
+> `origin/<default-branch>` — which is `main` in this layout. That is **wrong for the
+> issue lane** (you want `dev`) and coincidentally **right for the hotfix lane**. Never
+> assume the default; run the `merge-base` / `rev-parse` check above right after creating
+> any worktree and confirm they match the base you intended.
 
 ### 2. Implement
 
@@ -103,10 +117,12 @@ merge).
 
 PR conventions:
 
-- **base must be `dev`** (features/fixes never target `main` directly)
+- **base must be `dev`** (features/fixes never target `main` directly — the one exception
+  is an issue labelled `hotfix`, see [§ Hotfix](#hotfix))
 - Title carries `{{ISSUE_PREFIX}}-NNN`
 - Body links the tracker issue
-- Merge strategy: **squash and merge**
+- Merge strategy: **squash and merge** (per-lane rules:
+  [§ Merge strategy](#merge-strategy-per-lane))
 - Remote branch is auto-deleted on merge (`delete_branch_on_merge`)
 
 ### 4. Review, merge → Done
@@ -170,6 +186,27 @@ state: labels say *who* does the work, state says *how far along* it is.
   the earlier PR to merge and branch the next worktree off the new `dev`
 - Always `git fetch` + base on `origin/dev` before opening a new worktree
 
+## Choosing a promotion lane: release or hotfix?
+
+Both lanes end in a PR into `main`, and picking the wrong one is how unreviewed work
+reaches production. The decision rule is mechanical:
+
+```bash
+git fetch origin
+git log --oneline origin/main..origin/dev
+```
+
+**If that list contains a single commit you are not willing to ship right now, you must
+take the hotfix lane.** Cutting a release would drag every one of those commits into
+production along with your fix. Only when you are happy to ship the whole list is a
+release correct.
+
+| | Release lane | Hotfix lane |
+|---|---|---|
+| Ships | everything on `dev` | only your fix, on top of what is already live |
+| Base | `dev` | **`origin/main`** |
+| Use when | `dev` is fully shippable | production is broken and `dev` holds unshippable work |
+
 ## Releasing to `main`
 
 **Never** open a PR with `dev` as the head branch into `main` (with
@@ -180,25 +217,99 @@ branch from `dev`:
 git fetch origin
 git checkout dev && git pull --ff-only origin dev
 git checkout -b release/v0.1.0
+
+# Bump the project version to match the tag you are about to create
+#   (e.g. pyproject.toml `version`), commit it on the release branch
 git push -u origin HEAD
 gh pr create --base main --title "release: v0.1.0" --body "..."
 ```
 
-- Tag / create a GitHub Release after merging
-- Temporary `release/*` branches may be auto-deleted; `dev` lives forever
-- After a hotfix lands on `main`, it **must** be synced back to `dev`
+After the PR reads MERGEABLE/CLEAN and a human has approved it (`release/*` → `main` is
+**always** a human gate):
+
+1. **Merge with a merge commit, not squash** (see
+   [§ Merge strategy](#merge-strategy-per-lane))
+2. Create the annotated tag and the GitHub Release: `git tag -a v0.1.0 -m "v0.1.0"` +
+   `git push origin v0.1.0`
+3. **Deploy from the tag**, never from a branch
+4. Backfill the tracker Release's `commitSha` (see [§ Version axis](#version-axis))
+
+Temporary `release/*` branches may be auto-deleted; `dev` lives forever.
 
 ## Hotfix
 
+**When to take this lane:** production is broken *and* `dev` already holds work that must
+not ship yet — see [§ Choosing a promotion lane](#choosing-a-promotion-lane-release-or-hotfix).
+`origin/main` is by definition the code running in production, so it is the only correct
+base.
+
 ```bash
 git fetch origin
-git worktree add -b hotfix/short-topic ../{{PROJECT_NAME}}-wt/hotfix-short-topic origin/main
-# … fix, PR → main …
-# after merge: sync the fix back to dev (merge or cherry-pick)
+git worktree add -b hotfix/{{ISSUE_PREFIX_LOWER}}-123-short-topic \
+    ../{{PROJECT_NAME}}-wt/hotfix-{{ISSUE_PREFIX_LOWER}}-123 origin/main
+
+# Verify the base immediately — these two values must be equal
+git -C ../{{PROJECT_NAME}}-wt/hotfix-{{ISSUE_PREFIX_LOWER}}-123 merge-base HEAD origin/main
+git rev-parse origin/main
 ```
+
+Then:
+
+1. Fix **only** this one issue
+2. **Bump the project version to a patch release** (`0.1.5` → `0.1.5.1`) — otherwise tag
+   `v0.1.5.1` points at a tree that calls itself `0.1.5`
+3. `gh pr create --base main`, title/body carry `{{ISSUE_PREFIX}}-NNN`; tracker →
+   `In Review`
+4. **Merge with a merge commit, not squash** (see
+   [§ Merge strategy](#merge-strategy-per-lane))
+5. Tag `v0.1.5.1` + create the GitHub Release
+6. **Deploy from the tag**, not from a branch
+7. **Merge `main` back into `dev`:** `git checkout dev && git merge origin/main`. Skip this
+   and the next release re-ships the bug you just fixed
+8. Tracker: issue → `Done`, the corresponding Release → `Released`, and fill in that
+   Release's `commitSha`
 
 When production is live, hotfixes outrank regular issues — anything on a
 {{HIGH_RISK_PATHS}} path takes this route.
+
+## Version axis
+
+The version number is **pinned in advance** and appears in three places that must agree.
+If any one of them disagrees, a step was skipped:
+
+| Place | Artifact | Question it answers |
+|-------|----------|---------------------|
+| Tracker | a Release / version entity (`0.1.5`, `0.1.5.1`, `0.1.6`, …) | **Plan**: which issues are in this version |
+| Git | annotated tag `v0.1.5` | **Fact**: which tree this version is |
+| GitHub | the GitHub Release on that tag | **Ship**: public changelog and artifacts |
+
+- Every issue belongs to exactly one tracker Release. Once a Release has issues attached,
+  those issues leave `Backlog` for `Todo`.
+- After shipping, backfill the tracker Release's **`commitSha`** (the commit the tag points
+  at). This is the only authoritative binding between "a version" and "some code".
+- Milestones and Releases are **orthogonal axes**: a milestone is *which capability stage*,
+  a Release is *when it ships*. Don't use milestones to express release batches.
+- Hotfixes use a four-segment version (`0.1.5.1` — valid and correctly ordered under
+  PEP 440 and semver-tools alike). **Don't** reuse the next minor number; the tracker has
+  already promised that number to a feature batch.
+
+## Merge strategy (per lane)
+
+| PR | Merge with | Why |
+|----|-----------|-----|
+| `feat/*` `fix/*` `chore/*` → `dev` | **squash** | One issue, one commit; clean `dev` history |
+| `release/*` → `main` | **merge commit** | Preserves ancestry |
+| `hotfix/*` → `main` | **merge commit** | Same |
+
+**Why releases and hotfixes must not be squashed:** squashing creates a brand-new commit
+on `main` that exists nowhere in `dev`'s history, so the tag lands on a branch
+disconnected from `dev`. The damage is silent but permanent:
+`git merge-base --is-ancestor v0.1.5 origin/dev` returns false, and
+`git log v0.1.5..origin/dev` — "what's changed since the last release" — returns garbage.
+Both of those are the queries you most want to trust at release time.
+
+This means the GitHub repo must have **both** `Allow squash merge` and
+`Allow merge commit` enabled, with the lane deciding which you use.
 
 ## Branch naming
 
@@ -207,11 +318,12 @@ When production is live, hotfixes outrank regular issues — anything on a
 | Feature | `feat/{{ISSUE_PREFIX_LOWER}}-<id>-<topic>` | `feat/{{ISSUE_PREFIX_LOWER}}-101-user-auth` |
 | Fix | `fix/{{ISSUE_PREFIX_LOWER}}-<id>-<topic>` | `fix/{{ISSUE_PREFIX_LOWER}}-112-race-condition` |
 | Chore | `chore/{{ISSUE_PREFIX_LOWER}}-<id>-<topic>` | `chore/{{ISSUE_PREFIX_LOWER}}-108-lint-config` |
-| Hotfix | `hotfix/<topic>` | `hotfix/login-loop` |
-| Release | `release/v<semver>` | `release/v0.1.0` |
+| Hotfix | `hotfix/{{ISSUE_PREFIX_LOWER}}-<id>-<topic>` | `hotfix/{{ISSUE_PREFIX_LOWER}}-140-login-loop` |
+| Release | `release/v<version>` | `release/v0.1.0`, `release/v0.1.5.1` |
 
 - All lowercase, words joined with `-`
-- **Must include the tracker id** (`{{ISSUE_PREFIX_LOWER}}-NNN`) for PR ↔ issue tracing
+- **Must include the tracker id** (`{{ISSUE_PREFIX_LOWER}}-NNN`) for PR ↔ issue tracing —
+  hotfixes included, they are tracked issues too
 - One PR does one thing
 
 ## Recommended worktree layout
@@ -239,3 +351,61 @@ When production is live, hotfixes outrank regular issues — anything on a
 - Leaving the tracker un-`Done` after the PR merges
 - Continuing work on a branch not based on latest `origin/dev` (drop the worktree,
   re-branch from fresh `dev`)
+- Committing `.env`, private keys, or API secrets
+- **Deploying from a branch.** The only valid deploy source is a tag — otherwise nobody
+  can say which tree production is running
+- **Cutting a release to ship one urgent fix.** If `git log origin/main..origin/dev`
+  contains anything that must not ship yet, take the hotfix lane
+- **Landing a hotfix on `main` without merging `main` back into `dev`.** The next release
+  will re-ship the bug you just fixed
+- **Squash-merging `release/*` or `hotfix/*` into `main`** (breaks the tag's ancestry with
+  `dev` — see [§ Merge strategy](#merge-strategy-per-lane))
+
+## Agent / automation constraints
+
+Implementing agents (including unattended ones) **must**:
+
+1. Change code only inside a worktree — never commit directly to `dev` in the primary clone
+2. Move the tracker in lockstep: `In Progress` on start → `In Review` when the PR opens →
+   `Done` only after confirming the squash-merge
+3. Open the PR against `dev` **unless the issue carries a `hotfix` label**, in which case
+   the worktree base is `origin/main` and the PR base is `main` (see [§ Hotfix](#hotfix)).
+   **Check the label before creating the worktree** — do not default to `dev` blindly
+4. Treat a completed `/implement` three-round review loop (plus the escalation pass when
+   round 3 left findings open) as pre-authorization to self-squash-merge, run post-merge
+   cleanup, and set the tracker to `Done`. PRs produced any other way — or that skipped
+   the loop — stop at `In Review` for a human
+5. Respect module isolation when several issues run in parallel (see
+   [§ Parallel issues](#parallel-issues))
+6. **Never** self-merge or deploy a change touching **{{HIGH_RISK_PATHS}}**, even with a
+   green test run — stop at `In Review` for human confirmation. This gate **overrides the
+   self-merge pre-authorization in #4.**
+7. Never merge `release/*` → `main` without human approval
+
+## Branch protection
+
+Configure server-side protection on `main` and `dev` as soon as the repo's plan allows it:
+require a PR, forbid force-pushes, forbid deletion.
+
+> GitHub returns `403 Upgrade to GitHub Pro or make this repository public` for both
+> classic branch protection and rulesets on **private repos on the Free plan**. If that
+> applies, server-side protection is simply unavailable — the remote is genuinely
+> unprotected and workflow discipline is the only real safeguard.
+
+### Fallback: the local `pre-push` hook
+
+While server-side protection is unavailable, `.githooks/pre-push` (checked in) blocks the
+most common mistake — pushing straight to `main` or `dev`. Enable it **once per clone and
+per worktree**:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Deliberate override, when you genuinely need it:
+
+```bash
+ALLOW_DIRECT_PUSH=1 git push ...
+```
+
+This guards only the local clone. It is **not** a server-side gate.

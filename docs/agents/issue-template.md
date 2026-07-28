@@ -56,7 +56,7 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 | **Project**   | `{{LINEAR_PROJECT}}` (always — the only project in scope for this repo). |
 | **Milestone** | Attach to the project milestone matching the `[Mn]` title tag.          |
 | **Priority**  | `Urgent` / `High` / `Medium` / `Low` — see the table below.             |
-| **Labels**    | Triage role from `triage-labels.md` + any type label (`bug`, `feature`, `research`, `chore`). |
+| **Labels**    | Triage role from `triage-labels.md` + any type label (`bug`, `feature`, `research`, `chore`, `hotfix`). `hotfix` changes the git base branch — see `triage-labels.md`. |
 | **Assignee**  | Set when claimed; leave empty in the backlog.                           |
 | **Relations** | Use Linear's native `blocks` / `blocked-by` relations.                  |
 

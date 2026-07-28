@@ -70,12 +70,24 @@ Also:
    `git remote set-url origin <new-repo-url>`
 2. Create the integration branch: `git checkout -b dev` (keep `main` as the release
    line).
-3. Set merge policy on the GitHub repo (squash-only + delete branch on merge):
+3. Set merge policy on the GitHub repo. **Both** squash and merge-commit must be
+   allowed — the lane decides which you use (`docs/GIT_WORKFLOW.md` § Merge strategy):
+   squash for issues → `dev`, merge commit for `release/*` / `hotfix/*` → `main`.
    ```bash
-   gh repo edit --enable-squash-merge --enable-merge-commit=false \
+   gh repo edit --enable-squash-merge --enable-merge-commit \
      --enable-rebase-merge=false --delete-branch-on-merge
    ```
-4. Initial commit on `main`, then push both branches:
+4. Enable the local push guard, which refuses direct pushes to `main` / `dev`:
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+   Tell the user this must be re-run **in every worktree**, not just the primary clone.
+5. Try to enable server-side branch protection on `main` and `dev` (require a PR, block
+   force-push and deletion). On a **private repo on the Free plan this returns
+   `403 Upgrade to GitHub Pro`** for both classic protection and rulesets — if so, say so
+   plainly, note that the remote is genuinely unprotected, and move on. The `pre-push`
+   hook from step 4 is the only guard until the plan allows it.
+6. Initial commit on `main`, then push both branches:
    `git push -u origin main dev`.
 
 ## 4. Verify the skeleton

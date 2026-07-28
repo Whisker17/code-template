@@ -88,3 +88,38 @@ like this:
 
 Read it with `linear.list_issues` (filter to the id/identifier), then pull discussion
 with `linear.list_comments({ issueId })`.
+
+## Wayfinding operations
+
+Used by `/wayfinder`. The **map** is a single issue; its tickets are **sub-issues** of it.
+Without this section the skill falls back to a local-markdown tracker — so keep it
+accurate.
+
+- **Map**: one Linear issue labelled `wayfinder:map`, holding the Notes /
+  Decisions-so-far / Fog body. Create with `linear.save_issue({ title, team,
+  project: "{{LINEAR_PROJECT}}", labels: ["wayfinder:map"] })`. Create the label first
+  with `linear.create_issue_label` if `linear.list_issue_labels` doesn't have it.
+- **Child ticket**: an issue whose **`parent`** is the map — Linear's native sub-issue
+  relationship, visible in the map's own UI:
+  `linear.save_issue({ title, team, project: "{{LINEAR_PROJECT}}", parent: <map-id>,
+  labels: ["wayfinder:<type>"] })`, where `<type>` is `research` / `prototype` /
+  `grilling` / `task`. Once claimed, set `assignee` to the driving dev (`"me"` for the
+  agent's own session).
+- **Blocking**: Linear's **native `blocked-by` / `blocks` relations** — the canonical,
+  UI-visible representation, same mechanism as
+  [§ Publishing ticket sets](#publishing-ticket-sets-eg-from-to-tickets). Wire edges via
+  `linear.save_issue`'s relations support, or the dedicated relation tool if
+  `discover_tools({ query: "linear issue relation" })` surfaces one. Wire edges in a
+  **second pass**, after the issues exist and have ids. A ticket is unblocked when every
+  issue blocking it is closed.
+- **Frontier query**: `linear.list_issues` filtered to the map's children
+  (`parent: <map-id>`) and open states, then drop any ticket that still has an open
+  `blocked-by` relation or a non-empty `assignee`. First in map order wins.
+- **Claim**: `linear.save_issue({ id, assignee: "me" })` — the session's first write.
+- **Resolve**: post the answer with `linear.save_comment({ issueId, body })`, set the
+  ticket's `state` to a completed workflow state via `linear.save_issue`, then append a
+  context pointer to the map's Decisions-so-far.
+
+Wayfinder tickets are **decision** tickets, not build slices — they are orthogonal to the
+`[Mn]` milestone tagging in `issue-template.md`. Don't attach them to a Release
+(`docs/GIT_WORKFLOW.md` § Version axis): nothing ships from resolving one.

@@ -59,6 +59,11 @@ Do **not** implement issues in the primary clone working tree.
 
 1. `git fetch` + create worktree/branch from `origin/dev`
    (`fix/{{ISSUE_PREFIX_LOWER}}-NNN-topic` or `feat/{{ISSUE_PREFIX_LOWER}}-NNN-topic`).
+   **Check the issue's labels first** — an issue labelled `hotfix` branches off
+   `origin/main` instead and targets `main` (see **Promotion lanes** below). Verify the
+   base right after creating the worktree: `git merge-base HEAD origin/dev` must equal
+   `git rev-parse origin/dev`. Claude Code's `EnterWorktree` defaults to
+   `origin/main` — wrong for this lane.
 2. Implement only that issue; tracker state → **`In Progress`**.
 3. `gh pr create --base dev` (title/body include `{{ISSUE_PREFIX}}-NNN`); tracker →
    **`In Review`**. Any review finding you intentionally leave unfixed goes in
@@ -88,9 +93,31 @@ Drive these from the **primary clone**; never commit to `dev` directly.
    `dev`).
 5. **Tracker → `Done`.**
 
-Never open a PR with `dev` as head into `main` (the branch would be auto-deleted by
-`delete_branch_on_merge`). Promote via temporary `release/*` from `dev`. Full rules:
-`docs/GIT_WORKFLOW.md`.
+### Promotion lanes (`→ main`)
+
+`main` **equals production** — always the last deployed tag. Never open a PR with `dev` as
+head into `main` (the branch would be auto-deleted by `delete_branch_on_merge`). Two lanes
+reach `main`, and picking the wrong one ships unreviewed work:
+
+- **Release** — everything on `dev` is shippable. Cut a temporary `release/vX.Y.Z` from
+  `dev`, PR → `main`. **Always a human gate.**
+- **Hotfix** — production is broken *and* `dev` holds work that must not ship. Branch off
+  `origin/main`, PR → `main`, then **merge `main` back into `dev`** or the next release
+  re-ships the bug.
+
+The decision rule: run `git log --oneline origin/main..origin/dev`. **If that list holds a
+single commit you would not ship right now, you must use the hotfix lane.**
+
+Merge strategy is per-lane: **squash** into `dev`, but **merge commit** into `main` —
+squashing a release/hotfix disconnects the tag from `dev`'s history and silently breaks
+`git log <tag>..origin/dev`. Bump the project version before tagging, **deploy from the
+tag and never from a branch**, and keep the tracker Release ↔ git tag ↔ GitHub Release
+triple in agreement (backfill the Release's `commitSha`).
+
+Enable the local push guard once per clone **and per worktree**:
+`git config core.hooksPath .githooks`.
+
+Full rules: `docs/GIT_WORKFLOW.md`.
 
 ## Template feedback loop
 

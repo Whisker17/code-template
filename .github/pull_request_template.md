@@ -4,8 +4,19 @@
 
 ## Base branch
 
-- [ ] `dev` (default: feature / fix / chore)
-- [ ] `main` (release or hotfix only)
+- [ ] `dev` (default: feature / fix / chore) → merge with **squash**
+- [ ] `main` (release or hotfix only) → merge with a **merge commit**, never squash
+
+<!-- Targeting `main`? Confirm the lane is right: if `git log origin/main..origin/dev`
+holds anything that must not ship yet, this has to be a hotfix off `origin/main`, not a
+release. See docs/GIT_WORKFLOW.md § Choosing a promotion lane. -->
+
+## Release / hotfix only
+
+- [ ] Project version bumped to match the tag being created
+- [ ] Tag + GitHub Release planned; deploy will come **from the tag**, not a branch
+- [ ] Hotfix: `main` will be merged back into `dev` after this lands
+- [ ] Tracker Release `commitSha` will be backfilled after tagging
 
 ## Type
 
