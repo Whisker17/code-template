@@ -155,17 +155,19 @@ native roles.
 
 ## Agent skills
 
-Skills live in `.claude/skills/<name>/SKILL.md`. Runtimes that auto-discover them expose
+Project skills live in `.agents/skills/<name>/SKILL.md`, which is the cross-runtime source
+of truth. `.claude/skills` is a compatibility symlink for Claude Code; do not maintain a
+second copy there. Runtimes that auto-discover project skills expose
 each as `/<name>`; **in a runtime with no skill loader, read the file directly** — a skill
 is just markdown. The load-bearing ones:
 
 | Skill | Path |
 |-------|------|
-| `/implement` | `.claude/skills/implement/SKILL.md` |
-| `/code-review` | `.claude/skills/code-review/SKILL.md` |
-| `/grill-me` → `/to-spec` → `/to-tickets` | `.claude/skills/{grill-me,to-spec,to-tickets}/SKILL.md` |
-| `/tdd`, `/diagnosing-bugs`, `/handoff`, `/triage` | `.claude/skills/<name>/SKILL.md` |
-| `/ask-matt` (which skill do I want?) | `.claude/skills/ask-matt/SKILL.md` |
+| `/implement` | `.agents/skills/implement/SKILL.md` |
+| `/code-review` | `.agents/skills/code-review/SKILL.md` |
+| `/grill-me` → `/to-spec` → `/to-tickets` | `.agents/skills/{grill-me,to-spec,to-tickets}/SKILL.md` |
+| `/tdd`, `/diagnosing-bugs`, `/handoff`, `/triage` | `.agents/skills/<name>/SKILL.md` |
+| `/ask-matt` (which skill do I want?) | `.agents/skills/ask-matt/SKILL.md` |
 
 ### Issue tracker
 

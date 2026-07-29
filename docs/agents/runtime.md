@@ -3,7 +3,9 @@
 How this repo's skills reach a *second* agent — for review, escalation, or codebase
 exploration — without assuming which runtime or vendor you are working in.
 
-Skills in `.claude/skills/` name a **role**. This file maps roles to real commands.
+Skills in `.agents/skills/` name a **role**. This file maps roles to real commands.
+`.claude/skills` is a compatibility symlink for Claude Code; the project keeps one
+cross-runtime copy of each skill.
 That indirection is the whole point: model generations turn over every few months, and
 the mapping must have exactly one edit point.
 
@@ -114,14 +116,14 @@ masking the other.
 
 | Runtime | Native sub-agent | Skill loading | Notes |
 |---------|------------------|---------------|-------|
-| Claude Code | `Agent` tool, `model:` override | `.claude/skills/` auto-loaded, `/name` | Use the role mapping for model and effort selection |
-| Codex | `multi_agent_v1`/flat `spawn_agent` when exposed | reads `AGENTS.md`; each skill ships `agents/openai.yaml` interface metadata | Use `lazycodex-code-reviewer` natively; otherwise use the runtime-detecting dispatcher |
-| Grok | Grok agent/subprocess | reads `AGENTS.md`; no assumption of a skill loader | Use Grok for implementation and the configured Claude Opus reviewer via the dispatcher |
+| Claude Code | `Agent` tool, `model:` override | `.claude/skills/` compatibility path auto-loaded, `/name` | Use the role mapping for model and effort selection |
+| Codex | `multi_agent_v1`/flat `spawn_agent` when exposed | `.agents/skills/` plus `AGENTS.md`; each skill ships `agents/openai.yaml` interface metadata | Use `lazycodex-code-reviewer` natively; otherwise use the runtime-detecting dispatcher |
+| Grok | Grok agent/subprocess | reads `AGENTS.md` and the `.agents/skills/` path; no assumption of a skill loader | Use Grok for implementation and the configured Claude Opus reviewer via the dispatcher |
 | Any other | assume none | may have no skill loader — see below | Use the configured subprocess path |
 
 **Runtimes with no skill loader.** A skill is just a markdown file. If yours does not
-auto-discover `.claude/skills/`, it can still be told the path: *"read
-`.claude/skills/implement/SKILL.md` and follow it."* The `## Agent skills` section of
+auto-discover `.agents/skills/`, it can still be told the path: *"read
+`.agents/skills/implement/SKILL.md` and follow it."* The `## Agent skills` section of
 `AGENTS.md` lists the paths for exactly this reason.
 
 ## Changing models
