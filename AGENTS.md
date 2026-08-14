@@ -120,10 +120,11 @@ create it as a side effect of picking up a ticket.
    **{{HIGH_RISK_PATHS}}**, `release/*` → `main` promotions, and a finished
    version-integration `release/v*` → `dev`. PRs that skipped the
    review loop also stop at `In Review`. After merging, run the **post-merge cleanup**
-   below. An owner may waive one of these exceptions for a bounded issue set only
-   in the shape documented in `docs/GIT_WORKFLOW.md` § Waiving an exception —
-   machine-checkable scope, an expiry bound to a Release, and the compensating
-   control. A tracker label alone waives nothing.
+   below. **No waiver of these exceptions is in force.** If the owner ever grants
+   one for a bounded issue set it must take the shape in `docs/GIT_WORKFLOW.md`
+   § Waiving an exception — machine-checkable scope, an expiry bound to a Release,
+   the compensating control — *and* amend the rule it overrides at every site that
+   states it, this one included. A tracker label alone waives nothing.
 
 ### Two `release/` lifecycles
 

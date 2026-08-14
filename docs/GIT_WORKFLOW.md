@@ -362,10 +362,12 @@ concentrates in the semantically hottest files — in the source project
 11 commits behind with 15 overlapping files. A conflict resolved wrongly
 there will not be caught by review when no human reads the diff.
 
-**When:** whenever `dev` advances — immediately after each hotfix backmerge
-lands on `dev`, and as part of the same session as any governance landing
-on `dev`. A version branch more than **one release** behind `dev` is a
-defect: fix the fan-out before further feature work merges into it.
+**When:** whenever `dev` advances, in that same session — **any** merge landing on
+`dev` triggers it, not just some of them: a hotfix backmerge, a governance PR, and a
+finished version-integration branch merging back (which must reach the *other* live
+version branches) alike. If the resolved base was `dev`, fan out. A version branch
+more than **one release** behind `dev` is a defect: fix the fan-out before further
+feature work merges into it.
 
 **What is "live":** every `origin/release/v*` that is not the head of an
 open PR into `main` (those are temporary cuts in flight). A freshly cut
@@ -380,33 +382,38 @@ git fetch origin
 # Fail closed: an unreachable `gh` would leave open_to_main empty, classifying every
 # temporary cut in flight as "live" and merging dev's unreleased work into a branch
 # queued for main. No answer is not the same as "no open PRs".
-if ! open_to_main=$(gh pr list --base main --state open --json headRefName --jq '.[].headRefName'); then
+if ! open_to_main=$(gh pr list --base main --state open \
+                      --json headRefName --jq '.[].headRefName'); then
   echo "refuse: cannot list open PRs into main — fan-out targets are unknown" >&2
-  exit 1
+else
+  for ref in $(git for-each-ref --format='%(refname:short)' \
+                 'refs/remotes/origin/release/v*'); do
+    name=${ref#origin/}
+    if printf '%s\n' "$open_to_main" | grep -qx "$name"; then
+      continue   # temporary cut in flight
+    fi
+    unique=$(git rev-list --count origin/dev.."$ref")
+    only_on_ref=$(git rev-list --count origin/dev.."$ref" ^origin/main)
+    if [ "$unique" -gt 0 ] && [ "$only_on_ref" -eq 0 ]; then
+      echo "refuse: $name is a main-based cut (unique-vs-dev commits all on main)" >&2
+      continue
+    fi
+    echo "$name"
+  done
 fi
-for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/release/v*'); do
-  name=${ref#origin/}
-  if printf '%s\n' "$open_to_main" | grep -qx "$name"; then
-    continue   # temporary cut in flight
-  fi
-  unique=$(git rev-list --count origin/dev.."$ref")
-  only_on_ref=$(git rev-list --count origin/dev.."$ref" ^origin/main)
-  if [ "$unique" -gt 0 ] && [ "$only_on_ref" -eq 0 ]; then
-    echo "refuse: $name unique-vs-dev commits are all on origin/main — main-based cut, do not merge" >&2
-    continue
-  fi
-  echo "$name"
-done
 ```
+
+(No `exit` in that block — it is meant to be pasted into an interactive shell, and
+`exit` would close it.)
 
 For each name, from the **primary clone** (this is the documented
 exception to "never commit to a `release/v*` integration branch
 directly" — it is a fan-out merge, not feature work):
 
 ```bash
-git checkout "$name"
-git merge --ff-only "origin/$name"   # never merge into a stale local branch
-git merge origin/dev
+# Chained deliberately: if the --ff-only fails (diverged local branch — exactly the
+# case it exists to catch), the dev merge must not run anyway.
+git checkout "$name" && git merge --ff-only "origin/$name" && git merge origin/dev
 # resolve, run the affected tests
 ALLOW_DIRECT_PUSH=1 git push
 ```
