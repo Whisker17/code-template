@@ -30,8 +30,9 @@ this has to be a hotfix off `origin/main`, not a release. -->
 
 - [ ] Project version bumped to match the tag being created
 - [ ] Tag + GitHub Release planned; deploy will come **from the tag**, not a branch
-- [ ] Hotfix: `main` will be merged back into `dev` after this lands, then
-      `dev` fans out per the section above
+- [ ] Hotfix: `main` will be merged back into `dev` **and `dev` pushed** after this
+      lands, then `dev` fans out per the section above (an unpushed backmerge makes
+      the fan-out ship nothing)
 - [ ] Tracker Release `commitSha` will be backfilled after tagging
 
 ## Type

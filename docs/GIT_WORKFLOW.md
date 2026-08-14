@@ -325,8 +325,9 @@ documented exceptions — they are not PR-gated and they push with
 3. **Delete the local branch:** `git branch -D feat/{{ISSUE_PREFIX_LOWER}}-123-topic`
    (fails while the worktree still holds the branch — do step 2 first)
 4. **Fast-forward the resolved base:** `git fetch origin --prune` then
-   `git merge --ff-only origin/<resolved-base>` (must fast-forward — never
-   create commits on `dev` or on a `release/v*` integration branch)
+   `git merge --ff-only origin/<resolved-base>` (must fast-forward — if it
+   would create a merge commit, your local copy diverged: reset it to
+   `origin/<resolved-base>` rather than merging)
 5. **Fan-out whenever `dev` advanced:** if this merge — or a backmerge that
    followed it — moved `dev`, merge `dev` into every live version-integration
    branch, in this same session. See
@@ -527,13 +528,18 @@ Then:
    [§ Merge strategy](#merge-strategy-per-lane))
 5. Tag `v0.1.5.1` + create the GitHub Release
 6. **Deploy from the tag**, not from a branch
-7. **Merge `main` back into `dev` — and push it:**
-   `git checkout dev && git merge --ff-only origin/dev && git merge origin/main`, then
-   `ALLOW_DIRECT_PUSH=1 git push`. Like fan-out, this backmerge is a **documented
-   direct-merge exception**, not PR-gated. Skip the merge and the next release
-   re-ships the bug you just fixed; skip the **push** and step 8 fans out an
-   `origin/dev` that never received the fix — the fan-out then silently ships
-   nothing, which is the failure step 8 exists to prevent
+7. **Merge `main` back into `dev` — and push it.** From the **primary clone** (inside
+   the hotfix worktree `git checkout dev` fails — `dev` is checked out elsewhere), and
+   only after a fetch, or `origin/main` still predates the merge GitHub just made and
+   this merges nothing:
+   `git fetch origin && git checkout dev && git merge --ff-only origin/dev && git merge origin/main`,
+   then `ALLOW_DIRECT_PUSH=1 git push`. The `--ff-only` is chained deliberately, as in
+   fan-out: if the local `dev` diverged, the `origin/main` merge must not run. Like
+   fan-out, this backmerge is a **documented direct-merge exception**, not PR-gated
+   (see [§ Branch protection](#branch-protection) if a server-side ruleset blocks the
+   push). Skip the merge and the next release re-ships the bug you just fixed; skip
+   the **push** and step 8 fans out an `origin/dev` that never received the fix — the
+   fan-out then silently ships nothing, which is the failure step 8 exists to prevent
 8. **Fan out `dev` into every live version-integration branch** (see
    [§ Fan-out](#fan-out-dev-into-live-version-branches)). Skip this and the
    next version ships without the hotfix. State the query, never a name list.
@@ -647,8 +653,8 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 - **Backmerging a hotfix to `dev` without pushing `dev`.** The fan-out that follows
   reads `origin/dev`, so an unpushed backmerge makes step 8 ship nothing at all
 - **Landing anything on `dev` without fan-out** to live `release/v*` integration
-  branches — a hotfix backmerge, a governance PR, or a finished version-integration
-  merge-back alike. The next version ships without it
+  branches in the same session — a hotfix backmerge, a governance PR, or a finished
+  version-integration merge-back alike. The next version ships without it
 - **Squash-merging `release/*` or `hotfix/*` into `main`** (breaks the tag's ancestry with
   `dev` — see [§ Merge strategy](#merge-strategy-per-lane))
 
@@ -692,6 +698,13 @@ allows it: require a PR, forbid force-pushes, forbid deletion. On live
 the primary clone; a require-PR ruleset has no `ALLOW_DIRECT_PUSH` equivalent
 and would make the standing cadence impossible.
 
+Require-a-PR on `dev` is still right, but it blocks one legitimate push: the
+hotfix backmerge ([§ Hotfix](#hotfix) step 7) lands on `dev` directly too. Keep a
+bypass for the owner (classic protection: leave *Do not allow bypassing the above
+settings* unchecked; rulesets: a bypass entry) — or, where no bypass is available,
+land that backmerge as a PR from a throwaway branch cut off `origin/main` into
+`dev`, merged with a **merge commit**, and fan out after it.
+
 > GitHub returns `403 Upgrade to GitHub Pro or make this repository public` for both
 > classic branch protection and rulesets on **private repos on the Free plan**. If that
 > applies, server-side protection is simply unavailable — the remote is genuinely
@@ -707,9 +720,10 @@ integration branch. Enable it **once per clone and per worktree**:
 git config core.hooksPath .githooks
 ```
 
-Deliberate override, when you genuinely need it (including the documented
-fan-out merge of `origin/dev` into a live `release/v*` from the primary
-clone, and the first push of a freshly cut `release/v*`):
+Deliberate override, when you genuinely need it — the three documented cases, all
+from the primary clone: the fan-out merge of `origin/dev` into a live `release/v*`,
+the hotfix backmerge of `main` into `dev` ([§ Hotfix](#hotfix) step 7), and the first
+push of a freshly cut `release/v*`:
 
 ```bash
 ALLOW_DIRECT_PUSH=1 git push ...

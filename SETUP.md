@@ -114,6 +114,9 @@ Also:
    **force-push and deletion blocks only — never require a PR**. Fan-out is a
    direct merge of `dev` from the primary clone, and a require-PR ruleset has no
    `ALLOW_DIRECT_PUSH` equivalent (`docs/GIT_WORKFLOW.md` § Branch protection).
+   Require-a-PR on `dev` also blocks the hotfix backmerge, which is a direct push —
+   keep an owner bypass, or plan to land that backmerge as a PR off `origin/main`
+   (same section).
 6. Initial commit on `main`, then push both branches:
    `git push -u origin main dev`.
 

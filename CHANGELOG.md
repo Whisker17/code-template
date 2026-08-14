@@ -50,6 +50,18 @@ unreleased, never-live-tested next-version work. The trunk was no longer shippab
 - Title convention migrates `[Mn]` (milestone) → `[X.Y.Z]` (version/Release) as the
   primary routing signal; milestones stay tracker metadata and never route git.
 
+**Beyond the source — flow these forward to `mantle-stocks-arbitrage-bots`.** Review
+found three defects the upstream text shares: (1) the hotfix backmerge never pushed
+`dev`, so the fan-out behind it read an `origin/dev` without the fix and silently
+shipped nothing — it now fetches, fast-forwards, merges, and pushes from the primary
+clone (`git checkout dev` fails inside the hotfix worktree); (2) the fan-out query
+failed *open* when `gh` was unreachable, classifying every in-flight temporary cut as
+live; (3) the fan-out merge did not fast-forward the local branch first, so conflicts
+got resolved against code that was no longer there. The set of direct-push exceptions
+is also stated as all three (fan-out, hotfix backmerge, first push of a fresh cut)
+everywhere it appears, including the `pre-push` message an operator actually reads.
+Two residual issues are logged in `docs/DEFERRED_ISSUES.md`.
+
 ---
 
 ## 2026-07-28 — Runtime-neutral agent roles

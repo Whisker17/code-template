@@ -31,7 +31,21 @@ soon — anything touching {{HIGH_RISK_PATHS}} defaults to at least High), **Med
 
 ## Open
 
-_(none yet)_
+- **A temporary `release/v*` cut is only distinguishable from a live integration branch
+  by its open PR into `main`** (Medium, version-routed-PRs port).
+  `docs/GIT_WORKFLOW.md` § Fan-out (the live-branch query) — between pushing a fresh cut
+  and opening its PR, the query classifies the cut as "live", so a concurrent fan-out
+  merges unreleased `dev` into a branch queued for production. Deferred because the only
+  real fix changes the branch-naming contract (a distinct prefix for temporary cuts, or
+  pushing the branch only after the PR exists); the port mitigates it with prose only
+  ("open the PR immediately after the push", § Releasing to `main`).
+- **The port's design record is deliberately untracked** (Low, version-routed-PRs port).
+  `docs/references/version-routed-prs-port-plan.md` — committing it breaks acceptance
+  criteria 1, 6 and 7 of its own §5: those criteria are `grep -rn` sweeps over all of
+  `docs/`, and the plan quotes the very literals they forbid (the hardcoded governance
+  PR base, the retired milestone title prefix, and placeholder markers) as examples.
+  Fix: scope those greps to exclude `docs/references/`, then commit the doc. Until then
+  the reasoning behind the workflow lives only in commit messages.
 
 ---
 

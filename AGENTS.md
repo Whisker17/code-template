@@ -161,8 +161,9 @@ first push of a freshly cut `release/v*`.
 3. **Delete the local branch:** `git branch -D fix/{{ISSUE_PREFIX_LOWER}}-NNN-topic`
    (this fails while the worktree still holds the branch — do step 2 first).
 4. **Fast-forward the resolved base:** `git fetch origin --prune` then
-   `git merge --ff-only origin/<resolved-base>` (must fast-forward — do not create
-   commits on `dev` or on a `release/v*` integration branch).
+   `git merge --ff-only origin/<resolved-base>` (must fast-forward — if it would
+   create a merge commit, your local copy diverged: reset it to the remote rather
+   than merging).
 5. **Fan-out whenever `dev` advanced:** merge `dev` into every **live**
    `release/v*` integration branch in this same session (query in
    `docs/GIT_WORKFLOW.md` — never a hardcoded name list).
@@ -181,9 +182,10 @@ reach `main`, and picking the wrong one ships unreviewed work:
 - **Release** — everything on `dev` is shippable. Cut a temporary `release/vX.Y.Z` from
   `dev`, PR → `main`. **Always a human gate.**
 - **Hotfix** — production is broken *and* `dev` holds work that must not ship. Branch off
-  `origin/main`, PR → `main`, then **merge `main` back into `dev` and push it**
-  (`ALLOW_DIRECT_PUSH=1`), then **fan out `dev` into every live version-integration
-  branch** or the next version ships without the fix.
+  `origin/main`, PR → `main`, then, from the primary clone and after a `git fetch`,
+  **merge `main` back into `dev` and push it** (`ALLOW_DIRECT_PUSH=1`), then **fan out
+  `dev` into every live version-integration branch** or the next version ships without
+  the fix.
 
 The decision rule: run `git log --oneline origin/main..origin/dev`. **If that list holds a
 single commit you would not ship right now, you must use the hotfix lane.**
