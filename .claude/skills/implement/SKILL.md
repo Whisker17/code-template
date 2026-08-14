@@ -29,13 +29,26 @@ Commit your work to the current branch.
 
 A completed review loop means the work is ready to merge — take the PR all the way, unless the change is **gated** (below):
 
-1. Push and open the PR: `git push -u origin HEAD`, then `gh pr create --base dev` (title/body include `{{ISSUE_PREFIX}}-NNN`). Tracker → `In Review`.
-2. Verify the PR reads **MERGEABLE / CLEAN** (if `dev` advanced, `git merge origin/dev`, resolve, rerun affected tests, push) and that the full test suite and lint pass.
-3. `gh pr merge <N> --squash --delete-branch`, then run the post-merge cleanup from AGENTS.md (remove worktree, delete local branch, fast-forward local `dev`). Tracker → `Done`.
+1. Push and open the PR: `git push -u origin HEAD`, then
+   `gh pr create --base <resolved-base>` (title/body include `{{ISSUE_PREFIX}}-NNN`
+   **and the resolved base plus the signals it was derived from** — see
+   `docs/GIT_WORKFLOW.md` § Resolving the base branch). Tracker → `In Review`.
+   Version-scoped work targets `release/v{version}`; repo-wide governance
+   (carve-out file list) targets `dev`; `hotfix` targets `main`. Never
+   default to `dev`.
+2. Verify the PR reads **MERGEABLE / CLEAN** (if the resolved base advanced,
+   `git merge origin/<resolved-base>`, resolve, rerun affected tests, push)
+   and that the full test suite and lint pass.
+3. `gh pr merge <N> --squash --delete-branch`, then run the post-merge
+   cleanup from AGENTS.md (remove worktree, delete local branch, fast-forward
+   the resolved base, **fan out `dev` into live `release/v*` integration
+   branches when that base was `dev`**). Tracker → `Done`.
 
 **Gated changes stop at `In Review` and wait for a human** — do steps 1–2, skip 3:
 
 - Anything touching **{{HIGH_RISK_PATHS}}** (`docs/GIT_WORKFLOW.md` § Agent / automation constraints #6 — it overrides this skill's merge authorization).
 - Any `release/*` → `main` promotion.
+- A finished version-integration `release/v*` → `dev` (the merge-back that
+  makes `dev` shippable again).
 
 The completed three-round review loop — plus the escalation pass, when round 3 left findings open — is what authorizes the self-merge. Work that skipped the loop must also stop at `In Review`, **including work that skipped it because `REVIEWER` was unavailable**. The authorization comes from the review having actually happened, never from the intention to review.

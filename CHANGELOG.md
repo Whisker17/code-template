@@ -8,6 +8,50 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## 2026-08-14 — Version-routed PRs, fail-closed base resolution, fan-out
+
+Ported back from `mantle-stocks-arbitrage-bots` (`8249baf`, `639c85d`), which hit the
+failure this template's main+dev model sets up: every PR merged into `dev`, so when
+production broke, the hotfix's backmerge landed on a trunk carrying ~15 commits of
+unreleased, never-live-tested next-version work. The trunk was no longer shippable.
+
+- **PRs route by version, fail closed.** A three-category resolution table replaces
+  "one PR into `dev`": hotfix → `main`; repo-wide governance (a named carve-out file
+  list — workflow docs, hooks, CI, PR template, agent-roles conf + dispatch script,
+  skills) → `dev`; everything else → `release/v{version}`. The version comes from two
+  independent signals — the issue-title prefix `[X.Y.Z]` (primary,
+  tracker-independent) cross-checked against the tracker's release binding
+  (`docs/agents/issue-tracker.md`, where the Linear-specific sharp edges now live:
+  Release field, **not** `projectMilestone`). Disagree or missing → **refuse to
+  start**. Never default to `dev` — a silent fallback recreates the trunk pollution
+  invisibly. Bootstrap clause: before the first production tag, the version-scoped
+  row resolves to `dev` (no hotfix lane exists yet), as a table row, not a default.
+- **Two `release/*` lifecycles.** Temporary cut (no feature PRs, PR → `main`,
+  deleted) vs long-lived version integration (receives feature PRs, merges back to
+  `dev` under a human gate). Cutting one is a deliberate act, never a side effect of
+  picking up a ticket.
+- **Fan-out is a standing obligation.** Hotfix backmerges and governance landings on
+  `dev` merge into every live `release/v*` in the same session — *a governance rule
+  is only in force on branches that carry it*. Live branches come from a query (with
+  refuse cases for in-flight cuts), never a name list. Source-project evidence: 9
+  hotfixes in ~2 days put a version branch 11 commits behind with 15 overlapping
+  files. `pre-push` now protects `release/v*`; server-side protection on those
+  branches must NOT require a PR (fan-out is a direct merge).
+- **Base verification generalized.** `merge-base`/`rev-parse` against
+  `origin/<resolved-base>` immediately after worktree creation; the PR body states
+  the resolved base and the signals it was derived from.
+- **Scoped-waiver pattern (mechanism only).** How an owner waives a human merge gate:
+  machine-checkable scope, expiry bound to a Release, explicit list of what stays in
+  force, and the compensating control — no acceptance criterion may depend on a
+  reviewer noticing anything. The downstream instance stays downstream.
+- **Two footgun notes.** Annotated tags: `git rev-parse <tag>` returns the tag
+  object, not the commit — use `<tag>^{commit}`. Fan-out conflicts: a green suite
+  cannot catch a semantic merge bug — ask "would this fail if the fix were reverted?"
+- Title convention migrates `[Mn]` (milestone) → `[X.Y.Z]` (version/Release) as the
+  primary routing signal; milestones stay tracker metadata and never route git.
+
+---
+
 ## 2026-07-28 — Runtime-neutral agent roles
 
 The template pinned its reviewer to `model: "opus"` inside `code-review/SKILL.md` and

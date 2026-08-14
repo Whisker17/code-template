@@ -84,7 +84,11 @@ Also:
    `gh repo create <owner>/<PROJECT_NAME> --private`):
    `git remote set-url origin <new-repo-url>`
 2. Create the integration branch: `git checkout -b dev` (keep `main` as the release
-   line).
+   line). Do **not** cut a `release/v*` branch yet: until the first production tag
+   exists, `docs/GIT_WORKFLOW.md` § Resolving the base branch resolves the
+   version-scoped row to `dev`. The first long-lived `release/v*` integration
+   branch is cut deliberately, later, when work on the next version begins while a
+   deployed version is live.
 3. Set merge policy on the GitHub repo. **Both** squash and merge-commit must be
    allowed — the lane decides which you use (`docs/GIT_WORKFLOW.md` § Merge strategy):
    squash for issues → `dev`, merge commit for `release/*` / `hotfix/*` → `main`.
@@ -102,6 +106,11 @@ Also:
    `403 Upgrade to GitHub Pro`** for both classic protection and rulesets — if so, say so
    plainly, note that the remote is genuinely unprotected, and move on. The `pre-push`
    hook from step 4 is the only guard until the plan allows it.
+
+   When live `release/v*` integration branches later exist, protect them with
+   **force-push and deletion blocks only — never require a PR**. Fan-out is a
+   direct merge of `dev` from the primary clone, and a require-PR ruleset has no
+   `ALLOW_DIRECT_PUSH` equivalent (`docs/GIT_WORKFLOW.md` § Branch protection).
 6. Initial commit on `main`, then push both branches:
    `git push -u origin main dev`.
 

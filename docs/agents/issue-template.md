@@ -37,15 +37,23 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 ## Title convention
 
 ```
-[Mn] [Component] <imperative, specific description>
+[X.Y.Z] [Component] <imperative, specific description>
 ```
 
-- **`[Mn]`** — the milestone this issue belongs to (per `docs/DESIGN.md` §6). Omit only
-  for standalone issues with no milestone.
+- **`[X.Y.Z]`** — the **version / Release** this issue ships in (e.g. `[0.2.0]`).
+  This is the **primary git-routing signal** (`docs/GIT_WORKFLOW.md` § Resolving
+  the base branch). An implementing agent that cannot read a version prefix, or
+  whose prefix disagrees with the tracker's release field, **refuses to start**.
+  Omit the prefix only for repo-wide governance (the carve-out file list in
+  that section) — those issues target `dev` and have no version.
 - **`[Component]`** — the module this touches, per `docs/DESIGN.md` §4.2, plus
   cross-cutting tags `[Config]`, `[Infra]`, `[Docs]`, `[CI]`.
 - **Description** — short, specific, and imperative. Prefer
   `Add request dedup to the scheduler` over `Scheduler stuff`.
+
+Do **not** put the milestone in the title. Milestone and Release can both render
+as `0.2.0` and have already disagreed in practice (title `[0.2.0]`, milestone
+`0.3.0`). Milestone is a tracker field; the title prefix is the version.
 
 ---
 
@@ -54,7 +62,8 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 | Field         | How to set it                                                            |
 | ------------- | ------------------------------------------------------------------------ |
 | **Project**   | `{{LINEAR_PROJECT}}` (always — the only project in scope for this repo). |
-| **Milestone** | Attach to the project milestone matching the `[Mn]` title tag.          |
+| **Release**   | Required-by-convention for every version-scoped issue. Must match the `[X.Y.Z]` title prefix. **A missing Release blocks implementation** — the agent refuses rather than guessing `dev`. This table is a prompt, not a gate: trackers generally do not enforce non-empty fields; enforcement is the refusal in `docs/GIT_WORKFLOW.md`. Omit only for repo-wide governance (no version prefix). |
+| **Milestone** | Capability stage (`docs/DESIGN.md` §6). Orthogonal to Release. Do not use it to express the version or to route git. |
 | **Priority**  | `Urgent` / `High` / `Medium` / `Low` — see the table below.             |
 | **Labels**    | Triage role from `triage-labels.md` + any type label (`bug`, `feature`, `research`, `chore`, `hotfix`). `hotfix` changes the git base branch — see `triage-labels.md`. |
 | **Assignee**  | Set when claimed; leave empty in the backlog.                           |
@@ -156,6 +165,8 @@ Bare URLs are fine.
 
 ## Appendix: Milestones
 
-Issues carry an `[Mn]` tag because they live under a **milestone**, per
-`docs/DESIGN.md` §6. Keep the milestone list there as the source of truth; if milestones
-change, update §6 — not this file.
+Issues carry an `[X.Y.Z]` title prefix because they belong to a **Release**
+(the git-routing signal). They may also sit under a **milestone** (capability
+stage), per `docs/DESIGN.md` §6 — that is a tracker field, not the title tag.
+Keep the milestone list in §6; if Releases change, that is the tracker
+Release entity, not this file.

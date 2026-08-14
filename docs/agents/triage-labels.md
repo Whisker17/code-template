@@ -18,9 +18,10 @@ corresponding label string from this table.
 
 `hotfix` is a **type** label, not one of the five triage roles, but it is the one type
 label that changes git behaviour: an issue labelled `hotfix` branches off `origin/main`
-and targets `main`, instead of the usual `dev` → `dev` (see `docs/GIT_WORKFLOW.md`
-§ Hotfix). Agents **must read an issue's labels before creating its worktree** — the base
-branch is not something to assume.
+and targets `main` (see `docs/GIT_WORKFLOW.md` § Resolving the base branch). Without
+this label, version-scoped work targets `release/v{version}` and only repo-wide
+governance targets `dev`. Agents **must resolve the base before creating the
+worktree** — never assume `dev`.
 
 Apply it only when production is actually broken *and* `dev` holds work that must not ship
 yet. If everything on `dev` is shippable, the fix rides a normal release instead.

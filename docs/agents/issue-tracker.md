@@ -28,7 +28,9 @@ workflow. Take the first rung of this ladder that your runtime actually offers:
    local copy is worse than an honest block. If the project genuinely has no Linear
    access, re-run `/setup-matt-pocock-skills` to install a different tracker binding
    (`issue-tracker-github.md` / `-gitlab.md` / `-local.md`) so *all* skills agree on
-   where issues live.
+   where issues live. Any replacement binding must also define
+   [§ Release ↔ version binding](#release--version-binding), or declare that it has
+   no release entity — git routing reads that section.
 
 The rest of this file names Linear MCP tools (namespace `linear`); under rung 2, read each
 as its GraphQL equivalent. Core tools:
@@ -57,18 +59,55 @@ for the triage roles in `triage-labels.md`.
 
 ## Issue lifecycle ↔ Git (mandatory)
 
-Implementation always uses a **git worktree** off latest `dev` (see
-`docs/GIT_WORKFLOW.md`). Agents must keep Linear state in lockstep with the PR:
+Implementation always uses a **git worktree** off the **resolved base** (see
+`docs/GIT_WORKFLOW.md` — version-scoped work targets `release/v{version}`,
+governance targets `dev`, hotfix targets `main`). Agents must keep Linear
+state in lockstep with the PR:
 
 | When | Linear `state` |
 | --- | --- |
 | Claimed / coding in worktree | `In Progress` |
-| PR opened against `dev` (awaiting review) | **`In Review`** |
-| PR squash-merged into `dev` | **`Done`** |
+| PR opened against the resolved base (awaiting review) | **`In Review`** |
+| PR squash-merged into the resolved base | **`Done`** |
 | Abandoned | `Canceled` |
 
 Do not mark `Done` when the PR is only opened. Do not leave an open PR in `In Progress`.
 Triage labels (`ready-for-agent`, etc.) stay orthogonal to these states.
+
+## Release ↔ version binding
+
+`docs/GIT_WORKFLOW.md` § Version determination resolves a version-scoped issue's
+base branch from two signals: the `[X.Y.Z]` title prefix (primary) cross-checked
+against **this tracker's release entity**. That entity is tracker-specific, so it
+is defined here.
+
+**For Linear, the release entity is the issue's `Release` field.** Sharp edges,
+all of which have already caused a real mis-resolution in the source project
+(`mantle-stocks-arbitrage-bots`, WHI-1097):
+
+- **`Release` is not `projectMilestone`.** Both render as a bare `X.Y.Z` in the
+  UI and in API payloads, and reading the milestone as the Release let a title
+  prefix of `[0.2.0]` sit against a milestone of `0.3.0` undetected for days.
+  Milestone is *capability stage*; Release is *when it ships* and what routes
+  git (`docs/GIT_WORKFLOW.md` § Version axis).
+- **Linear does not enforce non-empty fields.** `issue-template.md`'s metadata
+  table asks for a Release, but nothing rejects an issue without one — several
+  shipped with the field empty. The enforcement is the agent's **refusal**, not
+  the tracker.
+- **Read it through the same access ladder as everything else** (above): via MCP,
+  `discover_tools({ query: "linear issue release", detail: "typescript" })` then
+  the returned `codeApi.path` from `execute_code`; under rung 2, the GraphQL
+  `issue` query — select the release/version field explicitly and confirm you did
+  not select the milestone by accident. If the tracker is unreachable, the
+  cross-check has not been performed: say so and stop, rather than proceeding on
+  the title prefix alone as though both signals had agreed.
+
+**Swapping trackers:** an alternative binding (`issue-tracker-github.md` /
+`-gitlab.md` / `-local.md`) must define this section too — naming its own release
+entity and how to read it — or state explicitly that it has **no** release
+entity, which drops the cross-check per `docs/GIT_WORKFLOW.md` § Version
+determination and leaves the title prefix standing alone. A missing or ambiguous
+prefix still refuses.
 
 ## Pull requests as a triage surface
 
@@ -95,9 +134,10 @@ like this:
    each edge as a human-readable `## Blocked By` line in the body per
    `issue-template.md`; the native relation is the source of truth, the body line is the
    mirror.
-3. **Scoping**: every issue gets `project: "{{LINEAR_PROJECT}}"` and, if the set belongs
-   to a milestone, the matching milestone attachment (title carries the `[Mn]` tag per
-   `issue-template.md`).
+3. **Scoping**: every issue gets `project: "{{LINEAR_PROJECT}}"` and, if the
+   set belongs to a version, the matching **Release** (title carries the `[X.Y.Z]`
+   prefix per `issue-template.md`). Milestone is orthogonal — attach it when the
+   set is a capability stage, but do not put it in the title.
 4. **State + labels**: state `Todo`, triage label `ready-for-agent` (unless the user
    says otherwise) — the tickets are agent-grabbable by construction.
 5. **Body**: use the copy-paste skeleton in `issue-template.md`, not the skill's generic
@@ -140,5 +180,5 @@ accurate.
   context pointer to the map's Decisions-so-far.
 
 Wayfinder tickets are **decision** tickets, not build slices — they are orthogonal to the
-`[Mn]` milestone tagging in `issue-template.md`. Don't attach them to a Release
+`[X.Y.Z]` version prefix in `issue-template.md`. Don't attach them to a Release
 (`docs/GIT_WORKFLOW.md` § Version axis): nothing ships from resolving one.

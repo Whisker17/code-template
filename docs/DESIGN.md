@@ -79,7 +79,10 @@ supports post-hoc review. Delete subsections that don't apply.)_
 ## 6. Milestones
 
 _(fill in: numbered milestones M1..Mn, each with a one-line success criterion. Issue
-titles carry an `[Mn]` tag that references this section — keep the two in sync.)_
+titles carry the `[X.Y.Z]` version prefix, not a milestone tag — a milestone is tracker
+metadata (which capability stage), and never routes git. See
+`docs/agents/issue-template.md` § Title convention and `docs/GIT_WORKFLOW.md`
+§ Version axis.)_
 
 ## 7. Rejected Alternatives
 

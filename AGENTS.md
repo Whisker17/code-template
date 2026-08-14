@@ -54,45 +54,119 @@ load-bearing interfaces other modules may depend on.
 
 ## Git workflow (mandatory)
 
-**One issue = one git worktree off latest `origin/dev` = one PR into `dev`.**
+**One issue = one git worktree off the resolved base = one PR into that base.**
 Do **not** implement issues in the primary clone working tree.
+**Never default to `dev`** — resolve the base from the table below; if the issue
+does not fall into exactly one row, **stop and surface it**.
 
-1. `git fetch` + create worktree/branch from `origin/dev`
+| Category | Recognised by | Worktree base | PR base |
+| --- | --- | --- | --- |
+| Hotfix | `hotfix` label | `origin/main` | `main` |
+| Repo-wide governance | touches **only** the carve-out file list | `origin/dev` | `dev` |
+| Version-scoped work | everything else | `origin/release/v{version}` | `release/v{version}` |
+
+**Bootstrap:** before the first production tag exists, the version-scoped row
+resolves to `dev` and no `release/v*` integration branch exists yet — a resolved
+value from the table, not a default. See `docs/GIT_WORKFLOW.md`
+§ Resolving the base branch.
+
+**Carve-out** (governs every branch; pinning it to one release leaves hotfixes on
+stale rules) — same list as `docs/GIT_WORKFLOW.md`:
+
+- `AGENTS.md` (`CLAUDE.md` is a symlink — edit `AGENTS.md` only)
+- `docs/GIT_WORKFLOW.md`
+- `docs/agents/` (issue template, tracker binding, triage labels, runtime)
+- `.githooks/`
+- CI config (`.github/workflows/`)
+- `.github/pull_request_template.md`
+- `config/agent-roles.conf`
+- `scripts/agent-dispatch.sh`
+- `.claude/skills/`
+
+A mixed PR (feature + carve-out) must be **split** — governance → `dev` and
+fans out; feature → its release branch.
+
+**Version for the third row — two signals, fail closed:**
+
+1. **Primary:** the issue-title prefix `[X.Y.Z]` (e.g. `[0.2.0] [Scheduler] …`).
+   Tracker-independent, no API call.
+2. **Cross-check:** the tracker's release binding (`docs/agents/issue-tracker.md`
+   § Release ↔ version binding). A tracker with no release entity drops the
+   cross-check; the prefix then stands alone.
+
+If they disagree, or the cross-check exists and either signal is missing,
+**refuse to start**. Do not infer the version from a milestone, and do not fall
+back to `dev`. If `origin/release/v{version}` does not exist, refuse — do not
+create it as a side effect of picking up a ticket.
+
+1. `git fetch` + create the worktree from the **resolved** base
    (`fix/{{ISSUE_PREFIX_LOWER}}-NNN-topic` or `feat/{{ISSUE_PREFIX_LOWER}}-NNN-topic`).
-   **Check the issue's labels first** — an issue labelled `hotfix` branches off
-   `origin/main` instead and targets `main` (see **Promotion lanes** below). Verify the
-   base right after creating the worktree — `git merge-base HEAD origin/dev` must equal
-   `git rev-parse origin/dev` — whatever tooling created it. *(Runtime aside: Claude
-   Code's `EnterWorktree` defaults to `origin/main`, wrong for this lane. Any wrapper may
-   have its own default; the check above is what settles it.)*
+   Verify immediately — `git merge-base HEAD origin/<resolved-base>` must equal
+   `git rev-parse origin/<resolved-base>` — whatever tooling created the worktree.
+   *(Runtime aside: Claude Code's `EnterWorktree` defaults to `origin/main`, which
+   is right for hotfix and wrong for everything else. The check is what settles
+   it.)*
 2. Implement only that issue; tracker state → **`In Progress`**.
-3. `gh pr create --base dev` (title/body include `{{ISSUE_PREFIX}}-NNN`); tracker →
+3. `gh pr create --base <resolved-base>` (title/body include `{{ISSUE_PREFIX}}-NNN`
+   **and the resolved base plus the signals it was derived from**); tracker →
    **`In Review`**. Any review finding you intentionally leave unfixed goes in
    `docs/DEFERRED_ISSUES.md` as part of this PR — see that file for the format.
 4. A PR whose implementation went through `/implement`'s full three-round review loop
    (plus the escalation pass, when round 3 left findings open) is **pre-authorized to
    self-squash-merge** once it reads MERGEABLE/CLEAN and tests + lint pass — no separate
    human approval. **Exceptions that stop at `In Review` for a human:** changes touching
-   **{{HIGH_RISK_PATHS}}**, and `release/*` → `main` promotions. PRs that skipped the
+   **{{HIGH_RISK_PATHS}}**, `release/*` → `main` promotions, and a finished
+   version-integration `release/v*` → `dev`. PRs that skipped the
    review loop also stop at `In Review`. After merging, run the **post-merge cleanup**
-   below.
+   below. An owner may waive one of these exceptions for a bounded issue set only
+   in the shape documented in `docs/GIT_WORKFLOW.md` § Waiving an exception —
+   machine-checkable scope, an expiry bound to a Release, and the compensating
+   control. A tracker label alone waives nothing.
+
+### Two `release/` lifecycles
+
+Same prefix, different job. `release/*` → `main` is a human gate for **both**.
+
+- **Temporary cut** (`release/v0.1.4`): branched from `dev`, receives **no**
+  feature work, PR → `main`, deleted after merge. A multi-commit hotfix *batch*
+  may cut from `main` instead; a single `hotfix/*` PR still goes straight to
+  `main`.
+- **Long-lived version integration** (`release/v0.2.0`): branched from `dev`,
+  **receives feature PRs**, lives for the whole version. When the version is
+  done: merge it into `dev` (merge commit, **human gate**) so `dev` stays
+  "validated and shippable", then promote `dev` → `main` via a fresh temporary
+  cut. Do not PR the integration branch to `main` directly.
+
+Cutting an integration branch is a **deliberate act**, never a side effect of
+picking up a ticket.
 
 ### Post-merge cleanup (mandatory, in order)
 
-Drive these from the **primary clone**; never commit to `dev` directly.
+Drive these from the **primary clone**. Never commit **feature work** to `dev` or
+a `release/v*` integration branch directly. Fan-out merges of `dev` into live
+integration branches (step 5) are the documented exception — they are not
+PR-gated.
 
-0. **If the PR is CONFLICTING** (`dev` advanced since you branched): inside the feature
-   worktree, `git merge origin/dev`, resolve, rerun the affected tests, and `git push`.
+0. **If the PR is CONFLICTING** (the resolved base advanced since you branched):
+   inside the feature worktree, `git merge origin/<resolved-base>`, resolve,
+   rerun the affected tests, and `git push`.
    The PR must read **MERGEABLE / CLEAN** before you merge.
 1. **Squash-merge + drop the remote branch:** `gh pr merge <N> --squash --delete-branch`.
 2. **Remove the worktree:** `git worktree remove <worktree-path>` then
    `git worktree prune`.
 3. **Delete the local branch:** `git branch -D fix/{{ISSUE_PREFIX_LOWER}}-NNN-topic`
    (this fails while the worktree still holds the branch — do step 2 first).
-4. **Fast-forward local `dev`:** `git fetch origin --prune` then
-   `git merge --ff-only origin/dev` (must fast-forward — do not create commits on
-   `dev`).
-5. **Tracker → `Done`.**
+4. **Fast-forward the resolved base:** `git fetch origin --prune` then
+   `git merge --ff-only origin/<resolved-base>` (must fast-forward — do not create
+   commits on `dev` or on a `release/v*` integration branch).
+5. **Fan-out when the resolved base was `dev`:** merge `dev` into every **live**
+   `release/v*` integration branch in this same session (query in
+   `docs/GIT_WORKFLOW.md` — never a hardcoded name list).
+   A governance rule is only in force on branches that carry it.
+   `main` is excluded. After a hotfix,
+   this step is what puts the fix onto version branches; skip it and the next
+   version ships without the hotfix.
+6. **Tracker → `Done`.**
 
 ### Promotion lanes (`→ main`)
 
@@ -103,13 +177,16 @@ reach `main`, and picking the wrong one ships unreviewed work:
 - **Release** — everything on `dev` is shippable. Cut a temporary `release/vX.Y.Z` from
   `dev`, PR → `main`. **Always a human gate.**
 - **Hotfix** — production is broken *and* `dev` holds work that must not ship. Branch off
-  `origin/main`, PR → `main`, then **merge `main` back into `dev`** or the next release
-  re-ships the bug.
+  `origin/main`, PR → `main`, then **merge `main` back into `dev`**, then **fan out
+  `dev` into every live version-integration branch** or the next version ships
+  without the fix.
 
 The decision rule: run `git log --oneline origin/main..origin/dev`. **If that list holds a
 single commit you would not ship right now, you must use the hotfix lane.**
 
-Merge strategy is per-lane: **squash** into `dev`, but **merge commit** into `main` —
+Merge strategy is per-lane: **squash** into `dev` and into a long-lived
+`release/v*`, but **merge commit** into `main` and for a finished integration
+branch merging back into `dev` —
 squashing a release/hotfix disconnects the tag from `dev`'s history and silently breaks
 `git log <tag>..origin/dev`. Bump the project version before tagging, **deploy from the
 tag and never from a branch**, and keep the tracker Release ↔ git tag ↔ GitHub Release
