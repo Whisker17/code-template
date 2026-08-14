@@ -14,8 +14,10 @@
 # Emergency override (say why in the PR or commit message):
 #   ALLOW_DIRECT_PUSH=1 git push ...
 #
-# Fan-out merges of origin/dev into a live release/v* integration branch are
-# the documented exception — they use the override from the primary clone.
+# Three merges are documented exceptions and use the override from the primary
+# clone: fan-out of origin/dev into a live release/v* integration branch, the
+# hotfix backmerge of main into dev, and the first push of a freshly cut
+# release/v* (no PR exists yet). See docs/GIT_WORKFLOW.md.
 
 set -euo pipefail
 
@@ -46,9 +48,13 @@ if [ "$BLOCKED" -eq 1 ]; then
     cat >&2 <<'MSG'
 
   Protected branches (main, dev, release/v*) only accept changes through a
-  pull request. Fan-out of origin/dev into a live release/v* integration
-  branch is the documented exception (ALLOW_DIRECT_PUSH=1 from the primary
-  clone). See docs/GIT_WORKFLOW.md.
+  pull request. Three merges are documented exceptions, done from the primary
+  clone with ALLOW_DIRECT_PUSH=1 (see docs/GIT_WORKFLOW.md):
+    - fan-out of origin/dev into a live release/v* integration branch
+    - the hotfix backmerge of main into dev
+    - the first push of a freshly cut release/v* (no PR exists yet)
+
+  Everything else goes through one of these four lanes:
 
     - version-scoped : worktree off origin/release/vX.Y.Z -> PR base release/vX.Y.Z (squash)
     - governance     : worktree off origin/dev            -> PR base dev            (squash)

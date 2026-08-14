@@ -146,9 +146,10 @@ picking up a ticket.
 ### Post-merge cleanup (mandatory, in order)
 
 Drive these from the **primary clone**. Never commit **feature work** to `dev` or
-a `release/v*` integration branch directly. Fan-out merges of `dev` into live
-integration branches (step 5) are the documented exception — they are not
-PR-gated.
+a `release/v*` integration branch directly. Three merges are documented
+exceptions — not PR-gated, pushed with `ALLOW_DIRECT_PUSH=1`: fan-out into live
+integration branches (step 5), the hotfix backmerge of `main` into `dev`, and the
+first push of a freshly cut `release/v*`.
 
 0. **If the PR is CONFLICTING** (the resolved base advanced since you branched):
    inside the feature worktree, `git merge origin/<resolved-base>`, resolve,
@@ -162,13 +163,13 @@ PR-gated.
 4. **Fast-forward the resolved base:** `git fetch origin --prune` then
    `git merge --ff-only origin/<resolved-base>` (must fast-forward — do not create
    commits on `dev` or on a `release/v*` integration branch).
-5. **Fan-out when the resolved base was `dev`:** merge `dev` into every **live**
+5. **Fan-out whenever `dev` advanced:** merge `dev` into every **live**
    `release/v*` integration branch in this same session (query in
    `docs/GIT_WORKFLOW.md` — never a hardcoded name list).
    A governance rule is only in force on branches that carry it.
-   `main` is excluded. After a hotfix,
-   this step is what puts the fix onto version branches; skip it and the next
-   version ships without the hotfix.
+   `main` is excluded. After a hotfix, this step is what puts the fix onto version
+   branches — and it reads `origin/dev`, so the backmerge must be **pushed** first
+   or the fan-out ships nothing.
 6. **Tracker → `Done`.**
 
 ### Promotion lanes (`→ main`)
@@ -180,9 +181,9 @@ reach `main`, and picking the wrong one ships unreviewed work:
 - **Release** — everything on `dev` is shippable. Cut a temporary `release/vX.Y.Z` from
   `dev`, PR → `main`. **Always a human gate.**
 - **Hotfix** — production is broken *and* `dev` holds work that must not ship. Branch off
-  `origin/main`, PR → `main`, then **merge `main` back into `dev`**, then **fan out
-  `dev` into every live version-integration branch** or the next version ships
-  without the fix.
+  `origin/main`, PR → `main`, then **merge `main` back into `dev` and push it**
+  (`ALLOW_DIRECT_PUSH=1`), then **fan out `dev` into every live version-integration
+  branch** or the next version ships without the fix.
 
 The decision rule: run `git log --oneline origin/main..origin/dev`. **If that list holds a
 single commit you would not ship right now, you must use the hotfix lane.**

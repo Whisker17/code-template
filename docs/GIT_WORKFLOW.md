@@ -308,9 +308,12 @@ For the non-waived cases above, a human reviewer:
 ### Post-merge cleanup (mandatory, in order)
 
 Drive these from the **primary clone**. Never commit **feature work** to
-`dev` or a `release/v*` integration branch directly. Fan-out merges of
-`dev` into live integration branches (step 5) are the documented
-exception — they are not PR-gated.
+`dev` or a `release/v*` integration branch directly. Three merges are the
+documented exceptions — they are not PR-gated and they push with
+`ALLOW_DIRECT_PUSH=1`: fan-out of `dev` into live integration branches
+(step 5), the hotfix backmerge of `main` into `dev`
+([§ Hotfix](#hotfix) step 7), and the first push of a freshly cut
+`release/v*` ([§ Releasing to `main`](#releasing-to-main)).
 
 0. **If the PR is CONFLICTING** (the resolved base advanced since you
    branched): inside the feature worktree,
@@ -324,10 +327,11 @@ exception — they are not PR-gated.
 4. **Fast-forward the resolved base:** `git fetch origin --prune` then
    `git merge --ff-only origin/<resolved-base>` (must fast-forward — never
    create commits on `dev` or on a `release/v*` integration branch)
-5. **Fan-out when the resolved base was `dev`:** merge `dev` into every
-   live version-integration branch — see
-   [§ Fan-out](#fan-out-dev-into-live-version-branches). Required for both
-   hotfix backmerges and governance landings.
+5. **Fan-out whenever `dev` advanced:** if this merge — or a backmerge that
+   followed it — moved `dev`, merge `dev` into every live version-integration
+   branch, in this same session. See
+   [§ Fan-out](#fan-out-dev-into-live-version-branches) for the trigger list and
+   the query; it is not a shorter list than that one.
 6. **Tracker → `Done`**
 
 ### State mapping (tracker ↔ git)
@@ -478,6 +482,11 @@ ALLOW_DIRECT_PUSH=1 git push -u origin HEAD
 gh pr create --base main --title "release: v0.1.0" --body "..."
 ```
 
+**Open the PR immediately after the push.** Until it exists, the fan-out query has
+no way to tell this temporary cut from a live integration branch — it discriminates
+on the open PR into `main` — and a concurrent fan-out in that window would merge
+`dev`'s unreleased work into the branch you are about to ship.
+
 After the PR reads MERGEABLE/CLEAN and a human has approved it (`release/*` → `main` is
 **always** a human gate):
 
@@ -518,8 +527,13 @@ Then:
    [§ Merge strategy](#merge-strategy-per-lane))
 5. Tag `v0.1.5.1` + create the GitHub Release
 6. **Deploy from the tag**, not from a branch
-7. **Merge `main` back into `dev`:** `git checkout dev && git merge origin/main`. Skip this
-   and the next release re-ships the bug you just fixed
+7. **Merge `main` back into `dev` — and push it:**
+   `git checkout dev && git merge --ff-only origin/dev && git merge origin/main`, then
+   `ALLOW_DIRECT_PUSH=1 git push`. Like fan-out, this backmerge is a **documented
+   direct-merge exception**, not PR-gated. Skip the merge and the next release
+   re-ships the bug you just fixed; skip the **push** and step 8 fans out an
+   `origin/dev` that never received the fix — the fan-out then silently ships
+   nothing, which is the failure step 8 exists to prevent
 8. **Fan out `dev` into every live version-integration branch** (see
    [§ Fan-out](#fan-out-dev-into-live-version-branches)). Skip this and the
    next version ships without the hotfix. State the query, never a name list.
@@ -623,8 +637,6 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 - **Defaulting a version-scoped issue to `dev`** because the release field is
   empty or the release branch does not exist — refuse and surface it
 - **Creating `release/v*` as a side effect of picking up a ticket**
-- **Landing governance on `dev` without fan-out** to live version-integration
-  branches in the same session
 - Committing `.env`, private keys, or API secrets
 - **Deploying from a branch.** The only valid deploy source is a tag — otherwise nobody
   can say which tree production is running
@@ -632,8 +644,11 @@ This means the GitHub repo must have **both** `Allow squash merge` and
   contains anything that must not ship yet, take the hotfix lane
 - **Landing a hotfix on `main` without merging `main` back into `dev`.** The next release
   will re-ship the bug you just fixed
-- **Backmerging a hotfix to `dev` without fan-out** to live `release/v*`
-  integration branches. The next version ships without the fix
+- **Backmerging a hotfix to `dev` without pushing `dev`.** The fan-out that follows
+  reads `origin/dev`, so an unpushed backmerge makes step 8 ship nothing at all
+- **Landing anything on `dev` without fan-out** to live `release/v*` integration
+  branches — a hotfix backmerge, a governance PR, or a finished version-integration
+  merge-back alike. The next version ships without it
 - **Squash-merging `release/*` or `hotfix/*` into `main`** (breaks the tag's ancestry with
   `dev` — see [§ Merge strategy](#merge-strategy-per-lane))
 
