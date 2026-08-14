@@ -377,7 +377,13 @@ Do **not** snapshot branch names into this document. Query it:
 
 ```bash
 git fetch origin
-open_to_main=$(gh pr list --base main --state open --json headRefName --jq '.[].headRefName')
+# Fail closed: an unreachable `gh` would leave open_to_main empty, classifying every
+# temporary cut in flight as "live" and merging dev's unreleased work into a branch
+# queued for main. No answer is not the same as "no open PRs".
+if ! open_to_main=$(gh pr list --base main --state open --json headRefName --jq '.[].headRefName'); then
+  echo "refuse: cannot list open PRs into main — fan-out targets are unknown" >&2
+  exit 1
+fi
 for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/release/v*'); do
   name=${ref#origin/}
   if printf '%s\n' "$open_to_main" | grep -qx "$name"; then
@@ -398,10 +404,16 @@ exception to "never commit to a `release/v*` integration branch
 directly" — it is a fan-out merge, not feature work):
 
 ```bash
-git checkout "$name" && git merge origin/dev
+git checkout "$name"
+git merge --ff-only "origin/$name"   # never merge into a stale local branch
+git merge origin/dev
 # resolve, run the affected tests
 ALLOW_DIRECT_PUSH=1 git push
 ```
+
+The `--ff-only` step is not optional: merging `dev` into a stale local copy of the
+branch produces a merge whose "resolution" was made against code that is no longer
+there, and the push then either fails or lands a wrong tree.
 
 A green suite after resolving a fan-out conflict is **not** evidence the
 resolution is semantically right — the tests were green on both sides of the
@@ -642,8 +654,10 @@ Implementing agents (including unattended ones) **must**:
    [§ Parallel issues](#parallel-issues))
 6. **Never** self-merge or deploy a change touching **{{HIGH_RISK_PATHS}}**, even with a
    green test run — stop at `In Review` for human confirmation. This gate **overrides the
-   self-merge pre-authorization in #4**, unless the owner has waived it per
-   [§ Waiving an exception](#waiving-an-exception-owner-decision)
+   self-merge pre-authorization in #4.** No waiver of it is in force; if the owner ever
+   grants one it must take the shape in
+   [§ Waiving an exception](#waiving-an-exception-owner-decision) and amend this rule
+   here, not merely a tracker label
 7. Never merge `release/*` → `main` without human approval. Never merge a
    finished version-integration branch into `dev` without human approval.
 

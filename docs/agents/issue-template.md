@@ -45,7 +45,10 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
   the base branch). An implementing agent that cannot read a version prefix, or
   whose prefix disagrees with the tracker's release field, **refuses to start**.
   Omit the prefix only for repo-wide governance (the carve-out file list in
-  that section) — those issues target `dev` and have no version.
+  that section) — those issues target `dev` and have no version. A `hotfix`-labelled
+  issue keeps a prefix too, using the four-segment hotfix version (`[0.1.5.1]`, per
+  `docs/GIT_WORKFLOW.md` § Version axis), but it routes off the **label**, not the
+  prefix.
 - **`[Component]`** — the module this touches, per `docs/DESIGN.md` §4.2, plus
   cross-cutting tags `[Config]`, `[Infra]`, `[Docs]`, `[CI]`.
 - **Description** — short, specific, and imperative. Prefer

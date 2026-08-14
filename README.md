@@ -22,10 +22,12 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 3. Produce the spec of record: `/grill-me <your idea>` → `/to-spec` fills
    `docs/DESIGN.md`.
 4. Break it down: `/to-tickets` publishes blocked/blocking Linear issues.
-5. Implement: `/implement` per issue — worktree off `dev`, three-round review loop,
-   self-squash-merge on green (except {{HIGH_RISK_PATHS}} and releases).
-6. Ship: cut `release/vX.Y.Z` from `dev` → PR into `main` (merge commit), tag, deploy
-   **from the tag**. Production broken while `dev` holds unshippable work? Take the
+5. Implement: `/implement` per issue — worktree off the **resolved base** (version-scoped
+   → `release/v{version}`, repo-wide governance → `dev`, hotfix → `main`; never a
+   defaulted `dev`), three-round review loop, self-squash-merge on green (except
+   {{HIGH_RISK_PATHS}} and releases).
+6. Ship: cut a temporary `release/vX.Y.Z` from `dev` → PR into `main` (merge commit), tag,
+   deploy **from the tag**. Production broken while `dev` holds unshippable work? Take the
    hotfix lane instead — `docs/GIT_WORKFLOW.md`.
 
 ## What's inside
@@ -36,7 +38,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 | **Runtime adapter** | `docs/agents/runtime.md` (role contract, degraded mode), `config/agent-roles.conf` (role → command), `scripts/agent-dispatch.sh` (dispatch + `--probe`) |
 | **Skills** (22, vendored from `mattpocock/skills`) | implement, code-review, handoff, tdd, diagnosing-bugs, prototype, wayfinder, grill-me, grill-with-docs, grilling, triage, improve-codebase-architecture, research, resolving-merge-conflicts, setup-matt-pocock-skills, to-spec, to-tickets, domain-modeling, codebase-design, teach, writing-great-skills, ask-matt + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template) |
-| **Git workflow** | main ≡ production + dev + worktree-per-issue; per-lane merge strategy (squash → `dev`, merge commit → `main`); release vs hotfix decision rule; version axis (tracker Release ↔ tag ↔ GitHub Release); mandatory post-merge cleanup; Linear state lockstep; agent self-merge with human-review exceptions; `.githooks/pre-push` guard |
+| **Git workflow** | main ≡ production + dev + `release/v*` version integration + worktree-per-issue; fail-closed base resolution (version-scoped / governance carve-out / hotfix — never a defaulted `dev`); per-lane merge strategy (squash → `dev` and → long-lived `release/v*`, merge commit → `main` and for a finished integration branch); fan-out of `dev` into every live version branch; release vs hotfix decision rule; version axis (tracker Release ↔ tag ↔ GitHub Release); mandatory post-merge cleanup; Linear state lockstep; agent self-merge with human-review exceptions; `.githooks/pre-push` guard |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + hatchling + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
 
 The **process layer** (docs, workflow, skills) is stack-agnostic; only the stack layer

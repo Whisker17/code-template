@@ -91,12 +91,15 @@ Also:
    deployed version is live.
 3. Set merge policy on the GitHub repo. **Both** squash and merge-commit must be
    allowed — the lane decides which you use (`docs/GIT_WORKFLOW.md` § Merge strategy):
-   squash for issues → `dev`, merge commit for `release/*` / `hotfix/*` → `main`.
+   squash for issues → `dev` or → a long-lived `release/v*`, merge commit for
+   `release/*` / `hotfix/*` → `main` and for a finished version-integration branch
+   merging back into `dev`.
    ```bash
    gh repo edit --enable-squash-merge --enable-merge-commit \
      --enable-rebase-merge=false --delete-branch-on-merge
    ```
-4. Enable the local push guard, which refuses direct pushes to `main` / `dev`:
+4. Enable the local push guard, which refuses direct pushes to `main`, `dev`, and
+   any `release/v*` branch:
    ```bash
    git config core.hooksPath .githooks
    ```

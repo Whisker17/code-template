@@ -88,16 +88,18 @@ fans out; feature → its release branch.
 
 **Version for the third row — two signals, fail closed:**
 
-1. **Primary:** the issue-title prefix `[X.Y.Z]` (e.g. `[0.2.0] [Scheduler] …`).
-   Tracker-independent, no API call.
-2. **Cross-check:** the tracker's release binding (`docs/agents/issue-tracker.md`
-   § Release ↔ version binding). A tracker with no release entity drops the
-   cross-check; the prefix then stands alone.
+- **Primary:** the issue-title prefix `[X.Y.Z]` (e.g. `[0.2.0] [Scheduler] …`).
+  Tracker-independent, no API call.
+- **Cross-check:** the tracker's release binding (`docs/agents/issue-tracker.md`
+  § Release ↔ version binding). A tracker with no release entity drops the
+  cross-check; the prefix then stands alone.
 
 If they disagree, or the cross-check exists and either signal is missing,
 **refuse to start**. Do not infer the version from a milestone, and do not fall
 back to `dev`. If `origin/release/v{version}` does not exist, refuse — do not
 create it as a side effect of picking up a ticket.
+
+**Then, once the base is resolved:**
 
 1. `git fetch` + create the worktree from the **resolved** base
    (`fix/{{ISSUE_PREFIX_LOWER}}-NNN-topic` or `feat/{{ISSUE_PREFIX_LOWER}}-NNN-topic`).
