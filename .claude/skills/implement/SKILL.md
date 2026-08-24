@@ -8,7 +8,11 @@ Implement the work described by the user in the spec or tickets.
 
 Use /tdd where possible, at pre-agreed seams.
 
+Before writing code, read `.claude/skills/ponytail/SKILL.md` and apply it. Done when its completion criterion holds — the rung report, not a paraphrase. Put that report in the PR body.
+
 Run typechecking regularly, single test files regularly, and the full test suite once at the end.
+
+After the implementation is in place and **before** you start reviewing, apply `.claude/skills/ponytail/review.md` as a shrink pass: delete what it flags. This is not a review round and does not authorize merge.
 
 Before you start reviewing, confirm the review path exists:
 `scripts/agent-dispatch.sh --probe REVIEWER ESCALATOR`. Exit `3` means the loop below

@@ -91,6 +91,8 @@ hotfix branches run under stale rules:
 - `config/agent-roles.conf`
 - `scripts/agent-dispatch.sh`
 - `.claude/skills/`
+- `README.md` (locally-customized skills inventory)
+- `CHANGELOG.md` (template feedback loop)
 
 An issue that mixes this list with version-scoped code **must be split**: the
 governance part goes to `dev` and [fans out](#fan-out-dev-into-live-version-branches);

@@ -42,7 +42,10 @@ directly — a skill is just markdown"):
 4. `.claude/skills/code-review/SKILL.md` — how review is dispatched, including the diff command
    (§ below corrects one thing about it) and the Standards-axis smell baseline, which you must
    paste in full into every Standards dispatch — the reviewer has no other access to it.
-5. {{EXTRA_DOCS: tdd, DESIGN.md sections the issue cites, predecessor code to extend}}
+5. `.claude/skills/ponytail/SKILL.md` and `.claude/skills/ponytail/review.md` — generation
+   constraint (what to write, not how the issue moves). Follow `/implement` for when to
+   apply them; this entry exists so you load them. Not a review round.
+6. {{EXTRA_DOCS: tdd, DESIGN.md sections the issue cites, predecessor code to extend}}
 
 ## Predecessors
 
@@ -123,7 +126,10 @@ here. Only the repo-specific deltas on top of that sequence:
   resolves against whichever GitHub repo it thinks this clone is). Nested worktrees under the
   primary clone also need `--head {{OWNER_REPO}}:<feature-branch>` — see `docs/TRAPS.md`.
   PR title/body: `{{ISSUE_ID}}`, the resolved base plus the signals it came from,
-  {{ANY_ARGUMENT_A_REVIEWER_WILL_RAISE}}, and a one-line note of any deferred criteria.
+  {{ANY_ARGUMENT_A_REVIEWER_WILL_RAISE}}, a one-line note of any deferred criteria,
+  and the **rung report** (`.claude/skills/ponytail/SKILL.md` § Completion criterion).
+  That report's durable copy is the PR body; `/implement` requires it there. The
+  report-back bullet below is a convenience quote of the same text.
 - MERGEABLE/CLEAN is a git-conflict check only — separately confirm nothing that landed on
   `{{BASE}}` since you branched **semantically** conflicts with this issue's scope, even where
   git itself sees no conflict.
@@ -136,6 +142,10 @@ here. Only the repo-specific deltas on top of that sequence:
 
 - Resolved base and the merge-base assertion result.
 - `git diff --stat` evidence that the scope constraint held.
+- **Rung report:** quote the same text that is in the PR body (the durable copy
+  `/implement` requires). Exactly what `.claude/skills/ponytail/SKILL.md`
+  § Completion criterion requires. Missing from the PR body means the generation
+  constraint did not run.
 - **The review rounds verbatim**: per round, per axis — the exact command passed, every
   finding, your disposition of each. Whether every dispatch genuinely succeeded and actually
   saw content. Whether an escalation pass was needed.

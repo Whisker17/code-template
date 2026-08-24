@@ -37,7 +37,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 |-------|----------|
 | **Agent guidance** | `AGENTS.md` (canonical; `CLAUDE.md` is a symlink) |
 | **Runtime adapter** | `docs/agents/runtime.md` (role contract, degraded mode), `config/agent-roles.conf` (role → command), `scripts/agent-dispatch.sh` (dispatch + `--probe`) |
-| **Skills** (22 vendored from `mattpocock/skills` + first-party `/orchestrate`) | implement, code-review, orchestrate, handoff, tdd, diagnosing-bugs, prototype, wayfinder, grill-me, grill-with-docs, grilling, triage, improve-codebase-architecture, research, resolving-merge-conflicts, setup-matt-pocock-skills, to-spec, to-tickets, domain-modeling, codebase-design, teach, writing-great-skills, ask-matt + `skills-lock.json` |
+| **Skills** (22 vendored from `mattpocock/skills` + first-party `/orchestrate` + `/ponytail`) | implement, code-review, orchestrate, ponytail, handoff, tdd, diagnosing-bugs, prototype, wayfinder, grill-me, grill-with-docs, grilling, triage, improve-codebase-architecture, research, resolving-merge-conflicts, setup-matt-pocock-skills, to-spec, to-tickets, domain-modeling, codebase-design, teach, writing-great-skills, ask-matt + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (orchestrate trap registry), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template) |
 | **Git workflow** | main ≡ production + dev + `release/v*` version integration + worktree-per-issue; fail-closed base resolution (version-scoped / governance carve-out / hotfix — never a defaulted `dev`); per-lane merge strategy (squash → `dev` and → long-lived `release/v*`, merge commit → `main` and for a finished integration branch); fan-out of `dev` into every live version branch; release vs hotfix decision rule; version axis (tracker Release ↔ tag ↔ GitHub Release); mandatory post-merge cleanup; Linear state lockstep; agent self-merge with human-review exceptions; `.githooks/pre-push` guard |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + hatchling + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
@@ -60,10 +60,16 @@ Skills are pinned by `skills-lock.json`; upgrade them here deliberately, not per
 > silently overwrite them.** Diff before accepting any skill upgrade to:
 >
 > - `implement/SKILL.md` — three-round review loop + escalation pass; self-merge
->   authorization; `REVIEWER`/`ESCALATOR` role dispatch
-> - `code-review/SKILL.md` — `REVIEWER` role dispatch on both axes
+>   authorization; `REVIEWER`/`ESCALATOR` role dispatch; ponytail generation
+>   constraint + shrink pass before review
+> - `code-review/SKILL.md` — `REVIEWER` role dispatch on both axes; Reinvented Wheel
+>   smell on the Standards baseline
 > - `improve-codebase-architecture/`, `codebase-design/DESIGN-IT-TWICE.md`,
 >   `wayfinder/SKILL.md` — `EXPLORER` role dispatch with a documented serial fallback
-> - `ask-matt/SKILL.md` — runtime-neutral compaction wording
+> - `ask-matt/SKILL.md` — runtime-neutral compaction wording; implement drives
+>   tdd + ponytail
 > - `orchestrate/` — first-party, not vendored; do not add it to `skills-lock.json`.
 >   Trap registry lives in `docs/TRAPS.md` (skill-local `traps.md` is a pointer).
+>   Verify checks the implementer's rung report.
+> - `ponytail/` — first-party, not vendored; do not add it to `skills-lock.json`.
+>   Generation constraint driven by `/implement`, not a process skill.
