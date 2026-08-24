@@ -8,6 +8,36 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## 2026-08-24 — `/orchestrate` skill
+
+Ported back from `prop-amm-challenge` (WHI-1251 through WHI-1255). Four consecutive
+issues there were driven by one orchestrator spawning one implementer per issue, with
+adversarial review in a fresh context. The pattern worked — and wasted hours on traps
+that recur — so the orchestrator's contract is now a skill rather than a remembered
+habit.
+
+- **New first-party skill** `.claude/skills/orchestrate/` (`SKILL.md`, fill-in
+  `implementer-prompt.md`, pointer `traps.md`). Not vendored from `mattpocock/skills`;
+  not in `skills-lock.json`. `disable-model-invocation: true` — entered only on an
+  explicit human request, matching `/implement`.
+- **Canonical trap registry is `docs/TRAPS.md`**, not the skill file. Skill-local
+  `traps.md` is a pointer. Append-only, self-declaring trim: a silent trim is how
+  three measured entries vanished between a reviewed 9-entry draft and what first
+  landed. Downstream projects seed the numbered list with *their* traps; the template
+  ships only process-layer entries (wrong `gh` repo, nested-worktree `--head`,
+  three-dot vs two-dot, probe ≠ G1, vacuous empty reviewer stdout, `pgrep -fl`,
+  generate-once-after-review).
+- **`ask-matt`** routes a ready ticket *set* to `/orchestrate` rather than only
+  per-ticket `/implement`. `AGENTS.md` skill table has an `/orchestrate` row.
+- **What this skill is not.** It drives a set of already-written tracker issues. It
+  does not invent the backlog from a vision, and it cannot self-merge when G1 (a real
+  `DISPATCH-OK` dispatch, not `--probe`) fails.
+
+**Do not port back the source project's numbered trap list.** Those cite `cargo fmt`,
+a bench compile path, and a fork of a specific upstream — they are not template-true.
+
+---
+
 ## 2026-08-14 — Version-routed PRs, fail-closed base resolution, fan-out
 
 Ported back from `mantle-stocks-arbitrage-bots` (`8249baf`, `639c85d`), which hit the
