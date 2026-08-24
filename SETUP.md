@@ -61,14 +61,15 @@ Then verify (SETUP.md itself is exempt — it gets deleted in step 6):
 ```bash
 grep -rn '{{' --include='*.md' --include='*.toml' --include='*.yml' --include='*.py' \
   --exclude=SETUP.md --exclude-dir=.git . \
-  | grep -v 'improve-codebase-architecture/HTML-REPORT.md'
+  | grep -v 'improve-codebase-architecture/HTML-REPORT.md' \
+  | grep -v 'orchestrate/implementer-prompt.md'
 ```
 
 This must return nothing. **`.claude/` is deliberately in scope** — vendored skills
 carry `{{ISSUE_PREFIX}}` / `{{HIGH_RISK_PATHS}}` markers too, and excluding that
-directory is how unported values survive bootstrap. The single legitimate exception is
-`HTML-REPORT.md`'s `{{repo name}}`, which is a report template placeholder, not a
-bootstrap marker.
+directory is how unported values survive bootstrap. Two legitimate exceptions:
+`HTML-REPORT.md`'s `{{repo name}}`, and `orchestrate/implementer-prompt.md`'s
+`{{PLACEHOLDER}}` launch-template slots — neither is a bootstrap marker.
 
 Also:
 
