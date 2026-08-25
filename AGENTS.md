@@ -82,6 +82,8 @@ stale rules) — same list as `docs/GIT_WORKFLOW.md`:
 - `config/agent-roles.conf`
 - `scripts/agent-dispatch.sh`
 - `.claude/skills/`
+- `README.md` (locally-customized skills inventory)
+- `CHANGELOG.md` (template feedback loop)
 
 A mixed PR (feature + carve-out) must be **split** — governance → `dev` and
 fans out; feature → its release branch.
@@ -241,6 +243,7 @@ is just markdown. The load-bearing ones:
 | `/implement` | `.claude/skills/implement/SKILL.md` |
 | `/code-review` | `.claude/skills/code-review/SKILL.md` |
 | `/orchestrate` | `.claude/skills/orchestrate/SKILL.md` |
+| `/ponytail` | `.claude/skills/ponytail/SKILL.md` |
 | `/grill-me` → `/to-spec` → `/to-tickets` | `.claude/skills/{grill-me,to-spec,to-tickets}/SKILL.md` |
 | `/tdd`, `/diagnosing-bugs`, `/handoff`, `/triage` | `.claude/skills/<name>/SKILL.md` |
 | `/ask-matt` (which skill do I want?) | `.claude/skills/ask-matt/SKILL.md` |

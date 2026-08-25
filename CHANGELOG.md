@@ -8,6 +8,40 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## 2026-08-25 — `/ponytail` generation constraint
+
+Distilled from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)
+`@2ed6c52c9d7e5e56942508591085fd45dea277d3`. The upstream plugin cannot reach
+worktree implementers (no skill loader; Grok hooks cannot inject instructions),
+so the ladder is a first-party skill wired into `/implement` and the
+orchestrator's launch prompt — not an always-on `AGENTS.md` dump and not a
+third `/code-review` axis.
+
+- **New first-party skill** `.claude/skills/ponytail/` (`SKILL.md`, shrink
+  checklist `review.md`). Not in `skills-lock.json`.
+  `disable-model-invocation: true`. Repo overrides live in the skill: spec
+  binds capability, ladder binds how; `/tdd` wins tests; designed modules win
+  line-count; process report is not debt. No intensity modes — the skill *is*
+  full behavior (lowest rung that satisfies the spec).
+- **`/implement`** reads the skill before writing (completion criterion lives
+  in the ponytail skill; the rung report goes in the PR body) and runs a
+  shrink pass before round-1 `/code-review`. The shrink pass is not a review
+  round and does not authorize merge.
+- **`implementer-prompt.md`** adds a mandatory Read-first entry and a Report
+  back pointer at the ponytail criterion; `/orchestrate` Verify reads the
+  rung report from the PR body and cross-checks it against the merge; "no
+  hits" greps are re-run on `<merge-sha>^`, not the merge tree.
+- **`code-review`** Standards baseline gains **Reinvented Wheel** (stdlib /
+  platform / already-installed dep). Two axes stay two axes.
+- **Carve-out** now includes `README.md` and `CHANGELOG.md`, so a skills PR
+  is no longer mixed by having to edit the customized-skills inventory and
+  this file.
+
+Do not install the upstream host plugin as the load-bearing path. The
+distilled skill is the only activation path the template depends on.
+
+---
+
 ## 2026-08-24 — `/orchestrate` skill
 
 Ported back from `prop-amm-challenge` (WHI-1251 through WHI-1255). Four consecutive

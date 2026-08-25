@@ -86,7 +86,7 @@ still wrong.
 
 ```
 git fetch origin --prune                         # origin/<base> is stale without this
-gh pr view <N> --repo <owner/repo> --json number,state,baseRefName,mergeCommit
+gh pr view <N> --repo <owner/repo> --json number,state,baseRefName,mergeCommit,body
 git rev-parse <base> origin/<base>               # must be equal, AFTER the fetch above
 git show --stat <merge-sha>                      # squash lanes only (dev, release/v*) --
                                                   # the only lanes an issue self-merges into --
@@ -105,6 +105,29 @@ section is an unmet criterion that no report will volunteer.
 nothing about a **semantic** collision with whatever else landed on the base since this
 branch was cut. Diff the base's own history since branch point and check it against this
 issue's scope, not just the merge state.
+
+The **rung report** lives in the PR body (`body` from the `gh pr view` above),
+not in the implementer's message. It must match
+`.claude/skills/ponytail/SKILL.md` § Completion criterion.
+Missing = unmet criterion. Cross-check against the merge, not just presence:
+every new module (`git show --stat <merge-sha>`) and every added line in the
+deps manifest (`git show <merge-sha> -- pyproject.toml package.json`) must
+appear as a row. A new module with no row, a new dependency claimed at rung 5
+that the manifest does not show, or a rung claim the merge contradicts, is an
+unmet criterion. An explicit "no new module/dep/abstraction, touched: …" claim
+is checked the same way — if the merge added one, the claim is false.
+
+The shrink-pass deletions in that report are a self-report with no post-squash
+artifact to check. Read them for signal; do not treat them as evidence, and do
+not gate on them.
+
+Re-run the implementer's "no hits" greps against the merge's **parent**, never
+the merge itself: `git grep -n '<term>' <merge-sha>^ -- <paths>`. The merge
+tree already contains the new code and will poison a pre-write search;
+`<merge-sha>^` is the base as it stood before this PR. A hit there falsifies a
+rung-2/3/4 "nothing to reuse" claim. (If the hit landed on the base while the
+PR was open, that is still a reusable thing that existed at merge time — raise
+it.)
 
 ## When to intervene
 
