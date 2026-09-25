@@ -77,9 +77,8 @@ git log --oneline <branch-point>..origin/<base> # what landed on the base meanwh
 - The required project checks and the relevant issue checks
   (`docs/GIT_WORKFLOW.md` § 2 Implement) are green, and the evidence belongs to the
   **current** head SHA. Do not ask for the full suite per issue; it runs at the
-  candidate. If the base moved in a way that
-  conflicts textually or semantically, the implementer updates the branch and reruns the
-  affected checks.
+  candidate. If the base moved in a way that conflicts textually or semantically, the
+  implementer updates the branch and reruns the affected checks.
 - MERGEABLE/CLEAN proves no textual conflict, nothing more.
 
 Then merge per `docs/GIT_WORKFLOW.md` § Merge authorization, **one PR at a time from the
@@ -107,9 +106,9 @@ work: an empty or partial diff where new work is claimed is a scope error, not a
 | Stage | What happens |
 | --- | --- |
 | Review 1 | Review H1. No blocking finding → ready. Otherwise → fix batch 1 |
-| Fix batch 1 | Fix issues in the **same Release**, implemented and integrated → verified H2 |
+| Fix batch 1 | Fix issues (version fixes in the **same Release**; governance fixes via `dev`, below), implemented and integrated → verified H2 |
 | Review 2 | Review H2: the original findings and any regressions. Blocking → fix batch 2 |
-| Fix batch 2 | Same Release → verified H3 |
+| Fix batch 2 | Same routing → verified H3 |
 | Review 3 | Review H3. Passes → ready. Still blocking → **blocked**, hand to a human |
 
 - **Budget:** at most 3 complete reviews and 2 automatic fix batches. Only a completed
@@ -122,12 +121,24 @@ work: an empty or partial diff where new work is claimed is a scope error, not a
   a human. Suggestions do not block and do not become tasks automatically. Out-of-scope
   ones go in `docs/DEFERRED_ISSUES.md` with the reason. Never relabel a blocking finding
   as a suggestion.
-- **Fix issues:** one per independent root cause (findings sharing a root cause may share
-  one), in the same Release, built from the standard issue template with complexity. The
-  body carries `Review round`, the finding ids, the candidate SHA and the review evidence.
-  Look up the existing finding → issue mapping in the orchestration document before
-  creating one; retries and resumes must never duplicate. Fixes go implement → PR →
-  handoff → verify → merge like any issue. The original issues stay `Done`.
+- **Fix issues** follow the normal lane rules (`docs/GIT_WORKFLOW.md` § Resolving the base
+  branch). Never create a patch Release for a review round.
+  - **Version fix** (touches anything outside the carve-out): stays in the **original
+    Release** with its `[X.Y.Z]` prefix, and targets the integration branch.
+  - **Governance fix** (touches only carve-out files, e.g. `AGENTS.md` or a skill): no
+    prefix, no Release, targets `dev`. Record it in the orchestration document as an
+    external governance blocker of this release. A version fix that depends on it gets a
+    native `blocked-by`. It needs its one independent pre-merge review, then fan-out into
+    the integration branch. That moves the candidate, which is then re-verified and
+    re-reviewed without resetting the round count.
+  - A fix that spans both lanes is split exactly as the lane rules require.
+
+  One fix issue per independent root cause (findings sharing a root cause may share one),
+  built from the standard issue template with complexity. The body carries
+  `Review round`, the finding ids, the candidate SHA and the review evidence. Look up the
+  existing finding → issue mapping in the orchestration document before creating one;
+  retries and resumes must never duplicate. Fixes go implement → PR → handoff → verify →
+  merge like any issue. The original issues stay `Done`.
 - After each fix batch, run the full acceptance again on the new candidate.
 - **Pass** = no unresolved blocking finding and acceptance valid on **that** SHA.
 - **Moved HEAD:** if a required fan-out or other authorized change moves the candidate,

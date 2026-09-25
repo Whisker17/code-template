@@ -33,8 +33,9 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
      **resolved base**: version-scoped → `release/v{version}`, governance → `dev`,
      hotfix → `main`, never a defaulted `dev`);
    - verifies and merges serially;
-   - then runs the release review loop: at most 3 complete reviews and 2 fix batches, with
-     fixes staying in the same Release.
+   - then runs the release review loop: at most 3 complete reviews and 2 fix batches.
+     Version fixes stay in the original Release; governance-only fixes go through `dev`
+     with their own review and fan-out. No patch Release is created per round.
 
    Standalone `/implement` gets one independent PR review before it may merge. High-risk
    paths, hotfixes and every promotion wait for a human.

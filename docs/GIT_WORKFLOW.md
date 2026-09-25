@@ -158,7 +158,7 @@ Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Revie
          (§ Merge authorization; fail closed)
                       │
                       ▼
-         squash-merge PR → <resolved-base>
+         merge PR → <resolved-base> (lane's strategy)
          fan-out if that base was dev
          tracker: state = Done
          remove worktree + prune branch
@@ -325,8 +325,9 @@ For the human-gated rows, a human reviewer:
 2. Verifies against the latest resolved base before merging (primary clone or a
    clean worktree): run the relevant tests / dry-run
 3. Merges the PR with the lane's strategy ([§ Merge strategy](#merge-strategy-per-lane))
-4. Tracker: set the issue to **`Done`**
-5. Cleans up the local worktree (see below)
+4. Runs the post-merge cleanup below, plus the lane's own follow-ups (fan-out; for a
+   hotfix the tag, deploy and backmerge in [§ Hotfix](#hotfix))
+5. Only then sets the tracker to **`Done`** (merged and cleaned up — not released)
 
 ### Post-merge cleanup (mandatory, in order)
 
@@ -342,7 +343,10 @@ documented exceptions — they are not PR-gated and they push with
    branched): inside the feature worktree,
    `git merge origin/<resolved-base>`, resolve, rerun the affected tests,
    and `git push`. The PR must read **MERGEABLE / CLEAN** before you merge.
-1. **Squash-merge + drop the remote branch:** `gh pr merge <N> --squash --delete-branch`
+1. **Merge with the lane's strategy + drop the remote branch**
+   ([§ Merge strategy](#merge-strategy-per-lane)): `gh pr merge <N> --squash
+   --delete-branch` into `dev` or a long-lived `release/v*`; `--merge` (a merge commit)
+   for `hotfix/*` or `release/*` → `main` and a finished integration branch → `dev`
 2. **Remove the worktree:** `git worktree remove <worktree-path>` then
    `git worktree prune`
 3. **Delete the local branch:** `git branch -D feat/{{ISSUE_PREFIX_LOWER}}-123-topic`
@@ -366,7 +370,7 @@ documented exceptions — they are not PR-gated and they push with
 | Implementing | `In Progress` | worktree + branch exist, no PR (or draft) |
 | PR open, awaiting verification / merge | **`In Review`** | open PR → resolved base |
 | Waiting for a human, or verification failed | **`In Review`**, reason recorded on the issue | open PR, not merged |
-| Merged | **`Done`** | squash-merged into the resolved base, fan-out done if that base was `dev`, worktree removed |
+| Merged | **`Done`** | merged into the resolved base with the lane's strategy, cleanup done, fan-out done if that base was `dev`, worktree removed |
 | Abandoned | `Canceled` | PR closed, worktree removed, not merged |
 
 Triage labels (`ready-for-agent` / `ready-for-human` / …) are **orthogonal** to workflow
@@ -694,7 +698,7 @@ Implementing agents (including unattended ones) **must**:
 
 1. Change code only inside a worktree — never commit directly to `dev` in the primary clone
 2. Move the tracker in lockstep: `In Progress` on start → `In Review` when the PR opens →
-   `Done` only after confirming the squash-merge
+   `Done` only after confirming the merge and the post-merge cleanup
    (under `/orchestrate` the orchestrator owns these transitions and the implementer
    reports facts — `docs/agents/issue-tracker.md` § Issue lifecycle)
 3. Resolve the PR base from the [resolution table](#resolving-the-base-branch)

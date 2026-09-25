@@ -34,7 +34,9 @@ evidence; an independent reviewer examines the integrated release.
     finished `release/v*` → `dev` wait for a human;
   - `release/v*` → `dev` also needs a passed release review on the current SHA.
 - **Release review loop** (`/orchestrate` § 3): at most 3 complete reviews and 2
-  automatic fix batches. Fix issues stay in the same Release. Findings are either blocking
+  automatic fix batches. Version fix issues stay in the original Release;
+  governance-only fixes carry no Release and go to `dev` (independent review, fan-out),
+  recorded as external blockers. No patch Release per round. Findings are either blocking
   or suggestions. Evidence is bound to SHAs. Release state lives in one
   `Release X.Y.Z — orchestration` Linear document.
 - **Issues** gain a required `## Execution` section (complexity `medium` | `high`, reason,

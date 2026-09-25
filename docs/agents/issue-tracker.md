@@ -178,7 +178,8 @@ linked from the issues it concerns. It records:
 - workflow contract version (`v0.2`), and which issues, if any, started under an older one;
 - the planned issue set, the fixed review baseline **B** and the integration branch;
 - each review round: candidate SHA **H**, reviewer role/model/effort, outcome;
-- every finding id → the fix issue that owns it (or its disposition);
+- every finding id → the fix issue that owns it (or its disposition), including
+  governance fixes tracked as external blockers (no Release, routed to `dev`);
 - current blocker, if any.
 
 Find the document tools with
