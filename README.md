@@ -94,8 +94,9 @@ per-project.
 >   authority from `docs/GIT_WORKFLOW.md`; no TDD mandate, no built-in review loop
 > - `code-review/SKILL.md` — one fresh-context `REVIEWER` covering every aspect; PR and
 >   release-snapshot modes; blocking/suggestion finding format
-> - `to-spec/SKILL.md` — `docs/DESIGN.md` by default, publishes only on instruction, no
->   mandatory user-story list
+> - `to-spec/SKILL.md` — fills the numbered `docs/DESIGN.md` skeleton in place (stable
+>   `§` references), free-form docs only under `docs/references/`; publishes only on
+>   instruction
 > - `to-tickets/SKILL.md` — uses `docs/agents/issue-template.md` (complexity, scope,
 >   native relations); no local-file fallback
 > - `grill-me/SKILL.md` — self-contained (the separate `grilling` skill is gone)
