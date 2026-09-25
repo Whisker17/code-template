@@ -33,19 +33,22 @@ Ask **one at a time** ([interview]):
 6. **Stack** — keep the default Python/uv layer, or replace it? If replacing, agree on
    the equivalents (package manager, lint, typecheck, test commands) and rewrite the
    stack-specific files (`pyproject.toml`, `main.py`, `tests/`, the Build/test/run
-   section of AGENTS.md) accordingly.
+   section of AGENTS.md) accordingly. Keep `tests/test_agent_dispatch.py` either way: it
+   tests the dispatcher, not the stack, and runs with Python + pytest alone
+   (`uv run --no-project --with pytest python -m pytest tests/test_agent_dispatch.py`).
 7. **Docker** — keep `Dockerfile` + `docker-compose.yml` skeletons, or delete both?
 8. **Template repo URL** (for the feedback-loop pointer; default to the URL in
    `git remote -v` before you change it) → `TEMPLATE_REPO_URL`
-9. **Agent roles** — which runtime is implementing, and which agent reviews it. Read
-   `docs/agents/runtime.md` § Choosing a reviewer first, then ask. The default in
-   `config/agent-roles.conf` assumes Claude Code implementing with `claude -p --model
-   opus` reviewing. Two things to settle with the user:
-   - Their implementing runtime → `IMPLEMENTER_LABEL`
-   - Their reviewer. **Push for cross-vendor** (e.g. Codex implements, `claude` CLI
-     reviews) — independent failure modes catch more than a stronger same-vendor model.
-     Correct `REVIEWER_CMD` / `ESCALATOR_CMD` / `EXPLORER_CMD` accordingly, and verify
-     each CLI's real flags with `--help` rather than trusting the commented examples.
+9. **Agent roles** — read `docs/agents/runtime.md` first, then settle, for each of
+   `ORCHESTRATOR`, `IMPLEMENTER` and `REVIEWER`: the runtime (`claude` | `codex` | `pi`),
+   the **exact** model ID that runtime accepts, and the runtime-native values for
+   `medium` and `high` effort. **Push for a cross-vendor reviewer** — independent failure
+   modes catch more than a stronger same-vendor model. The template ships every role
+   unconfigured; the recorded intent (implementer Claude Opus 5.5, reviewer GPT-6 Astra)
+   is not a verified value. Take IDs and effort values from the runtime itself (its
+   `--help`, model list, or current config), not from memory or a catalog listing alone,
+   and write them into `config/agent-roles.conf`. If a runtime cannot do one of the
+   efforts, leave that mapping unset — dispatch then fails closed for it.
 
 ## 2. Replace placeholders
 
@@ -61,15 +64,13 @@ Then verify (SETUP.md itself is exempt — it gets deleted in step 6):
 ```bash
 grep -rn '{{' --include='*.md' --include='*.toml' --include='*.yml' --include='*.py' \
   --exclude=SETUP.md --exclude-dir=.git . \
-  | grep -v 'improve-codebase-architecture/HTML-REPORT.md' \
   | grep -v 'orchestrate/implementer-prompt.md'
 ```
 
-This must return nothing. **`.claude/` is deliberately in scope** — vendored skills
-carry `{{ISSUE_PREFIX}}` / `{{HIGH_RISK_PATHS}}` markers too, and excluding that
-directory is how unported values survive bootstrap. Two legitimate exceptions:
-`HTML-REPORT.md`'s `{{repo name}}`, and `orchestrate/implementer-prompt.md`'s
-`{{PLACEHOLDER}}` launch-template slots — neither is a bootstrap marker.
+This must return nothing. **`.claude/` is deliberately in scope** — skills can carry
+bootstrap markers too, and excluding that directory is how unported values survive
+bootstrap. One legitimate exception: `orchestrate/implementer-prompt.md`'s
+`{{PLACEHOLDER}}` launch-template slots, which are not bootstrap markers.
 
 Also:
 
@@ -131,16 +132,34 @@ uv run ruff check .
 
 (Adjust if the stack was replaced in step 1.6.)
 
-Then verify the agent role mapping from step 1.9 resolves:
+Then verify the agent roles from step 1.9. Configuration is **done only when a real
+call succeeds** — `--probe` alone checks the file and `PATH`, not authentication:
 
 ```bash
-scripts/agent-dispatch.sh --probe
+scripts/agent-dispatch.sh --probe            # every role must report ok
+for role in ORCHESTRATOR IMPLEMENTER REVIEWER; do
+  printf 'Reply with exactly: DISPATCH-OK\n' \
+    | scripts/agent-dispatch.sh "$role" - --effort high   # must print DISPATCH-OK, exit 0
+done
+printf 'Reply with exactly: DISPATCH-OK\n' \
+  | scripts/agent-dispatch.sh IMPLEMENTER - --effort medium
 ```
 
-Every role must report `ok`. A `UNUSABLE` role means `/implement`'s review loop cannot run
-in this environment — fix the mapping now, or tell the user plainly that PRs will have to
-stop at `In Review` for human review until it is fixed (`docs/agents/runtime.md`
-§ Degraded mode).
+A role that fails stays failed: fix the mapping, or tell the user plainly that work
+needing it stops at `In Review` and releases stay blocked (`docs/agents/runtime.md`
+§ Reviewer unavailable). Never paper over it by switching model or effort silently.
+
+Finally, confirm agents actually load `AGENTS.md` — the template ships no `CLAUDE.md`:
+
+- **Claude Code** reads `AGENTS.md` natively from **v2.1.281** (`claude --version`). On an
+  older client, tell the user to upgrade; a project that must stay on one may add its own
+  `CLAUDE.md` import, outside the template's supported setup.
+- A `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` in the repo or any ancestor
+  directory can stop `AGENTS.md` from loading. Point out any you find; the user may set
+  `claude-md-and-agents-md` in their own settings. Do not edit user or managed settings
+  yourself, and do not assume a repo setting overrides them.
+- Start a fresh session and check with `/memory` (or the runtime's equivalent) that
+  `AGENTS.md` is listed by path. Report the result; do not assume it.
 
 ## 5. Hand off to the design phase
 
