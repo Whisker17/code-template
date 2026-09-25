@@ -33,8 +33,8 @@ Implement one issue (or the bounded work the user describes) end to end. You are
   - the **required project checks** (CI, and what `AGENTS.md` marks for every merge)
     always;
   - the **relevant issue checks** always;
-  - the **full suite** only in standalone mode. Under `/orchestrate` it runs at the
-    release candidate instead.
+  - the **full suite** for standalone, governance and hotfix work. Only an ordinary
+    version or bootstrap issue under `/orchestrate` defers it to the release candidate.
 - If the base advanced, update the branch and rerun the affected checks. An earlier
   HEAD's pass does not count.
 

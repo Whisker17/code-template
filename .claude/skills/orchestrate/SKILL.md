@@ -76,8 +76,9 @@ git log --oneline <branch-point>..origin/<base> # what landed on the base meanwh
   missing artifact or doc section counts as an unmet criterion.
 - The required project checks and the relevant issue checks
   (`docs/GIT_WORKFLOW.md` § 2 Implement) are green, and the evidence belongs to the
-  **current** head SHA. Do not ask for the full suite per issue; it runs at the
-  candidate. If the base moved in a way that conflicts textually or semantically, the
+  **current** head SHA. For ordinary version and bootstrap issues, do not ask for the
+  full suite per issue; it runs at the candidate. Governance and hotfix PRs keep their own
+  full-suite gate. If the base moved in a way that conflicts textually or semantically, the
   implementer updates the branch and reruns the affected checks.
 - MERGEABLE/CLEAN proves no textual conflict, nothing more.
 

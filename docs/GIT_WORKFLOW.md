@@ -159,9 +159,9 @@ Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Revie
                       │
                       ▼
          merge PR → <resolved-base> (lane's strategy)
+         remove worktree + prune branch
          fan-out if that base was dev
          tracker: state = Done
-         remove worktree + prune branch
 ```
 
 ### 1. Start: new worktree off the resolved base
