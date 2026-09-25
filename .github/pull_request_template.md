@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- What this PR does and why -->
+<!-- What this PR does and why. Tracker issue: {{ISSUE_PREFIX}}-NNN -->
 
 ## Base branch
 
@@ -12,12 +12,32 @@ Resolved from `docs/GIT_WORKFLOW.md` § Resolving the base branch.
 - [ ] `dev` (finished version-integration `release/v*` merge-back) → **merge commit**,
       never squash — **human gate**
 - [ ] `main` (hotfix, or temporary `release/*` cut) → merge with a **merge commit**,
-      never squash
+      never squash — **human gate**
 
 <!-- Signals this base was derived from: title prefix `[X.Y.Z]` / tracker
 Release / hotfix label / carve-out paths. Targeting `main`? If
 `git log origin/main..origin/dev` holds anything that must not ship yet,
 this has to be a hotfix off `origin/main`, not a release. -->
+
+## Merge authorization
+
+Row of `docs/GIT_WORKFLOW.md` § Merge authorization this PR is under:
+
+- [ ] Ordinary version issue → integration branch, under `/orchestrate` (release review later)
+- [ ] Bootstrap issue → `dev`, under `/orchestrate`
+- [ ] Governance → `dev` / standalone `/implement` — independent review passed on commit: `<sha>`
+- [ ] Human gate (high-risk path, hotfix, `release/*` → `main`, finished `release/v*` → `dev`)
+
+<!-- Finished `release/v*` → `dev`: link the `Release X.Y.Z — orchestration` document,
+baseline B, reviewed candidate H and the final review round. -->
+
+## Evidence
+
+- Commit SHA verified:
+- Commands and results (actual output or a link, not "tests pass"):
+- Artifacts (reports, logs, screenshots), if any:
+- Role / model / effort used:
+- New dependency or significant abstraction, and why it is needed (omit if none):
 
 ## Fan-out (any PR landing on `dev`)
 
@@ -44,9 +64,9 @@ this has to be a hotfix off `origin/main`, not a release. -->
 - [ ] hotfix
 - [ ] release
 
-## Test plan
+## Checks
 
-- [ ] Local tests run (`uv run pytest` or the relevant subset)
+- [ ] Relevant tests / lint run (`uv run pytest` or the relevant subset) on the final HEAD
 - [ ] If this touches {{HIGH_RISK_PATHS}}: verification approach documented (dry-run /
       staging / mocked)
 - [ ] No new tunable parameters outside `docs/DESIGN.md` §2, or the deviation is
@@ -54,5 +74,5 @@ this has to be a hotfix off `origin/main`, not a release. -->
 
 ## Notes
 
-<!-- Risks, rollback plan, follow-up TODOs. Deferred review findings go to
-docs/DEFERRED_ISSUES.md in this PR. -->
+<!-- Risks, rollback plan, follow-up TODOs. Review findings consciously left unfixed
+go to docs/DEFERRED_ISSUES.md in this PR, with the reason. -->
