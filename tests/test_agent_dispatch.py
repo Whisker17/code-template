@@ -15,10 +15,12 @@ import pytest
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "agent-dispatch.sh"
 BASH = shutil.which("bash") or "/bin/bash"
 
-# A fake runtime: records argv (one per line) and stdin, exits with $FAKE_EXIT.
+# A fake runtime: records argv (one per line), stdin and the content of any @file
+# argument (pi's prompt), then exits with $FAKE_EXIT.
 FAKE = """#!/bin/sh
 printf '%s\\n' "$(basename "$0")" "$@" > "$FAKE_LOG/argv"
 cat > "$FAKE_LOG/stdin"
+for a in "$@"; do case "$a" in @*) cat "${a#@}" > "$FAKE_LOG/atfile" ;; esac; done
 echo call >> "$FAKE_LOG/calls"
 echo "fake-output"
 exit "${FAKE_EXIT:-0}"
@@ -113,7 +115,7 @@ def test_codex_reads_stdin_prompt(tmp_path, env):
 
 
 def test_pi_gets_prompt_as_file_argument_including_spooled_stdin(tmp_path, env, prompt):
-    write_conf(tmp_path, env, ORCHESTRATOR_EXTRA_ARGS="--no-session")
+    write_conf(tmp_path, env)
     result = run(env, "ORCHESTRATOR", str(prompt), "--effort", "high")
     assert result.returncode == 0, result.stderr
     assert argv(env) == [
@@ -123,13 +125,15 @@ def test_pi_gets_prompt_as_file_argument_including_spooled_stdin(tmp_path, env, 
         "prov/orch-model",
         "--thinking",
         "high",
-        "--no-session",
         f"@{prompt}",
     ]
-    result = run(env, "ORCHESTRATOR", "-", "--effort", "high", stdin="spooled\n")
+    assert (Path(env["FAKE_LOG"]) / "atfile").read_text() == prompt.read_text()
+    result = run(env, "ORCHESTRATOR", "-", "--effort", "high", stdin="spooled prompt\n")
     assert result.returncode == 0, result.stderr
     spool = argv(env)[-1]
-    assert spool.startswith("@") and not Path(spool[1:]).exists()  # cleaned up
+    # The child read the piped prompt from the spool file, which is removed afterwards.
+    assert (Path(env["FAKE_LOG"]) / "atfile").read_text() == "spooled prompt\n"
+    assert spool.startswith("@") and not Path(spool[1:]).exists()
 
 
 @pytest.mark.parametrize(
@@ -155,7 +159,9 @@ def test_usage_errors_exit_2_without_calling(tmp_path, env, args):
         ("IMPLEMENTER", {"IMPLEMENTER_RUNTIME": "gemini"}, "high", "unknown runtime"),
         # REVIEWER maps only high: medium must fail, not silently run at high or default.
         ("REVIEWER", {}, "medium", "REVIEWER_EFFORT_MEDIUM is unset"),
-        ("REVIEWER", {"REVIEWER_EXTRA_ARGS": "--model other"}, "high", "must not set model"),
+        ("REVIEWER", {"REVIEWER_MODEL": "-m"}, "high", "single plain token"),
+        ("REVIEWER", {"REVIEWER_MODEL": "rev-model\t-m other"}, "high", "single plain token"),
+        ("REVIEWER", {"REVIEWER_EFFORT_HIGH": "x' -c model='o"}, "high", "single plain token"),
         ("ORCHESTRATOR", {"ORCHESTRATOR_MODEL": "prov/m:low"}, "high", "embeds a thinking"),
     ],
 )
@@ -164,6 +170,33 @@ def test_unavailable_role_exits_3_without_calling(tmp_path, env, role, overrides
     result = run(env, role, "-", "--effort", effort)
     assert result.returncode == 3, result.stderr
     assert reason in result.stderr
+    assert calls(env) == 0
+
+
+@pytest.mark.parametrize("key", ["EXTRA_ARGS", "CMD"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "-m\tother-model",  # tab-separated model override
+        "--model other-model",
+        "\n--model=other-model",
+        "  --resume  last",  # session reuse breaks the fresh context
+        "--continue",
+        "claude -p --model opus",  # a v0.1-style _CMD line
+    ],
+)
+def test_free_form_flags_cannot_override_model_or_session(tmp_path, env, key, value):
+    write_conf(
+        tmp_path,
+        env,
+        REVIEWER_RUNTIME="pi",
+        REVIEWER_MODEL="prov/review-model",
+        REVIEWER_EFFORT_HIGH="high",
+        **{f"REVIEWER_{key}": value},
+    )
+    result = run(env, "REVIEWER", "-", "--effort", "high", stdin="x")
+    assert result.returncode == 3, (result.stdout, result.stderr)
+    assert f"REVIEWER_{key} is not supported" in result.stderr
     assert calls(env) == 0
 
 

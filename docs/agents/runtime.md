@@ -45,6 +45,11 @@ scripts/agent-dispatch.sh --probe [ROLE ...]
   on `PATH`: exit `3`. Any other non-zero exit is the runtime's own (authentication and call
   failures included), returned unchanged. The dispatcher never retries, never swaps in
   another model and never lowers the effort.
+- The adapter builds the **whole** argv; there is no free-form flag or command field, so
+  nothing can override the model, the effort or the fresh session (no resume/continue).
+  Model and effort values must be single plain tokens. Permissions and sandboxing belong
+  in the runtime's own config. A leftover `<ROLE>_CMD` / `<ROLE>_EXTRA_ARGS` fails with
+  exit `3`.
 - The dispatched process runs in the caller's working directory (for an implementer, its
   worktree); its result is stdout.
 - No secrets in the config: authentication is the runtime's own login or environment.

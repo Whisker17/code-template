@@ -39,6 +39,18 @@ unavailable() { echo "agent-dispatch: $*" >&2; return 3; }
 
 var() { eval "printf '%s' \"\${$1:-}\""; }
 
+# A model or effort value is one plain token: no whitespace, quotes or leading dash,
+# so it can never be read as an extra flag or break out of the codex -c value.
+plain_value() {
+    local value
+    value="$(var "$2")"
+    case "$value" in
+        -*|*[!A-Za-z0-9._/:@+=-]*)
+            unavailable "$1: $2 must be a single plain token, got '$value'"
+            return 3 ;;
+    esac
+}
+
 effort_key() {
     case "$2" in
         medium) printf '%s_EFFORT_MEDIUM' "$1" ;;
@@ -74,15 +86,18 @@ check_role() {
             unavailable "$role: effort '$effort' is not supported ($key is unset in $CONF)"
             return 3
         }
+        plain_value "$role" "$key" || return 3
     fi
-    # Model and effort come only from the mapping above, never from extra args.
-    local extra
-    extra="$(var "${role}_EXTRA_ARGS")"
-    case " $extra " in
-        *" --model"*|*" -m "*|*" --effort"*|*" --thinking"*|*"reasoning_effort"*)
-            unavailable "$role: ${role}_EXTRA_ARGS must not set model or effort ('$extra')"
-            return 3 ;;
-    esac
+    plain_value "$role" "${role}_MODEL" || return 3
+    # The argv is fixed by the adapter below: no operator flags can override the
+    # model, the effort or the fresh session. Refuse keys that used to allow it.
+    local legacy
+    for legacy in "${role}_EXTRA_ARGS" "${role}_CMD"; do
+        [ -z "$(var "$legacy")" ] || {
+            unavailable "$role: $legacy is not supported; configure permissions or sandbox in the runtime's own config (docs/agents/runtime.md)"
+            return 3
+        }
+    done
     command -v "$runtime" >/dev/null 2>&1 || {
         unavailable "$role: '$runtime' is not on PATH"
         return 3
@@ -136,15 +151,11 @@ check_role "$ROLE" "$EFFORT" || exit 3
 RUNTIME="$(var "${ROLE}_RUNTIME")"
 MODEL="$(var "${ROLE}_MODEL")"
 NATIVE_EFFORT="$(var "$(effort_key "$ROLE" "$EFFORT")")"
-# Word-split deliberately: operator-supplied flags (permissions, sandbox, ...).
-read -r -a EXTRA <<< "$(var "${ROLE}_EXTRA_ARGS")"
-
 case "$RUNTIME" in
     claude) ARGV=(claude -p --model "$MODEL" --effort "$NATIVE_EFFORT") ;;
     codex)  ARGV=(codex exec --model "$MODEL" -c "model_reasoning_effort=\"$NATIVE_EFFORT\"") ;;
     pi)     ARGV=(pi -p --model "$MODEL" --thinking "$NATIVE_EFFORT") ;;
 esac
-ARGV+=("${EXTRA[@]+"${EXTRA[@]}"}")
 
 if [ "$RUNTIME" = "pi" ]; then
     # pi takes the prompt as an @file argument, not on stdin.
