@@ -74,7 +74,10 @@ git log --oneline <branch-point>..origin/<base> # what landed on the base meanwh
 
 - Base, head and commits match the issue; the diff stays inside the expected scope; any
   missing artifact or doc section counts as an unmet criterion.
-- The evidence belongs to the **current** head SHA. If the base moved in a way that
+- The required project checks and the relevant issue checks
+  (`docs/GIT_WORKFLOW.md` § 2 Implement) are green, and the evidence belongs to the
+  **current** head SHA. Do not ask for the full suite per issue; it runs at the
+  candidate. If the base moved in a way that
   conflicts textually or semantically, the implementer updates the branch and reruns the
   affected checks.
 - MERGEABLE/CLEAN proves no textual conflict, nothing more.

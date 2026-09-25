@@ -29,8 +29,14 @@ Implement one issue (or the bounded work the user describes) end to end. You are
 - Changes with branching, parsing, concurrency, money or security logic leave a runnable
   check that would fail if the behaviour broke. Prefer checks of external behaviour over
   assertions that restate the implementation. E2E and module tests are both fine.
-- Run the full test suite and lint once on the final HEAD. If the base advanced, update
-  the branch and rerun the affected checks — an earlier HEAD's pass does not count.
+- On the final HEAD, use the three tiers of `docs/GIT_WORKFLOW.md` § 2 Implement:
+  - the **required project checks** (CI, and what `AGENTS.md` marks for every merge)
+    always;
+  - the **relevant issue checks** always;
+  - the **full suite** only in standalone mode. Under `/orchestrate` it runs at the
+    release candidate instead.
+- If the base advanced, update the branch and rerun the affected checks. An earlier
+  HEAD's pass does not count.
 
 ## PR and handoff
 

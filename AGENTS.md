@@ -70,6 +70,9 @@ issue fits not exactly one row, **stop and surface it**.
   no Release.
 - Right after creating the worktree: `git merge-base HEAD origin/<base>` must equal
   `git rev-parse origin/<base>`; then `git config core.hooksPath .githooks` (per worktree).
+- Checks come in three tiers (`docs/GIT_WORKFLOW.md` § 2 Implement): required project
+  checks always, relevant issue checks for every PR, and the full suite at release
+  candidates and for PRs no release acceptance covers.
 - The PR body states the resolved base and the signals it came from, the evidence
   (commit SHA, commands, results) and the role/model/effort used.
 - Tracker moves with the PR: `In Progress` → `In Review` (PR open) → `Done` (merged and
@@ -79,12 +82,12 @@ issue fits not exactly one row, **stop and surface it**.
 
 | Work | Before merge | Agent may merge? |
 | --- | --- | --- |
-| Ordinary version issue → existing integration branch, under `/orchestrate` | Acceptance + required checks on the final HEAD; orchestrator verified the evidence | Yes — review happens at release level |
+| Ordinary version issue → existing integration branch, under `/orchestrate` | Issue acceptance, required project checks and relevant issue checks on the final HEAD; orchestrator verified the evidence | Yes — review happens at release level |
 | Bootstrap issue → `dev` (no production tag yet), under `/orchestrate` | Same | Yes — first release still gets a full release review |
-| Governance → `dev`; standalone `/implement` | Required checks + one independent PR review passed on the final commit | Yes, then fan out |
-| Touches **{{HIGH_RISK_PATHS}}** | Required checks | **No** — human |
-| `hotfix/*` → `main` | Checks + independent review | **No** — human |
-| Finished `release/v*` → `dev` | Full acceptance + passed release review on the current SHA | **No** — human |
+| Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and the full suite, plus one independent PR review passed on the final commit | Yes, then fan out |
+| Touches **{{HIGH_RISK_PATHS}}** | Its lane's checks + documented verification | **No** — human |
+| `hotfix/*` → `main` | Required and relevant checks, full suite, independent review | **No** — human |
+| Finished `release/v*` → `dev` | Full suite (complete acceptance) + passed release review on the current SHA | **No** — human |
 | `release/*` → `main` | Release flow | **No** — human |
 
 No waiver of the human rows is in force; a waiver takes the shape in
