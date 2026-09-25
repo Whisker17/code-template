@@ -8,6 +8,64 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## 2026-09-25 — v0.2.0: lightweight implementation and release orchestration (WHI-1491)
+
+Implements `docs/references/v0.2.0-design-spec.md`. Process weight moves from every issue
+to the release: designers state goal, constraints, dependencies and acceptance; the
+implementer builds within bounds; the orchestrator schedules, integrates and checks
+evidence; an independent reviewer examines the integrated release.
+
+- **Roles and dispatch.** Roles are `ORCHESTRATOR`, `IMPLEMENTER` and `REVIEWER`.
+  `ESCALATOR` and `EXPLORER` are gone. `config/agent-roles.conf` now holds, per role,
+  `_RUNTIME` (`claude` | `codex` | `pi`), `_MODEL` (the only place a model ID lives), and
+  `_EFFORT_MEDIUM` / `_EFFORT_HIGH`. `scripts/agent-dispatch.sh <ROLE> <prompt|-> --effort
+  <medium|high>` translates these into runtime flags and fails closed on anything unknown
+  or unconfigured (exit 2 or 3). It never substitutes a model, never lowers the effort, and
+  passes the runtime's exit code through unchanged. `--probe` is explicitly static. The
+  shipped config is unconfigured on purpose; SETUP verifies it with a real call per role.
+  New `tests/test_agent_dispatch.py` covers argv, stdin and error behaviour with fake
+  runtimes (no model calls).
+- **Merge authorization** (`docs/GIT_WORKFLOW.md` § 4) replaces "three review rounds +
+  escalation authorize a self-merge":
+  - ordinary version issues merge into their integration branch under `/orchestrate` on
+    acceptance and checks;
+  - governance and standalone `/implement` need one independent PR review;
+  - high-risk paths, **every `hotfix/*` → `main`** (newly a human gate), promotions and a
+    finished `release/v*` → `dev` wait for a human;
+  - `release/v*` → `dev` also needs a passed release review on the current SHA.
+- **Release review loop** (`/orchestrate` § 3): at most 3 complete reviews and 2
+  automatic fix batches. Fix issues stay in the same Release. Findings are either blocking
+  or suggestions. Evidence is bound to SHAs. Release state lives in one
+  `Release X.Y.Z — orchestration` Linear document.
+- **Issues** gain a required `## Execution` section (complexity `medium` | `high`, reason,
+  expected scope). It drives effort and shared-scope serialization.
+- **No mandatory TDD, per-issue review loop, ponytail rung report or shrink pass.** Tests
+  are chosen to catch real failures; full acceptance runs at the release candidate.
+- **Default distribution is 8 skills:** grill-me, to-spec, to-tickets, implement,
+  orchestrate, code-review, handoff and ponytail. Removed: ask-matt, codebase-design,
+  diagnosing-bugs, domain-modeling, grill-with-docs, grilling (folded into grill-me),
+  improve-codebase-architecture, prototype, research, resolving-merge-conflicts,
+  setup-matt-pocock-skills, tdd, teach, triage, wayfinder and writing-great-skills; also
+  `orchestrate/traps.md` and `ponytail/review.md`. `skills-lock.json` is trimmed to match.
+  The Linear wayfinding section and the "re-run setup to swap tracker" rung are gone:
+  with no tracker available, work is blocked; there is no shadow tracker.
+- **`AGENTS.md` is the single entry.** The `CLAUDE.md` symlink is removed (Claude Code ≥
+  v2.1.281 loads `AGENTS.md`; SETUP checks this with `/memory`). `AGENTS.md` shrank from
+  269 lines / 13 444 bytes to under 160 lines / about 8.3 KB. Full Git detail stays in
+  `GIT_WORKFLOW.md`.
+- **`docs/TRAPS.md`** is now an on-demand reference. Its always-needed rules (`gh
+  --repo/--head`, three-dot non-empty diffs, `--probe` ≠ real call, empty reviewer
+  output) moved into the authoritative docs. No entry was removed.
+
+**Landing exception (this change only).** On the owner's decision, v0.2 lands as one PR from
+`origin/main` into `main`. This waives, for WHI-1491 only, the base-routing table and the
+governance/non-governance split; it is not an agent merge. Downstream routing is unchanged.
+
+**Rollback:** revert this change with a normal revert PR. Do not reset branches or delete
+review history.
+
+---
+
 ## 2026-08-25 — `/ponytail` generation constraint
 
 Distilled from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)

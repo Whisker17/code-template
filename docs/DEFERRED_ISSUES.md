@@ -47,6 +47,21 @@ soon — anything touching {{HIGH_RISK_PATHS}} defaults to at least High), **Med
   Fix: scope those greps to exclude `docs/references/`, then commit the doc. Until then
   the reasoning behind the workflow lives only in commit messages.
 
+- **Dispatcher changes and their test live in different Git lanes** (Low, WHI-1491).
+  `scripts/agent-dispatch.sh` and `config/agent-roles.conf` are carve-out (governance →
+  `dev`), but `tests/test_agent_dispatch.py` is not. A future dispatcher change plus its
+  test is therefore a mixed PR that must be split. Deferred because widening the
+  carve-out is an owner decision. v0.2 itself landed under a one-off owner routing
+  exception.
+- **Runtime adapter flags are unverified by real calls** (Medium, WHI-1491).
+  `scripts/agent-dispatch.sh` builds `claude -p --model M --effort E`,
+  `codex exec --model M -c model_reasoning_effort="E" -` and
+  `pi -p --model M --thinking E @file` from each CLI's `--help` (and, for codex, an
+  existing user config key). The tests use fake runtimes. Nothing yet proves that each
+  runtime accepts these flags or that authentication works. That is SETUP step 4's real
+  `DISPATCH-OK` call per role. Fix: run it in a configured environment and correct any
+  adapter that fails.
+
 ---
 
 ## Resolved
