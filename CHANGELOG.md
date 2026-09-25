@@ -68,7 +68,7 @@ evidence; an independent reviewer examines the integrated release.
   with no tracker available, work is blocked; there is no shadow tracker.
 - **`AGENTS.md` is the single entry.** The `CLAUDE.md` symlink is removed (Claude Code ≥
   v2.1.281 loads `AGENTS.md`; SETUP checks this with `/memory`). `AGENTS.md` shrank from
-  269 lines / 13 444 bytes to under 160 lines / about 8.3 KB. Full Git detail stays in
+  269 lines / 13 444 bytes to 158 lines / 8 679 bytes. Full Git detail stays in
   `GIT_WORKFLOW.md`.
 - **`docs/TRAPS.md`** is now an on-demand reference. Its always-needed rules (`gh
   --repo/--head`, three-dot non-empty diffs, `--probe` ≠ real call, empty reviewer
