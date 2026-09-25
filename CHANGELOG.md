@@ -21,7 +21,10 @@ evidence; an independent reviewer examines the integrated release.
   `_EFFORT_MEDIUM` / `_EFFORT_HIGH`. `scripts/agent-dispatch.sh <ROLE> <prompt|-> --effort
   <medium|high>` translates these into runtime flags and fails closed on anything unknown
   or unconfigured (exit 2 or 3). It never substitutes a model, never lowers the effort, and
-  passes the runtime's exit code through unchanged. `--probe` is explicitly static. The
+  passes the runtime's exit code through unchanged. The adapter builds the whole argv:
+  there is no free-form flag or command field (a leftover `_CMD` / `_EXTRA_ARGS` fails
+  closed), so model, effort and the fresh session cannot be overridden. `--probe` is
+  explicitly static. The
   shipped config is unconfigured on purpose; SETUP verifies it with a real call per role.
   New `tests/test_agent_dispatch.py` covers argv, stdin and error behaviour with fake
   runtimes (no model calls).
@@ -41,8 +44,20 @@ evidence; an independent reviewer examines the integrated release.
   `Release X.Y.Z — orchestration` Linear document.
 - **Issues** gain a required `## Execution` section (complexity `medium` | `high`, reason,
   expected scope). It drives effort and shared-scope serialization.
-- **No mandatory TDD, per-issue review loop, ponytail rung report or shrink pass.** Tests
-  are chosen to catch real failures; full acceptance runs at the release candidate.
+- **No mandatory TDD, per-issue review loop, ponytail rung report or shrink pass.**
+  Verification has three tiers (`GIT_WORKFLOW.md` § 2):
+  - required project checks, always;
+  - relevant issue checks, for every PR;
+  - the full suite, including full E2E, at release candidates and fix batches, and for
+    governance, standalone and hotfix PRs.
+- **Linear:** `docs/agents/issue-tracker.md` lists the reference MCP calls:
+  - `list_issues` paging, then `get_issue` with `includeRelations` and `includeReleases`;
+  - `save_issue` with `setReleases`, and `blocks` / `blockedBy`;
+  - `list_documents` filtered by `projectId`, and `save_document`.
+
+  Each call is marked exercised or schema-verified.
+- **`/to-spec`** fills the numbered `docs/DESIGN.md` skeleton in place, so `§` references
+  stay stable.
 - **Default distribution is 8 skills:** grill-me, to-spec, to-tickets, implement,
   orchestrate, code-review, handoff and ponytail. Removed: ask-matt, codebase-design,
   diagnosing-bugs, domain-modeling, grill-with-docs, grilling (folded into grill-me),

@@ -38,16 +38,39 @@ on it. Do not guess from a field name. A write you could not confirm is reported
 done.
 
 The rest of this file names Linear MCP tools (namespace `linear`); under rung 2, read each
-as its GraphQL equivalent. Core tools:
+as its GraphQL equivalent. Tool names and argument shapes differ between servers and
+versions, so **discover the schema first** and use the calls below only where it matches.
+
+### Reference calls (Linear MCP)
+
+These were checked against the reference Linear MCP server. "Exercised" means a real call
+succeeded; "schema-verified" means the argument or field was confirmed in the tool schema
+but not called.
+
+| Need | Call | Status |
+| --- | --- | --- |
+| Page through a project's or Release's issues | `list_issues({ project, release, limit, cursor })` — repeat with the returned `cursor` while `hasNextPage` | exercised |
+| One issue with its Release and native relations | `get_issue({ id, includeRelations: true, includeReleases: true })` → `releases[]`, `relations.blocks` / `relations.blockedBy` | exercised |
+| Bind an issue to a Release | `save_issue({ id, setReleases: [<release>] })` (also `addReleases` / `removeReleases`), then re-read with `get_issue` | exercised |
+| Wire native dependencies | `save_issue({ id, blocks: [...], blockedBy: [...] })` | schema-verified, not exercised |
+| Find a project document | `list_documents({ projectId, query, limit, cursor, fields })` — the filter is `projectId`, not `project` | exercised |
+| Create / update a document | `save_document({ title, project, content })` creates; `save_document({ id, content })` updates | create exercised |
+
+**`list_issues` results do not include Release or relations.** Never infer those from a
+list page: call `get_issue` for each issue whose Release or dependencies matter. After a
+write, re-read to confirm it.
+
+Other core tools:
 
 - **Create / update an issue**: `linear.save_issue({...})`. When creating, `title` and
   `team` are required; also set `project` to `"{{LINEAR_PROJECT}}"` so it's scoped
   correctly. Omit `id` on create; pass `id` to update. Use `assignee` (a user id, name,
   email, or `"me"`) — not `assigneeId`. Set labels via the `labels` field (see
-  `triage-labels.md` for the canonical strings).
-- **Read / list issues**: `linear.list_issues({...})`. Filter by `assignee`
-  (`"me"` / `"null"`), team, project, state, or label. For a single issue, list with the
-  id/filter and read the returned record.
+  `triage-labels.md` for the canonical strings), the Release via `setReleases`, and
+  dependencies via `blocks` / `blockedBy` (table above).
+- **Read one issue**: `linear.get_issue({ id, includeRelations: true, includeReleases:
+  true })`. **List issues**: `linear.list_issues({...})` with the filters its schema
+  offers (project, release, assignee, state, label), paging with `cursor`.
 - **Comment**: `linear.save_comment({ issueId, body })` to start a thread;
   `linear.save_comment({ parentId, body })` to reply. Read with
   `linear.list_comments({ issueId })`.
@@ -108,15 +131,14 @@ all of which have already caused a real mis-resolution in the source project
   shipped with the field empty. The enforcement is the agent's **refusal**, not
   the tracker.
 - **Read it through the same access ladder as everything else** (above): via MCP,
-  `discover_tools({ query: "linear issue release", detail: "typescript" })` then
-  the returned `codeApi.path` from `execute_code`; under rung 2, the GraphQL
-  `issue` query — select the release/version field explicitly and confirm you did
-  not select the milestone by accident. If the tracker is unreachable, the
+  `get_issue({ id, includeReleases: true })` and read `releases[]` (a list page does not
+  carry it); under rung 2, the GraphQL `issue` query — select the release field
+  explicitly and confirm you did not select the milestone by accident. If the tracker is unreachable, the
   cross-check has not been performed: say so and stop, rather than proceeding on
   the title prefix alone as though both signals had agreed.
 
-**Swapping trackers:** an alternative binding (`issue-tracker-github.md` /
-`-gitlab.md` / `-local.md`) must define this section too — naming its own release
+**Swapping trackers:** a replacement binding for another tracker must define this
+section too — naming its own release
 entity and how to read it — or state explicitly that it has **no** release
 entity, which drops the cross-check per `docs/GIT_WORKFLOW.md` § Version
 determination and leaves the title prefix standing alone. A missing or ambiguous
@@ -142,14 +164,16 @@ like this:
 1. **Order**: create issues in dependency order — blockers first — so each later issue
    can reference real identifiers.
 2. **Blocking edges**: wire them as Linear's native **`blocked-by` / `blocks`
-   relations** (via `linear.save_issue`'s relations support, or the dedicated relation
-   tool if `discover_tools` surfaces one — query `"linear issue relation"`). Also mirror
+   relations** (`save_issue({ id, blocks, blockedBy })`, or the dedicated relation tool
+   if your server's schema has one), then confirm with `get_issue({ id,
+   includeRelations: true })`. Also mirror
    each edge as a human-readable `## Blocked By` line in the body per
    `issue-template.md`; the native relation is the source of truth, the body line is the
    mirror.
 3. **Scoping**: every issue gets `project: "{{LINEAR_PROJECT}}"` and, if the
-   set belongs to a version, the matching **Release** (title carries the `[X.Y.Z]`
-   prefix per `issue-template.md`). Milestone is orthogonal — attach it when the
+   set belongs to a version, the matching **Release** (`setReleases`, confirmed with
+   `get_issue({ id, includeReleases: true })`; title carries the `[X.Y.Z]` prefix per
+   `issue-template.md`). Milestone is orthogonal — attach it when the
    set is a capability stage, but do not put it in the title.
 4. **State + labels**: state `Todo`, triage label `ready-for-agent` (unless the user
    says otherwise) — the tickets are agent-grabbable by construction.
@@ -158,15 +182,17 @@ like this:
 
 ## When a skill says "fetch the relevant ticket"
 
-Read it with `linear.list_issues` (filter to the id/identifier), then pull discussion
-with `linear.list_comments({ issueId })`.
+Read it with `linear.get_issue({ id, includeRelations: true, includeReleases: true })`,
+then pull discussion with `linear.list_comments({ issueId })`.
 
 ## Reading a release
 
 `/orchestrate` works from an explicit project and Release — never a similar title or a
-milestone. Read **every page** of the Release's issues with: state, Release, native
-`blocks` / `blocked-by` relations, the `## Execution` section, acceptance criteria and
-comments/amendments. Native relations are the dependency source of truth; the body lines
+milestone. Page through **every** page of `list_issues({ project, release, limit,
+cursor })` until `hasNextPage` is false. Then, for each issue, `get_issue({ id,
+includeRelations: true, includeReleases: true })` for its state, `releases[]`,
+`relations.blocks` / `relations.blockedBy`, the `## Execution` section and acceptance
+criteria, plus `list_comments` for amendments. A list page alone is not enough. Native relations are the dependency source of truth; the body lines
 mirror them — fix whichever is wrong before scheduling.
 
 ## Release orchestration document
@@ -182,8 +208,8 @@ linked from the issues it concerns. It records:
   governance fixes tracked as external blockers (no Release, routed to `dev`);
 - current blocker, if any.
 
-Find the document tools with
-`discover_tools({ query: "linear document", detail: "typescript" })` (GraphQL:
-`documentCreate` / `documentUpdate` / `documents`). Search for the existing document before
-creating one. If documents cannot be written, say so and stop the step that needed it —
+Look it up first with `list_documents({ projectId, query: "Release X.Y.Z — orchestration" })`.
+Update it with `save_document({ id, content })` (or the server's patch form). Only if none
+exists, create it with `save_document({ title, project, content })`, then link it from the
+issues. GraphQL equivalents: `documents` / `documentCreate` / `documentUpdate`. If documents cannot be written, say so and stop the step that needed it —
 do not keep the state only in chat or a temp file.
