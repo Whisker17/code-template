@@ -50,7 +50,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 |-------|----------|
 | **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively) |
 | **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; ships unconfigured, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
-| **Skills** (8) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail + `skills-lock.json` |
+| **Skills** (9) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
 | **Git workflow** | See below |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
@@ -80,7 +80,7 @@ This template is expected to improve as projects hit process-level problems. Dow
 repos carry a "Template feedback loop" section in their `AGENTS.md`: when a project
 discovers a template-layer improvement, port it back here and record it in
 `CHANGELOG.md`. Old projects pick changes up manually (there is deliberately no
-auto-sync). Projects that want skills outside the core eight install them themselves; the
+auto-sync). Projects that want skills outside the core set install them themselves; the
 template does not maintain an optional skill pack.
 
 Vendored skills are pinned by `skills-lock.json`; upgrade them here deliberately, not
@@ -104,3 +104,7 @@ per-project.
 >   orchestration document
 > - `orchestrate/` — first-party, not vendored; do not add it to `skills-lock.json`
 > - `ponytail/` — first-party, not vendored; do not add it to `skills-lock.json`
+> - `answer-me-with-html/` — local fork of `QingYunA/answer-me-with-html` v0.2.2 (adds
+>   Excalidraw / UML diagrams baked via local Chrome, the `research` template, prereq /
+>   finding / glossary). Not in `skills-lock.json`; source, tests and the change list live in
+>   its `dev/` (`dev/README.md`). Rebuild `scripts/am.mjs` with `npm run build` after edits

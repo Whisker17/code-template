@@ -8,6 +8,29 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## 2026-10-03 — answer-me-with-html skill (research explainers)
+
+Adds `.claude/skills/answer-me-with-html/`, a local fork of
+[QingYunA/answer-me-with-html](https://github.com/QingYunA/answer-me-with-html) v0.2.2.
+The agent writes a short Markdown draft. A bundled CLI (`scripts/am.mjs`, Node 20+, no
+`npm install`) renders it to a single-file HTML page and checks the writing against
+STE-derived rules. This follows Karpathy's "understand LLM output" ladder: controlled
+writing, then diagrams, then HTML.
+
+The fork adds:
+- `excalidraw` sketches and `uml` (Mermaid) blueprints. They are baked into the page with
+  the local Chrome (`am bake`, automatic on render; Node 22+), so the output stays offline.
+  `am shot` takes one screenshot per figure for review.
+- A `research` template: a drawing-sheet overview, then the body, with 5 / 30 / deep
+  reading paths. The `prereq`, `finding` (with evidence kinds) and `glossary` components
+  support `[[term]]` hover links.
+- Research-page lint and the dev-onboarding method in `references/research.md`.
+
+It is not in `skills-lock.json`. The source, tests and the change list live in the skill's
+`dev/`. It replaces a user-level `research-explainer` skill that predated it.
+
+---
+
 ## 2026-09-25 — v0.2.0: lightweight implementation and release orchestration (WHI-1491)
 
 Implements `docs/references/v0.2.0-design-spec.md`. Process weight moves from every issue
