@@ -1,0 +1,3 @@
+interface:
+  display_name: "Answer me with HTML"
+  short_description: "Explain or share research as a one-page HTML explainer (Excalidraw / UML diagrams)"
