@@ -22,7 +22,8 @@ const USAGE = `Answer me with HTML ${VERSION} — 把 Markdown 内容稿渲染�
                       [--template sheet|doc|research] [--style off|80|strict] [--mode auto|light|dark]
   am lint   <file|->  [--style off|80|strict]     只做 STE 受控写作检查
   am bake   <page.html>                           用本机 Chrome 把 excalidraw / uml 图烘焙进页面（离线单文件）
-  am shot   <page.html> [-o 目录] [--only A,fig-2] 按面板 / 图截图，逐张检查版面
+  am shot   <page.html> [-o 目录] [--only A,fig-2] [--width 390]
+                                                  按面板 / 图截图，逐张检查版面（--width 390 查手机版式）
   am config [set <键> <值> | get <键> | reset [键]] 查看或修改配置
   am list                                         列出模板、主题、组件
   am help [组件名|format]                          查看组件语法 / 稿件格式
@@ -81,6 +82,7 @@ export async function main(argv, io = {}) {
         'no-open': { type: 'boolean' },
         'no-bake': { type: 'boolean' },
         only: { type: 'string' },
+        width: { type: 'string' },
         open: { type: 'boolean' },
         theme: { type: 'string' },
         template: { type: 'string' },
@@ -220,13 +222,18 @@ async function cmdShot(arg, opts, { print, fail, env, cwd }) {
   if (!existsSync(file)) return fail(`✗ 找不到 ${file}`), 2;
   let r;
   try {
-    r = await shotFile(file, { outDir: opts.out && resolve(cwd ?? process.cwd(), opts.out), only: opts.only?.split(',').map((s) => s.trim()), env });
+    const width = opts.width ? Number(opts.width) : undefined;
+    if (opts.width && !(width >= 280 && width <= 3840)) return fail('✗ --width 应为 280–3840 之间的像素值'), 2;
+    r = await shotFile(file, { outDir: opts.out && resolve(cwd ?? process.cwd(), opts.out), only: opts.only?.split(',').map((s) => s.trim()), width, env });
   } catch (e) {
     if (!(e instanceof BakeUnavailable)) throw e;
     return fail(`✗ 无法截图：${e.message}`), 2;
   }
   print(`✓ ${r.dir}`);
   print(`  ${r.shots.join(' ')}`);
+  const { docW, viewW, items } = r.layout;
+  if (items.body) print(`  视口 ${viewW}px · 正文宽 ${items.body[2]}px`);
+  if (docW > viewW + 1) fail(`! 横向溢出：页面宽 ${docW}px > 视口 ${viewW}px，有元素撑破了布局`);
   const bad = r.state === 'error' || r.state === 'timeout' || r.exceptions.length;
   if (r.state === 'timeout') fail(`✗ 页面渲染超时（卡在 ${r.stage}）`);
   for (const e of r.errors) fail(`✗ L${e.line} [${e.kind}] ${e.fig}: ${e.message}`);

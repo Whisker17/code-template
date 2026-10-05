@@ -160,11 +160,12 @@ export async function shotFile(file, { outDir, only, width = 1440, timeout = 120
     const layout = await cdp.js(`(() => {
       const box = (el) => { const b = el.getBoundingClientRect(); return [Math.round(b.left + scrollX), Math.round(b.top + scrollY), Math.round(b.width), Math.round(b.height)]; };
       const items = {};
-      for (const el of document.querySelectorAll('.am-overview, .am-panel[id], figure.am-fig[id], .am-frame')) {
-        const id = el.id || (el.classList.contains('am-frame') ? 'sheet' : '');
+      for (const el of document.querySelectorAll('.am-overview, .am-panel[id], figure.am-fig[id], .am-frame, .am-doc-body')) {
+        const id = el.id || (el.classList.contains('am-frame') ? 'sheet' : el.classList.contains('am-doc-body') ? 'body' : '');
         if (id && !(id in items)) items[id] = box(el);
       }
-      return { docH: document.documentElement.scrollHeight, items };
+      // 横向溢出：页面比视口宽说明有元素撑破了布局（移动端最常见的问题）。
+      return { docH: document.documentElement.scrollHeight, docW: document.documentElement.scrollWidth, viewW: innerWidth, items };
     })()`);
     const shoot = async (name, [x, y, w, h]) => {
       const res = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x, y, width: w, height: h, scale: 1 } });
@@ -177,7 +178,7 @@ export async function shotFile(file, { outDir, only, width = 1440, timeout = 120
       if (w < 4 || h < 4) continue;
       made.push(await shoot(id, [Math.max(0, x - 10), Math.max(0, y - 10), w + 20, Math.min(h + 20, maxCrop)]));
     }
-    return { ...r, dir, shots: made };
+    return { ...r, dir, shots: made, layout };
   } finally {
     close();
   }

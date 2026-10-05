@@ -29,10 +29,10 @@ npm run build               # 改了 src/ 之后执行，重新生成 ../scripts
 | `src/runtime/diagrams.js` | 浏览器端图形运行时：从 CDN 加载 Mermaid / Excalidraw；只在页面含图且尚未烘焙时内联 |
 | `src/runtime/page.js` | 阅读路径按钮；烘焙后的 `.excalidraw` 下载按钮 |
 | `src/bake.js` | Node 内置 WebSocket 驱动本机 Chrome（DevTools 协议），负责 `bakeFile` / `shotFile` |
-| `src/cli.js` | render 后自动烘焙；新增 `am bake`、`am shot`、`--no-bake`、`--only`；help 支持别名 |
+| `src/cli.js` | render 后自动烘焙；新增 `am bake`、`am shot`（`--only`、`--width`，报告正文宽度与横向溢出）、`--no-bake`；help 支持别名 |
 | `src/config.js` | 新配置键 `bake`（on / off）；环境变量 `AM_NO_BAKE=1` 也可以跳过烘焙 |
 | `src/lint/*` | 研究页完整性检查；prereq / finding 逐字段检查；扩充中英文空话词表 |
-| `src/themes/base.css` | 新组件与 research 模板的样式；暗色模式下烘焙的 SVG 整体反相 |
+| `src/themes/base.css` | 新组件与 research 模板的样式；暗色模式下烘焙的 SVG 整体反相；760px 断点下 research 单栏、工具栏 absolute（research.2 修复：research 桌面规则优先级更高，压过通用断点，手机正文只剩 ~77px） |
 | `test/research.test.js` | 新增测试。删除了 `always-hook.test.js`（插件没有带过来） |
 
 ## 烘焙为什么要用 Chrome
