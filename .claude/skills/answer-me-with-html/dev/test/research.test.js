@@ -12,7 +12,8 @@ import { renderDoc, RenderError } from '../src/render.js';
 import { parseDoc } from '../src/parse.js';
 import { lintDoc } from '../src/lint/ste.js';
 import { main } from '../src/cli.js';
-import { findChrome, bakeFile } from '../src/bake.js';
+import { findChrome, bakeFile, shotFile } from '../src/bake.js';
+import { pageCss } from '../src/themes/index.js';
 
 const ctx = (args = '') => ({ args, uid: () => 'u1', fig: () => 1, line: 10 });
 const render = (name, text, args) => COMPONENTS.get(name).render(text, ctx(args));
@@ -199,6 +200,49 @@ test('bake: excalidraw + uml 烘焙成零依赖单文件', { skip: !canBake && '
     assert.equal((out.match(/data-am-done="1"/g) || []).length, 2);
     assert.match(out, /class="am-excal-file"/);
     assert.match(out, /data-am="excal-dl"/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ── 移动端（回归：research 桌面规则优先级更高，压过 760px 单栏规则，手机正文只剩 ~77px）──
+// 返回 css 中每个 @media (max-width: 760px) 块的 [起点, 内容]。
+function mobileBlocks(css) {
+  const out = [];
+  const re = /@media \(max-width: 760px\) \{/g;
+  let m;
+  while ((m = re.exec(css))) {
+    let depth = 1;
+    let i = m.index + m[0].length;
+    for (; i < css.length && depth; i++) depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0;
+    out.push([m.index, css.slice(m.index, i)]);
+  }
+  return out;
+}
+
+test('css: research 的移动端单栏规则写在桌面规则之后，且优先级相同', () => {
+  const css = pageCss();
+  const desktop = css.indexOf('.am-research .am-doc-layout { grid-template-columns: 210px');
+  assert.ok(desktop > 0, '找不到 research 桌面版式规则');
+  const override = mobileBlocks(css).find(([at, body]) => at > desktop && /\.am-research \.am-doc-layout \{ grid-template-columns: minmax\(0, 1fr\)/.test(body));
+  assert.ok(override, '760px 断点里缺少排在桌面规则之后的 .am-research .am-doc-layout 单栏规则');
+  assert.match(override[1], /\.am-research \{ padding: 56px 12px/, 'research 移动端要给工具栏留出顶部空间、收窄边距');
+});
+
+test('css: 移动端工具栏不再 fixed 压住正文', () => {
+  const css = pageCss();
+  assert.ok(mobileBlocks(css).some(([, body]) => /\.am-toolbar \{ position: absolute; \}/.test(body)));
+});
+
+test('layout: research 页在 375px 手机宽度下正文接近满宽、无横向溢出', { skip: !canBake && '设置 AM_TEST_BAKE=1 且本机有 Chrome 时运行' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'am-mobile-'));
+  try {
+    const file = join(dir, 'p.html');
+    writeFileSync(file, renderDoc(`${RESEARCH}\n## F 长表格\n| a | b | c | d |\n|---|---|---|---|\n| 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 |\n`).html);
+    const r = await shotFile(file, { outDir: join(dir, 'shots'), width: 375, only: ['body'] });
+    const { docW, viewW, items } = r.layout;
+    assert.ok(items.body[2] >= 330, `正文只有 ${items.body[2]}px 宽`);
+    assert.ok(docW <= viewW + 1, `横向溢出：页面 ${docW}px > 视口 ${viewW}px`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

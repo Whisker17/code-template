@@ -8,6 +8,26 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## 2026-10-05 — answer-me-with-html 0.2.2-research.2: mobile layout fix
+
+On phones, `research` pages squeezed the body to about 77 px. The desktop rule
+`.am-research .am-doc-layout { 210px 1fr }` (specificity 0,2,0) came after the generic
+760 px breakpoint, and it overrode the breakpoint's single-column rule (0,1,0).
+
+- The fix adds a research-specific mobile block after the desktop rules, at the same
+  specificity: single column, 12 px margins, and room for the toolbar. Findings, the
+  glossary and figure headers are restacked.
+- On mobile the toolbar is no longer `fixed`, so it stops covering the text.
+- Diagrams keep a readable 560 px minimum width and scroll inside their frame.
+- The prerequisite grid can no longer overflow on 320 px screens.
+- `am shot --width <px>` reports the body width and any horizontal overflow.
+- New regression tests: a static CSS-order check, and a 375 px Chrome layout test.
+
+Surfaced by doc-hub (mobile hosting of research pages), which had worked around the bug by
+injecting a CSS patch.
+
+---
+
 ## 2026-10-03 — answer-me-with-html skill (research explainers)
 
 Adds `.claude/skills/answer-me-with-html/`, a local fork of

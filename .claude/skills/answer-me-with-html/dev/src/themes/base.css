@@ -262,7 +262,11 @@ html[data-theme="shadcn"] .am-kv { border-color: var(--line); border-radius: var
   .am-doc-layout { grid-template-columns: minmax(0, 1fr); }
   .am-toc { position: static; }
   .am-timeline--h { grid-template-columns: minmax(0, 1fr); }
+  .am-timeline--h li { padding-bottom: 10px; }
+  .am-timeline--h li::before { display: none; }
   .am-tree-cols { grid-template-columns: minmax(0, 1fr); }
+  /* fixed 工具栏在手机上会一直压住正文：改为只停在页面顶部。 */
+  .am-toolbar { position: absolute; }
 }
 .am-colophon { text-align: center; padding: 0 0 28px; font: 11px var(--font-mono); color: var(--ink-3); }
 
@@ -308,7 +312,7 @@ html[data-path="5"] [data-depth="2"], html[data-path="5"] [data-depth="3"], html
 .am-panel[data-depth="3"] > .am-panel-head h2::after { content: "deep"; margin-left: 8px; font: 10px var(--font-mono); color: var(--ink-3); border: 1px solid var(--line-2); padding: 0 5px; border-radius: var(--radius); }
 
 /* ── prereq 前置知识卡片（同一面板内自动成网格）── */
-.am-panel-body:has(> .am-prereq) { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.am-panel-body:has(> .am-prereq) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr)); gap: 14px; }
 .am-panel-body:has(> .am-prereq) > :not(.am-prereq) { grid-column: 1 / -1; }
 .am-panel-body:has(> .am-prereq) > * + * { margin-top: 0; }
 .am-prereq { border: var(--bw) solid var(--line); border-radius: var(--radius); background: var(--paper); scroll-margin-top: 16px; }
@@ -355,6 +359,28 @@ a.am-term:hover::after, a.am-term:focus::after {
   content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 30; width: max-content; max-width: 320px;
   white-space: normal; background: var(--head-bg); color: var(--head-fg); font: 12px/1.45 var(--font-sans); padding: 7px 9px;
   border-radius: var(--radius); box-shadow: 0 6px 18px rgba(0,0,0,.18); pointer-events: none;
+}
+/* ── research 移动端 ──────────────────────
+   research 的桌面规则（如 .am-research .am-doc-layout，优先级 0,2,0）写在通用 760px 断点之后、
+   优先级也更高，会压过断点里的单栏规则（0,1,0），手机上正文只剩约 80px 宽。
+   所以必须在所有 research 桌面规则之后，用同等优先级重新声明移动端版式。 */
+@media (max-width: 760px) {
+  .am-research { padding: 56px 12px 24px; }
+  .am-research .am-doc-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .am-research .am-doc-body { max-width: none; }
+  .am-research .am-toc { position: static; }
+  .am-paths { margin: 0 0 16px; }
+  .am-finding > header { flex-wrap: wrap; }
+  .am-finding dl { grid-template-columns: minmax(0, 1fr); }
+  .am-finding dt { padding-top: 6px; }
+  .am-glossary { grid-template-columns: minmax(0, 1fr); }
+  .am-glossary dt { border-bottom: 0; padding-bottom: 0; }
+  a.am-term:hover::after, a.am-term:focus::after { max-width: min(320px, 80vw); }
+  /* 图：问题单独占一行；图保持可读尺寸（≥560px），在画布内横向滚动，而不是缩到看不清。 */
+  .am-fig-q { flex-wrap: wrap; }
+  .am-fig-q span { flex: 1 1 100%; order: 2; }
+  .am-fig-canvas { justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+  .am-fig-canvas svg { min-width: 560px; }
 }
 @media print {
   html[data-path] [data-depth] { display: block !important; }
