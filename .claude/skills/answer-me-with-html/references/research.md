@@ -1,211 +1,211 @@
-# 研究页（research 模式）
+# Research pages (research mode)
 
-研究页把一次研究的结果做成一页 **explainer**。读者是没做过这次研究、也不熟悉这个领域的开发者。读完后，他们要能理解结论、检查结论，并在结论上继续工作。Karpathy 说我们的工作正在"上升到监督与理解"，研究页就是为这件事服务的产物。它是一次性的：为这次研究量身定做，不做通用框架。
+A research page turns the result of one piece of research into a one-page **explainer**. The readers are developers who did not do the research and do not know the field. After reading, they must be able to understand the conclusions, check them, and keep working from them. Karpathy says our work is "moving up to supervision and understanding"; a research page is the artifact for that. It is single-use: made for this one piece of research, not a general framework.
 
-完整示例：[`examples/kv-cache.research.md`](../examples/kv-cache.research.md)（中文，覆盖本文所有组件）。动手前先浏览一遍。
+Full example: [`examples/kv-cache.research.md`](../examples/kv-cache.research.md) (in Chinese; it uses every component in this file). Skim it before you start.
 
-## 目录
+## Contents
 
-1. 工作流（8 步，每步有完成标准）
-2. 页面骨架（可直接复制的稿件）
-3. Context 与 Background
-4. 前置知识阶梯与卡片
-5. 术语表、贯穿全文的例子、阅读路径
-6. 按研究类型调整骨架
-7. 检查清单
+1. Workflow (8 steps, each with a done criterion)
+2. Page skeleton (a draft you can copy)
+3. Context and Background
+4. The prerequisite ladder and cards
+5. Glossary, the running example, reading paths
+6. Adapting the skeleton to the kind of research
+7. Checklist
 
-## 1. 工作流
+## 1. Workflow
 
-### 1.1 固定材料
+### 1.1 Gather the material
 
-收集研究产生的全部材料：笔记、代码路径、命令及其输出、基准数据、论文、之前的对话。本模式只负责**解释**研究。研究还没做完时，先把研究做完。
+Collect everything the research produced: notes, code paths, commands and their output, benchmark data, papers, earlier conversations. This mode only **explains** research. If the research is not finished, finish it first.
 
-在草稿区（不写进页面）建一张**论断台账**：论断 → 证据（`file:line`、命令输出、URL）→ 类型（observed / inferred / speculative）。
+In a scratch area (not on the page), keep a **claim ledger**: claim → evidence (`file:line`, command output, URL) → kind (observed / inferred / speculative).
 
-**完成标准：** 页面上要出现的每个论断都在台账里有一行。没有证据的论断删掉，或标为 speculative。
+**Done when:** every claim that will appear on the page has a row in the ledger. Delete a claim with no evidence, or mark it speculative.
 
-### 1.2 确定读者与差距
+### 1.2 Set the reader and the gap
 
-默认读者是"能干的开发者，但第一次接触这个领域"。只有当读者不明确、且答案会改变深度时（新人 vs 领域专家），才问用户。
+The default reader is "a capable developer who is new to this field". Ask the user only when the reader is unclear and the answer changes the depth (a newcomer vs a domain expert).
 
-先写"默认已知"清单，也就是读者基线（见 §3）。再搭前置知识阶梯，写术语表（见 §4、§5）。
+First write the "you already know" list, the reader baseline (see §3). Then build the prerequisite ladder and write the glossary (see §4, §5).
 
-**完成标准：** "工作原理"和"发现"里出现的每个技术词，都满足三者之一：在基线清单里、有 prereq 卡片、有 glossary 条目。
+**Done when:** every technical word in "How it works" and "Findings" is one of three things: on the baseline list, covered by a prereq card, or in the glossary.
 
-### 1.3 规划页面
+### 1.3 Plan the page
 
-从 §2 的骨架开始，按 §6 选出适合这次研究类型的变体。为每个主要观点写下它的图要回答的**问题**，再按 [diagrams.md](diagrams.md) 选图的类型和工具（Excalidraw 草图 / UML 蓝图）。
+Start from the skeleton in §2 and pick the variant for this kind of research in §6. For each main point, write down the **question** its figure answers, then choose the kind of figure and the tool (Excalidraw sketch / UML blueprint) with [diagrams.md](diagrams.md).
 
-**完成标准：** 计划列出每个面板及其 depth（总览面板用 sheet），以及每张图的问题、类型和工具。图超过 8 张时，先把计划给用户看。
+**Done when:** the plan lists every panel with its depth (overview panels use sheet), and every figure with its question, kind and tool. With more than 8 figures, show the plan to the user first.
 
-### 1.4 画图
+### 1.4 Draw the figures
 
-草图写 `excalidraw`，蓝图写 `uml`，写法见 [diagrams.md](diagrams.md)。每张图都要带 `q=`、`takeaway=`，必要时加 `read=`。
+Write sketches as `excalidraw` and blueprints as `uml`; see [diagrams.md](diagrams.md). Every figure has `q=` and `takeaway=`, plus `read=` when it helps.
 
-### 1.5 按 STE-80 写文字
+### 1.5 Write the text to STE-80
 
-按 [writing.md](writing.md) 写所有文字。用用户的语言；代码标识符保持英文，并放在反引号里。
+Write all text by [writing.md](writing.md). Use the user's language; keep code identifiers in English and in backticks.
 
-### 1.6 渲染并烘焙
+### 1.6 Render and bake
 
-稿件存成文件，这样它可以评审、可以重新渲染。页面输出在稿件旁边：
+Save the draft as a file, so it can be reviewed and rendered again. Put the page next to the draft:
 
 ```bash
 AM="node ${CLAUDE_SKILL_DIR}/scripts/am.mjs"
-mkdir -p docs/explainers                              # 或用户 / 仓库约定的位置
-# 写好 docs/explainers/2026-10-03-kv-cache.md 后：
+mkdir -p docs/explainers                              # or where the user / the repository keeps them
+# after writing docs/explainers/2026-10-03-kv-cache.md:
 $AM render docs/explainers/2026-10-03-kv-cache.md -o docs/explainers/2026-10-03-kv-cache.html
 ```
 
-渲染时会检查以下内容：
-- 组件语法、Excalidraw spec（未知节点、重叠、标签放不下）
-- 未定义的 `[[术语]]`
-- STE 写作
-- 研究页完整性（缺 `q=`、缺 prereq / finding / glossary / 总览）
+The render checks:
+- component syntax and the Excalidraw spec (unknown nodes, overlaps, labels that do not fit)
+- `[[terms]]` that are not defined
+- STE writing
+- research-page completeness (a missing `q=`, a missing prereq / finding / glossary / overview)
 
-然后用本机 Chrome 把图烘焙进页面。看到 `✗ L<行号>` 就改那一行，再渲染一次。
+Then it bakes the figures into the page with the local Chrome. On `✗ L<line>`, fix that line and render again with `--replace <page>`.
 
-### 1.7 看截图（改到干净为止）
+### 1.7 Look at the screenshots (until they are clean)
 
 ```bash
-$AM shot docs/explainers/2026-10-03-kv-cache.html     # → $TMPDIR/am-shots/<页面名>/*.png（路径会打印出来）
+$AM shot docs/explainers/2026-10-03-kv-cache.html     # → $TMPDIR/am-shots/<page name>/*.png (the path is printed)
 ```
 
-打开并**逐张查看**：`overview.png`、每个 `fig-N.png`、每个 `panel-X.png`。自动检查看不到版面问题。按 §7 的清单修改稿件，然后重新渲染。
+Open and **look at each one**: `overview.png`, every `fig-N.png`, every `panel-X.png`. Automatic checks cannot see layout problems. Fix the draft by the checklist in §7, then render again.
 
-页面要在手机上看（例如发到 doc-hub）时，再跑一次 `$AM shot <页面> --width 390`。输出里的"正文宽"应接近视口宽度，并且不能出现"横向溢出"警告。
+When the page will be read on a phone (for example, published to doc-hub), also run `$AM shot <page> --width 390`. The printed "body width" must be close to the viewport width, and there must be no "Horizontal overflow" warning.
 
-**完成标准：** render 输出 `STE ✓` 或只剩有理由保留的警告，`烘焙 ✓`；并且最后一次修改之后，每张截图你都看过。
+**Done when:** the render prints `STE ✓`, or only warnings you keep for a reason, and `Baked ✓`; and you have looked at every screenshot after the last change.
 
-### 1.8 交付
+### 1.8 Hand over
 
-- 打开页面，告诉用户：
-  - 页面和稿件的路径
-  - 三条阅读路径
-  - 每张图一行说明
-  - 删掉或标为 speculative 的内容
-  - 开放问题
-- 截图默认在系统临时目录里，只用于检查，不进仓库。
+- Open the page and tell the user:
+  - the paths of the page and the draft
+  - the three reading paths
+  - one line per figure
+  - what you deleted or marked speculative
+  - the open questions
+- The screenshots stay in the system temp directory. They are for review only and do not go into the repository.
 
-## 2. 页面骨架
+## 2. Page skeleton
 
-复制后替换内容。面板字母可以改，但同一个页面里不要重复。
+Copy it and replace the content. Panel letters may change, but must not repeat on one page.
 
 ````markdown
 ---
 template: research
-title: <主题名，不写"关于 X 的调研">
-subtitle: <一句 STE：主要结论>
+title: <the subject, not "A study of X">
+subtitle: <one STE sentence: the main conclusion>
 cols: 4
-type: 技术调研            # 以下任意键显示在页头
-audience: <读者，例如：后端开发，未接触过 X>
-scope: <范围>
-evidence: <证据，例如：3 组实验，代码 @abc123>
+type: Technical research      # every key below shows in the page header
+audience: <the reader, for example: backend developers new to X>
+scope: <the scope>
+evidence: <the evidence, for example: 3 experiments, code @abc123>
 date: <YYYY-MM-DD> · v1
 ---
-<导语：1–2 句结论，链接 [F1](#F1)。>
+<Lead: the conclusion in 1–2 sentences, linking [F1](#F1).>
 
-## A <部件 / 结构> {sheet meta="…"}          ← 总览 4–6 个面板，每个用一种不同的形式
-## B <关键公式 / 命令 / 配置> {sheet span=2}  ← annot
-## C <方案对比> {sheet}                        ← ✓/✗ 表格
-## D <关键数字> {sheet span=2}                 ← 表格 / limits
-## E <演进> {sheet span=2}                     ← timeline
-## F 结论 {sheet span=4}                       ← callout ok：结论 + 先看哪里
+## A <parts / structure> {sheet meta="…"}          ← 4–6 overview panels, each in a different form
+## B <key formula / command / config> {sheet span=2}  ← annot
+## C <options compared> {sheet}                    ← ✓/✗ table
+## D <key numbers> {sheet span=2}                  ← table / limits
+## E <evolution> {sheet span=2}                    ← timeline
+## F Conclusion {sheet span=4}                     ← callout ok: the conclusion + where to start reading
 
-## G 如何阅读 {depth=1}          ← callout info "默认你已知道" + 各类读者看哪些面板
-## H 背景动机 {depth=2}          ← Context：问题 / 为什么现在 / 范围与非目标 / 已有做法 / 约束
-## I 前置知识 {depth=2}          ← excalidraw 前置知识地图 + prereq 卡片（按阶梯顺序）
-## J 工作原理 {depth=2}          ← 先 excalidraw 草图，再 uml 蓝图
-## K 发现 {depth=2}              ← finding F1… 按重要性排序
-## L 方法与证据 {depth=3}        ← 实验设置、结果表、深入细节
-## M 对我们的意义 {depth=2}      ← 带编号的行动；代价大时加 callout warn / err
-## N 局限与开放问题 {depth=2}
-## O 复现 {depth=3}              ← 环境、精确命令、预期输出
-## P 术语表 {depth=2}            ← glossary
-## Q 参考资料 {depth=2}          ← 编号列表，一手资料标 **PRIMARY**，每条写"为什么读"
+## G How to read this {depth=1}       ← callout info "You already know" + which panels each kind of reader reads
+## H Context {depth=2}                ← the problem / why now / scope and non-goals / existing approaches / constraints
+## I Background {depth=2}             ← excalidraw prerequisite map + prereq cards (in ladder order)
+## J How it works {depth=2}           ← excalidraw sketch first, then uml blueprint
+## K Findings {depth=2}               ← finding F1… in order of importance
+## L Method and evidence {depth=3}    ← setup, result tables, deep details
+## M What it means for us {depth=2}   ← numbered actions; callout warn / err when the cost is high
+## N Limits and open questions {depth=2}
+## O Reproduce {depth=3}              ← environment, exact commands, expected output
+## P Glossary {depth=2}               ← glossary
+## Q References {depth=2}             ← numbered list; mark primary sources **PRIMARY**; say "why read it" for each
 ````
 
-## 3. Context 与 Background
+## 3. Context and Background
 
-两者回答不同的问题，分开写。
+They answer different questions. Write them apart.
 
-| 面板 | 回答 | 内容 |
+| Panel | Answers | Content |
 |---|---|---|
-| **背景动机（Context）** | 这项研究**为什么**存在？ | 问题（一个具体症状，尽量带数字）、为什么现在、范围与非目标（列表）、已有做法及其不足（带出处）、约束 |
-| **前置知识（Background）** | 读懂它需要先**知道什么**？ | 前置知识地图、prereq 卡片、贯穿全文的例子 |
+| **Context** | **Why** does this research exist? | The problem (one concrete symptom, with a number if possible), why now, scope and non-goals (a list), existing approaches and their gaps (with sources), constraints |
+| **Background** | What must the reader **know first** to follow it? | The prerequisite map, prereq cards, the running example |
 
-Context 让读者愿意读，Background 让读者读得懂。少了任何一个，onboarding 都会失败。
+Context makes the reader want to read; Background makes the reader able to. Without either one, onboarding fails.
 
-**默认已知清单**是一份契约：清单上的内容不解释，不在清单上的内容必须解释或链接。写 3–8 条，越具体越好："GPU 有独立显存，容量有限"比"GPU 基础"好。用户指定了读者（"iOS 组""新入职的 ML 工程师"）时，基线随之调整，读者也写进页头的 `audience`。
+The **"you already know" list** is a contract: what is on it is not explained, and what is not on it must be explained or linked. Write 3–8 items, as concrete as possible: "A GPU has its own memory, of limited size" is better than "GPU basics". When the user names the reader ("the iOS team", "new ML engineers"), adjust the baseline and put the reader in the header's `audience`.
 
-## 4. 前置知识阶梯与卡片
+## 4. The prerequisite ladder and cards
 
-1. **收集术语**：列出"工作原理"和"发现"用到的每个概念（名词、技术、指标、系统部件）。
-2. **去掉基线**：划掉"默认已知"里的概念。
-3. **找依赖**：对剩下的每个概念问："要懂它，先得懂清单里的哪些？"得到一张有向无环图（DAG）。
-4. **分级**：
-   - **L1（必须懂）**：不懂就读不懂发现。写完整卡片，加 `l1`。
-   - **L2（有帮助）**：写短卡片，只写"是什么 / 为什么需要 / 深入"。
-   - **只需术语**：写一条 glossary 就够。
-5. **排序编号**：按拓扑序编号 `B-0`、`B-1`…，地图节点用同样的编号。
-6. **画地图**：用 `excalidraw`。默认已知画成灰色虚线框，卡片画成蓝色框，主题画成绿色框。箭头表示"先学 → 后学"，不显而易见时在箭头上写原因。
+1. **Collect terms**: list every concept that "How it works" and "Findings" use (nouns, techniques, metrics, system parts).
+2. **Remove the baseline**: strike out the concepts on the "you already know" list.
+3. **Find dependencies**: for each concept left, ask "which concepts on this list must I know to understand it?" The result is a directed acyclic graph (DAG).
+4. **Grade them**:
+   - **L1 (must know)**: without it the findings make no sense. Write a full card, with `l1`.
+   - **L2 (helps)**: write a short card: only what / why / deeper.
+   - **Term only**: a glossary entry is enough.
+5. **Order and number**: number the cards in topological order, `B-0`, `B-1`…, and use the same numbers on the map nodes.
+6. **Draw the map** with `excalidraw`. Draw "you already know" as gray dashed boxes, cards as blue boxes, the subject as a green box. An arrow means "learn first → learn after"; when the reason is not obvious, write it on the arrow.
 
-卡片字段（`prereq`）：
+Card fields (`prereq`; the Chinese key names `是什么` / `为什么需要` / `例子` / `误解` / `深入` / `依赖` are accepted too):
 
-| 字段 | 规则 |
+| Field | Rule |
 |---|---|
-| `# 标题` | "中文（English）"或英文名 |
-| 是什么 | 1–3 句 STE。用它**做什么**来定义，不写"是关于……的" |
-| 为什么需要 | 1–2 句，把概念连到**这次**研究。这一项把教科书卡片变成 onboarding 卡片，必填 |
-| 例子 | 最小的具体实例：3–6 行代码、一组算好的数字、一个代入真实值的公式 |
-| 误解 | 一组"误解：…… 事实：……"，写新人真的会犯的错 |
-| 深入 | 恰好一个最好的一手资料，尽量带章节号 |
-| 依赖 | 可选，如 `B-0` |
+| `# title` | the name, plus the English name when the page is not in English |
+| `what:` | 1–3 STE sentences. Define it by what it **does**, not "it is about…" |
+| `why:` | 1–2 sentences that connect the concept to **this** research. This field turns a textbook card into an onboarding card; it is required |
+| `example:` | the smallest concrete instance: 3–6 lines of code, a computed set of numbers, a formula with real values |
+| `misconception:` | one "Myth: … Fact: …" pair, about a mistake newcomers really make |
+| `deeper:` | exactly one best primary source, with a section number if possible |
+| `needs:` | optional, for example `B-0` |
 
-每张卡片正文控制在约 120 字（英文约 120 词），例子不计。写不下就拆成两张卡片。
+Keep each card body to about 120 words (about 120 Chinese characters), the example not counted. If it does not fit, split it into two cards.
 
-规模参考：差距小（相邻领域）用 1–2 张 L1 卡片和 5–10 条术语；差距中等用 3–5 张 L1 和 10–20 条术语；差距大用 5–8 张 L1，地图分层，术语 20 条以上。超过 8 张 L1 卡片时，说明主题太大，应该拆成系列，或请用户缩小范围。
+How many: a small gap (a neighbouring field) needs 1–2 L1 cards and 5–10 glossary entries; a medium gap 3–5 L1 cards and 10–20 entries; a large gap 5–8 L1 cards, a layered map and 20+ entries. More than 8 L1 cards means the subject is too big: split it into a series, or ask the user to narrow the scope.
 
-## 5. 术语表、贯穿全文的例子、阅读路径
+## 5. Glossary, the running example, reading paths
 
-**术语表**：
-- 每行写成 `术语 | 别名 | 定义 | 易混淆`。定义写 1–2 句 STE。"易混淆"写最典型的混淆，例如"不是 HTTP 缓存"。
-- 按阅读顺序排列，不按字母排。新人会从上往下读。
-- 每个主要面板里，术语第一次出现时写 `[[术语]]`（或 `[[显示文字|术语]]`），读者悬停就能看到定义。未定义的术语会报错。
+**Glossary**:
+- Each line is `term | alias | definition | often confused with`. Write the definition in 1–2 STE sentences. In the last column, write the most typical confusion, for example "not an HTTP cache".
+- Keep reading order, not alphabetical order. A newcomer reads from the top.
+- In each main panel, write the first use of a term as `[[term]]` (or `[[shown text|term]]`), so the reader sees the definition on hover. A term that is not defined is an error.
 
-**贯穿全文的例子**：在 Background 开头选**一个**具体例子（一个请求、一个模型、一条数据、一次提交），每个面板都用它展开。数字只陈述一次，可以放在总览面板里。发现先给出这个例子上的结果，再推广到一般情况。
+**The running example**: at the start of Background pick **one** concrete example (one request, one model, one record, one commit), and work it through every panel. State each number once, for example in an overview panel. A finding first gives the result on this example, then the general case.
 
-**阅读路径**：
+**Reading paths**:
 
-| 路径 | 显示 | 读者 | 要能做到 |
+| Path | Shows | Reader | Can then |
 |---|---|---|---|
-| 5 分钟 | sheet 总览 + depth=1 | lead / 评审 | 知道结论和量级，判断要不要细读 |
-| 30 分钟 | + depth=2 | 要用结论的开发者 | 能解释结论并据此行动 |
-| 完整 | + depth=3 | 要扩展或复核研究的开发者 | 能复现、能质疑 |
+| 5 minutes | sheet overview + depth=1 | a lead / a reviewer | know the conclusion and the magnitudes, and decide whether to read on |
+| 30 minutes | + depth=2 | a developer who will use the result | explain the conclusion and act on it |
+| Everything | + depth=3 | a developer who will extend or re-check the research | reproduce it and challenge it |
 
-## 6. 按研究类型调整骨架
+## 6. Adapting the skeleton to the kind of research
 
-| 研究类型 | 调整 | 常用图 |
+| Kind of research | Change | Common figures |
 |---|---|---|
-| X 是怎么工作的 | 工作原理是核心；发现写不显然的性质 | 草图直觉 → UML sequence / state → UML class / component |
-| 代码库深挖 | 工作原理开头加"代码地图"表（`path` → 职责 → 入口，链接固定 commit）；发现写热点、风险、接缝 | UML component / class，一条真实请求的 sequence；Excalidraw 模块地图 |
-| 实验 / 基准 | 方法与证据放在发现前面（depth=2）；Context 加"假设"；复现必须写 | 实验装置草图、结果表、limits、前后对比 |
-| 对比 / 评估（A vs B） | Context 加"决策标准"，放在结果之前；每个标准一个 finding；"对我们的意义"给出推荐 | 总览里的 ✓/✗ 表、两张草图前后对比、并排的蓝图 |
-| 论文 / 文献 | "已有做法"写成谱系（timeline + "每篇改了什么"表）；局限里加"论文没有证明什么" | timeline、核心思想草图、算法 UML activity |
-| 事故 / 排障 | Context 写影响和时间线；工作原理写因果链；发现写根因和促成因素 | 故障时序 sequence、state、timeline、Excalidraw 因果图 |
+| How X works | How it works is the core; findings are the non-obvious properties | sketch for intuition → UML sequence / state → UML class / component |
+| Codebase deep dive | Start How it works with a "code map" table (`path` → responsibility → entry point, linked at a fixed commit); findings are hot spots, risks and seams | UML component / class, a sequence of one real request; an Excalidraw module map |
+| Experiment / benchmark | Put Method and evidence before Findings (depth=2); add "Hypothesis" to Context; Reproduce is required | a sketch of the setup, result tables, limits, before / after |
+| Comparison / evaluation (A vs B) | Add "Decision criteria" to Context, before any result; one finding per criterion; "What it means for us" gives a recommendation | a ✓/✗ table in the overview, two sketches before / after, blueprints side by side |
+| Paper / literature | Write existing approaches as a lineage (timeline + a "what each paper changed" table); add "what the paper does not prove" to Limits | timeline, a sketch of the core idea, UML activity for the algorithm |
+| Incident / debugging | Context gives the impact and the timeline; How it works is the causal chain; findings are the root cause and contributing factors | a sequence of the failure, state, timeline, an Excalidraw cause map |
 
-## 7. 检查清单
+## 7. Checklist
 
-**看截图：**
-- [ ] 总览约一屏（1440 宽时 ≤ ~950 px 高），每个面板用不同形式，没有超过 2 句的段落。
-- [ ] 每张图：节点不重叠，标签不压线，文字清晰。强调的是 `q` 问的那部分。草图像草图，蓝图像蓝图。
-- [ ] 没有文字墙：连续 5 段以上就换成图、列表，或下放到 depth=3。
-- [ ] 手机（`--width 390`）：正文接近满宽，没有横向溢出，图可以横向滚动、文字看得清。
+**Look at the screenshots:**
+- [ ] The overview is about one screen (≤ ~950 px high at 1440 wide), each panel in a different form, no paragraph longer than 2 sentences.
+- [ ] Every figure: no overlapping nodes, no labels on lines, readable text. The emphasis is on what `q` asks. Sketches look like sketches, blueprints like blueprints.
+- [ ] No walls of text: 5 or more paragraphs in a row become a figure, a list, or move down to depth=3.
+- [ ] Phone (`--width 390`): the body is nearly full width, no horizontal overflow, figures scroll sideways and their text is readable.
 
-**以新人身份读一遍：**
-- [ ] 冷启动：只有基线知识时，能否从前置知识 → 工作原理 → 发现一路读下来，不需要点外链？
-- [ ] 切到"5 分钟"：总览和导语能否给出结论和量级？
-- [ ] 总览和导语里的每个数字，在发现或证据里再次出现，并且有出处。
-- [ ] 复现命令能直接复制运行，并写明预期输出。
-- [ ] 局限里至少有一条真实的效度威胁。
-- [ ] 标题写主题，副标题写结论。
+**Read it once as a newcomer:**
+- [ ] Cold start: with only the baseline, can you read from Background → How it works → Findings without opening a link?
+- [ ] Switch to "5 minutes": do the overview and the lead give the conclusion and the magnitudes?
+- [ ] Every number in the overview and the lead appears again in Findings or Evidence, with its source.
+- [ ] The Reproduce commands can be copied and run as they are, and state the expected output.
+- [ ] Limits has at least one real threat to validity.
+- [ ] The title names the subject; the subtitle states the conclusion.

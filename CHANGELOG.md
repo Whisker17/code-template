@@ -8,6 +8,32 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0
+
+The research fork of `.claude/skills/answer-me-with-html/` moves from upstream v0.2.2 to
+v0.5.0 (upstream `533c39f`) with a three-way merge. Every fork addition is kept.
+
+- From upstream: `am patch`, `er` and `ask` components, code blocks that quote files
+  (`src=` / `lines=`), diff blocks, images, change markers in flow / tree / er, theme and
+  language registries (paper theme, `theme: auto`, user themes, zh-Hant / ja / he, right-to-left
+  pages), the Reply and Remark buttons, the diagram lightbox, the sheet layout planner,
+  raw-HTML filtering, `--replace`, `am serve`, `am clean` and `am theme check`.
+- Not taken: `am video` stays in the source but is not documented in `SKILL.md`; the plugin,
+  website, bench and demo stay out. Always-on mode is now a rules-file line (see `dev/README.md`).
+- The fork follows upstream's English-only repository rule: `SKILL.md`, `references/`, CLI
+  output, comments and tests are English. Page labels of the research template and its
+  components follow the page language (`src/languages/research.js`). The Chinese prereq /
+  finding keys and evidence kinds are still accepted.
+- Baking now copies only the drawn figures back into the page file, so the page script's
+  load-time changes are not frozen into a baked page. `am patch` keeps the research template
+  and bakes again. A figure error keeps the page closed, like an STE warning.
+- The update notice of a fork version compares upstream with its base and never suggests
+  `npx skills update`; `references/settings.md` says to sync by hand.
+- Tests: 828 (791 pass, 37 skipped without Chrome); with `AM_TEST_BAKE=1` the real bake and
+  375 px layout tests pass too.
+
+---
+
 ## 2026-10-05 — answer-me-with-html 0.2.2-research.2: mobile layout fix
 
 On phones, `research` pages squeezed the body to about 77 px. The desktop rule

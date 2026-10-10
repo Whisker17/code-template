@@ -1,53 +1,78 @@
-# answer-me-with-html（research fork）开发说明
+# answer-me-with-html (research fork): development notes
 
-本目录是 skill 的源码。skill 运行时只需要上一级的 `SKILL.md`、`references/` 和 `scripts/am.mjs`（打包产物）。
+This directory is the source of the skill. At run time the skill needs only the parent directory's `SKILL.md`, `references/`, `examples/` and `scripts/am.mjs` (the bundle).
 
-- 上游：<https://github.com/QingYunA/answer-me-with-html>，fork 自 v0.2.2（MIT，见 `LICENSE`）。
-- 上游的插件、市场、always-on hook、bench、demo 没有带过来。项目级安装用不到它们。
+- Upstream: <https://github.com/QingYunA/answer-me-with-html>, MIT (see `LICENSE`).
+- Fork version `X.Y.Z-research.N`: based on upstream `X.Y.Z`. Current base: **upstream v0.5.0** (`b275eba`, synced at `533c39f`).
+- `dev/` mirrors the upstream repository root for `src/`, `test/`, `bin/`, `scripts/build.mjs`, `scripts/inline-assets.mjs`, `package.json` and `examples/` (`dev/examples/` is used by the tests only; the agent-facing examples are in `../examples/`). Upstream's `skills/answer-me-with-html/` is the parent directory.
+- Not carried over: the plugin manifests and commands, the website (`site/`), bench, docs and demo, and the release / snapshot / smoke-install scripts.
+- Upstream's `am video` code stays in `src/` (it is wired into themes, languages, page and patch), but `SKILL.md` does not document it and `references/video.md` is not shipped.
 
-## 构建与测试
+## Build and test
 
 ```bash
 cd .claude/skills/answer-me-with-html/dev
-npm install                 # esbuild + marked + dagre，只在开发时需要
-npm test                    # 单元测试；真实烘焙测试需要：AM_TEST_BAKE=1 npm test
-npm run build               # 改了 src/ 之后执行，重新生成 ../scripts/am.mjs（要提交）
+npm install                 # esbuild + marked + dagre + yaml, only for development
+npm test                    # unit tests; the real bake / layout tests need: AM_TEST_BAKE=1 npm test
+npm run build               # after changing src/, regenerates ../scripts/am.mjs (commit it)
 ```
 
-`node_modules/` 已被忽略。`../scripts/am.mjs` 是提交到仓库里的打包产物：改了 `src/` 却没有 build，bundle 测试会失败（版本号检查）。
+`node_modules/` is ignored. `../scripts/am.mjs` is a committed build output: when `src/` changes without a build, the bundle test fails (version check). On a merge conflict in `am.mjs`, take either side and rebuild; never merge it by hand.
 
-## 相对上游的改动
+## Changes from upstream
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `src/components/excalidraw.js` | 新组件：Excalidraw JSON spec。静态校验节点 id、重叠和标签间距，错误带行号 |
-| `src/components/uml.js` | 新组件：Mermaid 源码（别名 `mermaid`），校验图类型，禁用 C4 |
-| `src/components/figure.js` | 图外壳：编号、`q` / `read` / `takeaway` |
-| `src/components/research.js` | 新组件：`prereq`、`finding`、`glossary` |
-| `src/markdown.js` | `[[术语]]` 链接（代码里不替换），未定义时报错 |
-| `src/templates/research.js` | 新模板：`{sheet}` 总览、正文、目录，按 `depth=1/2/3` 区分阅读路径 |
-| `src/runtime/diagrams.js` | 浏览器端图形运行时：从 CDN 加载 Mermaid / Excalidraw；只在页面含图且尚未烘焙时内联 |
-| `src/runtime/page.js` | 阅读路径按钮；烘焙后的 `.excalidraw` 下载按钮 |
-| `src/bake.js` | Node 内置 WebSocket 驱动本机 Chrome（DevTools 协议），负责 `bakeFile` / `shotFile` |
-| `src/cli.js` | render 后自动烘焙；新增 `am bake`、`am shot`（`--only`、`--width`，报告正文宽度与横向溢出）、`--no-bake`；help 支持别名 |
-| `src/config.js` | 新配置键 `bake`（on / off）；环境变量 `AM_NO_BAKE=1` 也可以跳过烘焙 |
-| `src/lint/*` | 研究页完整性检查；prereq / finding 逐字段检查；扩充中英文空话词表 |
-| `src/themes/base.css` | 新组件与 research 模板的样式；暗色模式下烘焙的 SVG 整体反相；760px 断点下 research 单栏、工具栏 absolute（research.2 修复：research 桌面规则优先级更高，压过通用断点，手机正文只剩 ~77px） |
-| `test/research.test.js` | 新增测试。删除了 `always-hook.test.js`（插件没有带过来） |
+| `src/components/excalidraw.js` | New component: an Excalidraw JSON spec. Checks node ids, overlaps and label room statically; errors carry line numbers |
+| `src/components/uml.js` | New component: Mermaid source (alias `mermaid`); checks the diagram type, refuses C4 |
+| `src/components/figure.js` | Figure shell: number, `q` / `read` / `takeaway` |
+| `src/components/research.js` | New components: `prereq`, `finding`, `glossary` (English keys; the Chinese keys of the first fork version are accepted) |
+| `src/components/index.js` | Registers the new components; `ALIASES` / `resolveComponent`; `LIVE` (components the browser draws) |
+| `src/languages/research.js` | Labels of the research template and components per language (zh, zh-Hant, en, ja, he; English fallback), kept out of the upstream language files |
+| `src/markdown.js` | `[[term]]` links (not inside code); an undefined term is an error |
+| `src/render.js` | Fence aliases become component names; glossary collected first; figures numbered; `data-am-live="pending"` and the diagram runtime when a page has figures; returns `live` |
+| `src/templates/research.js` | New template: `{sheet}` overview (sized like the sheet template), body, contents, reading paths by `depth=1/2/3` |
+| `src/templates/panel.js` | `depth` option (`data-depth`); `bake` is a reserved frontmatter key |
+| `src/page.js` | `readPage` recognizes the research template, so `am patch` keeps it |
+| `src/parse.js` | `research` is a template choice |
+| `src/runtime/diagrams.js` | Browser runtime that loads Mermaid / Excalidraw from a CDN; inlined only when a page has figures that are not baked |
+| `src/runtime/page.js` | Reading-path buttons; the `.excalidraw` download button of a baked figure |
+| `src/bake.js` | Drives the local Chrome over the DevTools protocol (Node's built-in WebSocket): `bakeFile` / `shotFile`. Baking copies only the drawn `<figure>` elements back into the file (`spliceFigures`) |
+| `src/cli.js` | render and patch bake after writing; new `am bake`, `am shot` (`--only`, `--width`, reports body width and horizontal overflow), `--no-bake`; a figure error keeps the page closed like an STE warning; help takes aliases |
+| `src/config.js` | New key `bake` (on / off); `AM_NO_BAKE=1` also skips baking |
+| `src/update.js` | A fork version compares upstream against its base and never suggests `npx skills update` (it would replace the fork) |
+| `src/lint/*` | Research-page completeness; prereq / finding checked field by field; longer English / Chinese empty-word lists |
+| `src/themes/base.css` | Styles of the new components and the research template; baked SVGs inverted in dark mode; at 760px a one-column research page and an absolute toolbar |
+| `src/assets.js`, `scripts/inline-assets.mjs` | `DIAGRAM_JS` |
+| `scripts/build.mjs` | Writes `../scripts/am.mjs` |
+| `test/research.test.js` | Tests of the fork. `bundle`, `install`, `frontmatter`, `language` and `robustness` tests point at the fork layout; `site` and `always-rule` tests are removed |
 
-## 烘焙为什么要用 Chrome
+## Why baking uses Chrome
 
-Mermaid 和 Excalidraw 都需要真实的 DOM 和字体度量，Node 里画不出来。所以分三步：
+Mermaid and Excalidraw need a real DOM and real font metrics, so Node cannot draw them. The page is made in three steps:
 
-1. render 生成的页面带一段 CDN 运行时，页面联网就能看。
-2. `am bake` 在 headless Chrome 里等运行时把 `data-am-live` 设为 `ok`。
-3. 取出渲染后的 DOM，删掉运行时，写回文件。烘焙后的页面不引用任何外部资源；Excalidraw 字体以 base64 内嵌。
+1. render writes a page with a CDN runtime; the page shows the figures when it is online.
+2. `am bake` opens it in headless Chrome and waits until the runtime sets `data-am-live` to `ok`.
+3. It takes each drawn `<figure>` from the browser, puts it in place of the placeholder in the file, and removes the runtime. Nothing else comes from the browser, so the load-time changes of the page script (layout styles, toolbar state, diagram buttons) do not end up in the file. The baked page loads nothing from outside; Excalidraw fonts are embedded as base64.
 
-Excalidraw 的一个坑：手绘字体加载前，canvas 量出的文字宽度偏窄，标签会被截断，连线遮罩也会偏小。`diagrams.js` 的处理是先导出一次，把 SVG 里内嵌的字体注册到 `document.fonts`，然后再正式转换。
+An Excalidraw trap: before the hand-drawn font loads, the canvas measures text too narrow, so labels are cut and edge masks are too small. `diagrams.js` exports once first, registers the fonts embedded in that SVG with `document.fonts`, then converts for real.
 
-## 和上游同步
+## Always-on mode
+
+Upstream replaced its always-on plugin with a rule in a rules file. To turn it on for a project, add this line to its `AGENTS.md` / `CLAUDE.md` (SKILL.md recognizes the marker):
+
+> [answer-me-with-html always-on] Whenever a reply gives a conclusion, summary, plan, comparison, review or explanation, even a short one, also make a page with the answer-me-with-html skill (2 to 4 panels for routine answers), render it with --no-open before you write the reply, and end the reply with a file:// link to the page. Skip casual chat, one- or two-sentence replies with no conclusion, pure command output, and requests for plain text.
+
+## Syncing with upstream
+
+Do a three-way merge in an upstream clone, then copy the result back. The fork base is the upstream commit named at the top of this file.
 
 ```bash
-git clone --depth 1 https://github.com/QingYunA/answer-me-with-html /tmp/am-upstream
-diff -ru /tmp/am-upstream/src src     # 逐个合并上游改动，保留上表里的改动
+git clone https://github.com/QingYunA/answer-me-with-html /tmp/am-up && cd /tmp/am-up
+git checkout -b fork <base commit>
+# Put the fork into the upstream layout: dev/{src,test,bin,scripts,package.json,examples} → ./,
+# ../{SKILL.md,references,agents,scripts/am.mjs} → skills/answer-me-with-html/. Commit.
+git merge main             # resolve conflicts, keeping every change in the table above
 ```
+
+Then copy `src/`, `test/`, `bin/`, the two scripts and `package.json` back into `dev/`, take upstream's new `SKILL.md` text into `../SKILL.md` (keep the fork sections), run `npm install && npm run build && npm test` (and `AM_TEST_BAKE=1 npm test` with Chrome), bump the version to `<upstream>-research.1`, and update the base commit above and the project `CHANGELOG.md`.

@@ -192,7 +192,7 @@ classDiagram
 
 ```finding F3 medium
 # PagedAttention 减少碎片浪费，不改模型
-结论: 按块分配 KV 显存后，浪费降到 4% 以下。
+结论: 按块分配 KV 显存后，浪费降到小于 4%。
 证据: [observed] 数字来自 vLLM 团队的报告 [4]。[inferred] 我们的负载可能不同，本文没有复测。
 影响: 复测之前，容量规划不要直接使用 4% 这个数字。
 ```

@@ -1,7 +1,7 @@
-// 用本机 Chrome / Chromium（DevTools 协议）打开页面，等图形运行时渲染完成：
-//   bakeFile：把 excalidraw / uml 的渲染结果写回 HTML，并删除 CDN 运行时 → 零依赖单文件。
-//   shotFile：按面板 / 图 / 总览截图，供人或模型逐张检查版面。
-// 只依赖 Node 内置的 fetch 与 WebSocket（Node 22+）；没有 Chrome 或 WebSocket 时抛 BakeUnavailable。
+// Research fork — open a page in the local Chrome / Chromium (DevTools protocol) and wait for the diagram runtime to finish:
+//   bakeFile: write the drawn excalidraw / uml figures back into the HTML and drop the CDN runtime → a single file with no dependencies.
+//   shotFile: screenshot each panel / figure / the overview, so a person or a model can check the layout one image at a time.
+// Uses only Node's built-in fetch and WebSocket (Node 22+); without Chrome or WebSocket it throws BakeUnavailable.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -62,27 +62,27 @@ class CDP {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function launch(width, env) {
-  if (typeof WebSocket === 'undefined') throw new BakeUnavailable(`烘焙需要 Node 22+（内置 WebSocket），当前 ${process.version}`);
+  if (typeof WebSocket === 'undefined') throw new BakeUnavailable(`baking needs Node 22+ (built-in WebSocket); this is ${process.version}`);
   const chrome = findChrome(env);
-  if (!chrome) throw new BakeUnavailable('没有找到 Chrome / Chromium / Edge；设置环境变量 AM_CHROME=/path/to/chrome');
+  if (!chrome) throw new BakeUnavailable('no Chrome / Chromium / Edge found; set AM_CHROME=/path/to/chrome');
   const profile = mkdtempSync(join(tmpdir(), 'am-chrome-'));
   const proc = spawn(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--no-default-browser-check',
     '--remote-debugging-port=0', `--user-data-dir=${profile}`, `--window-size=${width},1000`, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
   const cleanup = () => {
-    try { proc.kill(); } catch { /* 已退出 */ }
+    try { proc.kill(); } catch { /* already gone */ }
     setTimeout(() => rmSync(profile, { recursive: true, force: true }), 300).unref();
   };
   try {
     const wsUrl = await new Promise((ok, ko) => {
       let buf = '';
-      const timer = setTimeout(() => ko(new BakeUnavailable('Chrome 30 秒内没有启动')), 30000);
+      const timer = setTimeout(() => ko(new BakeUnavailable('Chrome did not start within 30 seconds')), 30000);
       proc.stderr.on('data', (d) => {
         buf += d;
         const m = buf.match(/DevTools listening on (ws:\/\/\S+)/);
         if (m) { clearTimeout(timer); ok(m[1]); }
       });
-      proc.on('exit', () => { clearTimeout(timer); ko(new BakeUnavailable('Chrome 启动后立即退出')); });
-      proc.on('error', (e) => { clearTimeout(timer); ko(new BakeUnavailable(`无法启动 Chrome：${e.message}`)); });
+      proc.on('exit', () => { clearTimeout(timer); ko(new BakeUnavailable('Chrome exited right after it started')); });
+      proc.on('error', (e) => { clearTimeout(timer); ko(new BakeUnavailable(`cannot start Chrome: ${e.message}`)); });
     });
     const port = new URL(wsUrl).port;
     let page;
@@ -90,12 +90,12 @@ async function launch(width, env) {
       try {
         const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
         page = list.find((t) => t.type === 'page');
-      } catch { /* 还没就绪 */ }
+      } catch { /* not ready yet */ }
       if (!page) await sleep(200);
     }
-    if (!page) throw new BakeUnavailable('Chrome 没有提供可用的页面');
+    if (!page) throw new BakeUnavailable('Chrome offers no page to drive');
     const ws = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise((ok, ko) => { ws.onopen = ok; ws.onerror = () => ko(new BakeUnavailable('无法连接 Chrome DevTools')); });
+    await new Promise((ok, ko) => { ws.onopen = ok; ws.onerror = () => ko(new BakeUnavailable('cannot connect to Chrome DevTools')); });
     const cdp = new CDP(ws);
     return { cdp, close: () => { try { ws.close(); } catch { /* ignore */ } cleanup(); } };
   } catch (e) {
@@ -104,7 +104,7 @@ async function launch(width, env) {
   }
 }
 
-// 打开页面并等待图形运行时结束。返回渲染状态、错误、JS 异常。
+// Open the page and wait for the diagram runtime to finish. Returns the drawing state, figure errors and JS exceptions.
 async function open(cdp, url, width, timeout) {
   await cdp.call('Page.enable');
   await cdp.call('Runtime.enable');
@@ -125,31 +125,40 @@ async function open(cdp, url, width, timeout) {
   return { state: state === 'pending' || !state ? 'timeout' : state, stage, errors, exceptions, ms: Date.now() - t0 };
 }
 
-// 烘焙：渲染完成后删掉 CDN 运行时和错误条，写回静态 HTML。有错误时不写回。
+// Bake: once every figure is drawn, copy each drawn <figure> into the page file, drop the CDN runtime and the error banner, and
+// write the file back. Only the figures come from the browser: the rest of the file stays as render wrote it, so nothing the page
+// script adds at load time (toolbar state, layout styles, diagram buttons) is frozen into the file. With figure errors nothing is written.
 export async function bakeFile(file, { width = 1440, timeout = 120000, env = process.env } = {}) {
   const path = resolve(file);
   const { cdp, close } = await launch(width, env);
   try {
     const r = await open(cdp, pathToFileURL(path).href, width, timeout);
     if (r.state !== 'ok') return { ...r, baked: false };
-    const html = await cdp.js(`(() => {
-      document.getElementById('am-diagram-runtime')?.remove();
-      document.getElementById('am-render-errors')?.remove();
-      const root = document.documentElement;
-      for (const k of ['amLive', 'amStage', 'amErrors', 'path']) delete root.dataset[k];
-      root.dataset.amBaked = new Date().toISOString().slice(0, 16);
-      document.querySelectorAll('[aria-pressed]').forEach((b) => b.removeAttribute('aria-pressed'));
-      return '<!doctype html>\\n' + root.outerHTML + '\\n';
-    })()`);
-    writeFileSync(path, html);
-    return { ...r, baked: true, figures: (html.match(/data-am-done="1"/g) || []).length };
+    const figures = JSON.parse(await cdp.js(
+      `JSON.stringify([...document.querySelectorAll('figure.am-fig[data-am-done="1"]')].map((f) => [f.id, f.outerHTML]))`,
+    ));
+    writeFileSync(path, spliceFigures(readFileSync(path, 'utf8'), figures));
+    return { ...r, baked: true, figures: figures.length };
   } finally {
     close();
   }
 }
 
-// 截图：full.png + 每个面板 / 图 / 总览各一张。?shot=1 让阅读路径显示全部深度。
-// 默认写到系统临时目录（截图只用于检查，不该进仓库）。
+// The page file with each placeholder <figure id="fig-N"> replaced by its drawn copy, the diagram runtime removed, and the root tag
+// marked as baked. Figures do not nest and their payload escapes <, so a figure ends at the first </figure> after it.
+export function spliceFigures(html, figures, when = new Date().toISOString().slice(0, 16)) {
+  let out = html;
+  for (const [id, drawn] of figures) {
+    out = out.replace(new RegExp(`<figure class="am-fig[^"]*" id="${id}"[\\s\\S]*?</figure>`), () => drawn);
+  }
+  return out
+    .replace(/<div id="am-render-errors" hidden><\/div>\n/, '')
+    .replace(/<script type="module" id="am-diagram-runtime">[\s\S]*?<\/script>\n/, '')
+    .replace(/(<html\b[^>]*?) data-am-live="pending"/, `$1 data-am-baked="${when}"`);
+}
+
+// Screenshots: full.png plus one image per panel / figure / the overview. ?shot=1 makes the reading path show every depth.
+// They go to the system temp directory by default (they are for review and do not belong in a repository).
 export async function shotFile(file, { outDir, only, width = 1440, timeout = 120000, maxCrop = 2400, env = process.env } = {}) {
   const path = resolve(file);
   const dir = resolve(outDir ?? join(tmpdir(), 'am-shots', basename(path, '.html')));
@@ -164,7 +173,7 @@ export async function shotFile(file, { outDir, only, width = 1440, timeout = 120
         const id = el.id || (el.classList.contains('am-frame') ? 'sheet' : el.classList.contains('am-doc-body') ? 'body' : '');
         if (id && !(id in items)) items[id] = box(el);
       }
-      // 横向溢出：页面比视口宽说明有元素撑破了布局（移动端最常见的问题）。
+      // Horizontal overflow: a page wider than the viewport means an element breaks the layout (the most common phone problem).
       return { docH: document.documentElement.scrollHeight, docW: document.documentElement.scrollWidth, viewW: innerWidth, items };
     })()`);
     const shoot = async (name, [x, y, w, h]) => {
@@ -184,7 +193,7 @@ export async function shotFile(file, { outDir, only, width = 1440, timeout = 120
   }
 }
 
-// 页面是否还含未烘焙的图形运行时。
+// Whether the page still holds the diagram runtime (not baked yet).
 export function needsBake(file) {
   return readFileSync(file, 'utf8').includes('id="am-diagram-runtime"');
 }
