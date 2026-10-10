@@ -1,6 +1,6 @@
-// 图形运行时：只在页面含 excalidraw / uml 图且尚未烘焙时内联。
-// 从 CDN 加载 Mermaid 与 Excalidraw，渲染后在 <html> 上写 data-am-live="ok|error"，供 am bake / am shot 等待。
-// am bake 用本机 Chrome 执行本脚本，然后删除本脚本，得到零依赖的单文件页面。
+// Research fork — the diagram runtime: inlined only when a page has excalidraw / uml figures that are not baked yet.
+// It loads Mermaid and Excalidraw from a CDN, draws the figures, then sets data-am-live="ok|error" on <html> for am bake / am shot to wait on.
+// am bake runs this script in the local Chrome, copies the drawn figures into the page file and drops this script: a single file with no dependencies.
 const CDN = {
   mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs',
   excalidraw: 'https://esm.sh/@excalidraw/excalidraw@0.18.0?bundle-deps',
@@ -10,7 +10,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const errors = [];
 const fail = (fig, e) => {
   let msg = String(e && e.message ? e.message : e).split('\n').slice(0, 4).join(' ');
-  // Mermaid 报的是图内行号：换算成源稿行号（围栏行 + 图内行），并截短冗长的 Expecting 列表。
+  // Mermaid reports the line inside the figure: turn it into the draft line (fence line + inner line), and cut the long Expecting list.
   const inner = Number(msg.match(/on line (\d+)/)?.[1] ?? 0);
   msg = msg.replace(/(Expecting .{0,90}).*$/, '$1…');
   errors.push({ fig: fig?.id || '', line: Number(fig?.dataset.line || 0) + inner, kind: fig?.dataset.amLive || '', message: msg });
@@ -26,7 +26,7 @@ async function renderUml(figs) {
   try {
     ({ default: mermaid } = await import(CDN.mermaid));
   } catch (e) {
-    figs.forEach((f) => fail(f, `无法加载 Mermaid（${e.message}）：检查网络后重试`));
+    figs.forEach((f) => fail(f, `cannot load Mermaid (${e.message}): check the network and try again`));
     return;
   }
   const font = getComputedStyle(document.body).fontFamily;
@@ -45,7 +45,7 @@ async function renderUml(figs) {
     stage(`uml:${fig.id}`);
     try {
       const src = JSON.parse(fig.querySelector('script.am-uml-src').textContent);
-      // 每张图用唯一 id 单独渲染：mermaid.run 批量渲染会复用 id，导致 SVG 错位。
+      // Each figure renders on its own with a unique id: mermaid.run reuses ids in a batch, which breaks the SVGs.
       const { svg } = await mermaid.render(`am-mmd-${Date.now().toString(36)}-${i++}`, src);
       canvasOf(fig).innerHTML = svg;
       done(fig);
@@ -60,7 +60,7 @@ const EX = {
   bg: { blue: '#a5d8ff', green: '#b2f2bb', yellow: '#ffec99', red: '#ffc9c9', violet: '#d0bfff', gray: '#e9ecef', orange: '#ffd8a8', teal: '#96f2d7', white: '#ffffff', none: 'transparent' },
   stroke: { ink: '#1e1e1e', blue: '#1971c2', red: '#e03131', green: '#2f9e44', gray: '#868e96', violet: '#6741d9', orange: '#e8590c' },
 };
-// 边的端点贴到形状边缘（矩形 / 椭圆 / 菱形）。
+// Snap an edge end to the shape outline (rectangle / ellipse / diamond).
 function clip(n, tx, ty) {
   const cx = n.x + n.w / 2;
   const cy = n.y + n.h / 2;
@@ -131,11 +131,11 @@ function toSkeleton(spec) {
   for (const r of spec.raw || []) out.push(r);
   return out;
 }
-// Excalidraw 用 canvas 量字宽；手绘字体加载前会量窄，标签被截断、连线遮罩过小。
-// 先导出一次，把 SVG 里内嵌的字体注册到 document，再正式转换。
+// Excalidraw measures text on a canvas; before the hand-drawn font loads it measures too narrow, so labels are cut and edge masks are too small.
+// Export once first, register the fonts embedded in that SVG with the document, then convert for real.
 async function warmFonts(X, specs) {
   const warm = [];
-  for (const sp of specs) { try { warm.push(...X.convertToExcalidrawElements(toSkeleton(sp))); } catch { /* 正式渲染时再报错 */ } }
+  for (const sp of specs) { try { warm.push(...X.convertToExcalidrawElements(toSkeleton(sp))); } catch { /* reported by the real render */ } }
   if (!warm.length) return;
   const svg = await X.exportToSvg({ elements: warm, appState: {}, files: {} });
   const css = [...svg.querySelectorAll('style')].map((s) => s.textContent).join('\n');
@@ -143,7 +143,7 @@ async function warmFonts(X, specs) {
     const fam = /font-family:\s*["']?([^"';]+)["']?/.exec(m[1])?.[1];
     const src = /src:\s*url\(([^)]+)\)/.exec(m[1])?.[1]?.replace(/^["']|["']$/g, '');
     if (!fam || !src) continue;
-    try { const ff = new FontFace(fam, `url(${src})`); document.fonts.add(ff); await ff.load(); } catch { /* 字体失败只影响量宽 */ }
+    try { const ff = new FontFace(fam, `url(${src})`); document.fonts.add(ff); await ff.load(); } catch { /* a font failure only affects text measuring */ }
   }
 }
 async function renderExcalidraw(figs) {
@@ -152,12 +152,12 @@ async function renderExcalidraw(figs) {
   try {
     X = await import(CDN.excalidraw);
   } catch (e) {
-    figs.forEach((f) => fail(f, `无法加载 Excalidraw（${e.message}）：检查网络后重试`));
+    figs.forEach((f) => fail(f, `cannot load Excalidraw (${e.message}): check the network and try again`));
     return;
   }
   const specs = figs.map((f) => JSON.parse(f.querySelector('script.am-excal-spec').textContent));
   stage('excalidraw:fonts');
-  try { await warmFonts(X, specs); } catch { /* 继续渲染 */ }
+  try { await warmFonts(X, specs); } catch { /* draw anyway */ }
   for (const [i, fig] of figs.entries()) {
     stage(`excalidraw:${fig.id}`);
     try {

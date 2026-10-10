@@ -3,17 +3,1833 @@
 
 // src/cli.js
 import { parseArgs } from "node:util";
-import { readFileSync as readFileSync3, writeFileSync as writeFileSync3, mkdirSync as mkdirSync3, existsSync as existsSync3 } from "node:fs";
+import { readFileSync as readFileSync9, writeFileSync as writeFileSync7, mkdirSync as mkdirSync4, existsSync as existsSync7, rmSync as rmSync7 } from "node:fs";
 
 // src/assets.js
-var VERSION = "0.2.2-research.2";
-var BASE_CSS = '/* Answer me with HTML base \u2014 \u53EA\u5F15\u7528\u4E3B\u9898\u53D8\u91CF\uFF0C\u7981\u6B62\u5199\u6B7B\u989C\u8272\uFF08\u4E3B\u9898 token \u89C1 themes/index.js\uFF09 */\n*, *::before, *::after { box-sizing: border-box; }\nhtml, body { margin: 0; padding: 0; }\nbody {\n  background: var(--bg); color: var(--ink);\n  font-family: var(--font-sans); font-size: 14px; line-height: 1.55;\n  -webkit-font-smoothing: antialiased;\n}\ncode, pre, kbd { font-family: var(--font-mono); }\n\n/* \u2500\u2500 \u5DE5\u5177\u680F \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-toolbar {\n  position: fixed; top: 12px; right: 12px; z-index: 10; display: flex; gap: 6px;\n}\n.am-btn {\n  font: 12px/1 var(--font-sans); color: var(--ink); background: var(--paper);\n  border: 1px solid var(--line-2); border-radius: var(--radius); padding: 7px 10px; cursor: pointer;\n}\n.am-btn:hover { border-color: var(--ink-3); }\n.am-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }\n\n/* \u2500\u2500 \u9875\u5934 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-head { margin: 0 0 20px; padding-right: 260px; }\n.am-head h1 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -0.01em; }\n.am-sub { margin: 4px 0 0; color: var(--ink-2); }\n.am-head-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 12px; color: var(--ink-2); }\n.am-head-meta b { font-family: var(--font-mono); font-weight: 400; color: var(--ink-3); margin-right: 6px; }\n.am-intro { margin-top: 12px; max-width: 80ch; }\n\n/* \u2500\u2500 sheet \u56FE\u7EB8\u677F \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-sheet { max-width: 1680px; margin: 0 auto; padding: 32px 28px 40px; }\n.am-frame { position: relative; }\n.am-grid {\n  display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));\n  gap: 20px; align-items: start;\n}\n.am-ruler { display: none; }\nhtml[data-theme="blueprint"] .am-frame { border: 1px solid var(--line); padding: 30px; }\nhtml[data-theme="blueprint"] .am-frame::before {\n  content: ""; position: absolute; inset: 18px; border: 1px solid var(--line); pointer-events: none;\n}\nhtml[data-theme="blueprint"] .am-ruler {\n  display: flex; position: absolute; font: 10px/1 var(--font-mono); color: var(--ink-3);\n}\n.am-ruler span { flex: 1; display: flex; align-items: center; justify-content: center; }\n.am-ruler--top, .am-ruler--bottom { left: 18px; right: 18px; height: 18px; }\n.am-ruler--top { top: 0; }\n.am-ruler--bottom { bottom: 0; }\n.am-ruler--left, .am-ruler--right { top: 18px; bottom: 18px; width: 18px; flex-direction: column; }\n.am-ruler--left { left: 0; }\n.am-ruler--right { right: 0; }\n.am-ruler--top span + span, .am-ruler--bottom span + span { border-left: 1px solid var(--line); }\n.am-ruler--left span + span, .am-ruler--right span + span { border-top: 1px solid var(--line); }\n\n/* \u2500\u2500 \u9762\u677F \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-panel {\n  background: var(--paper); border: var(--bw) solid var(--line); border-radius: var(--radius);\n  box-shadow: var(--shadow); min-width: 0; overflow: hidden;\n}\n.am-panel-head {\n  display: flex; align-items: stretch; gap: 0; border-bottom: var(--bw) solid var(--line); min-height: 34px;\n}\n.am-panel-id {\n  display: flex; align-items: center; justify-content: center; min-width: 34px; padding: 0 8px;\n  background: var(--head-bg); color: var(--head-fg); font-weight: 600; font-size: 14px;\n}\nhtml[data-theme="shadcn"] .am-panel-id { border-radius: 6px; min-width: 24px; height: 24px; margin: 9px 0 9px 14px; font-size: 12px; }\nhtml[data-theme="shadcn"] .am-panel-head { border-bottom-width: 1px; }\n.am-panel-head h2 { margin: 0; padding: 7px 12px; font-size: 15px; font-weight: 600; flex: 1; display: flex; align-items: center; }\n.am-panel-meta { align-self: center; padding: 0 12px; font: 11px/1.3 var(--font-mono); color: var(--ink-2); text-align: right; }\n.am-panel-body { padding: 14px 16px 16px; }\n.am-panel-body > * + * { margin-top: 12px; }\n\n/* \u2500\u2500 Markdown \u6B63\u6587 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-md > :first-child { margin-top: 0; }\n.am-md > :last-child { margin-bottom: 0; }\n.am-md p { margin: 0 0 8px; }\n.am-md ul, .am-md ol { margin: 0 0 8px; padding-left: 20px; }\n.am-md li + li { margin-top: 3px; }\n.am-md h3, .am-md h4 { margin: 14px 0 6px; font-size: 13px; }\n.am-md a { color: var(--accent); }\n.am-md blockquote { margin: 0 0 8px; padding: 2px 12px; border-left: 3px solid var(--line-2); color: var(--ink-2); }\n.am-md :not(pre) > code { font-size: 0.9em; background: var(--fill); padding: 1px 5px; border-radius: 4px; }\n.am-md hr { border: 0; border-top: 1px solid var(--line-2); margin: 12px 0; }\n.am-md table { width: 100%; border-collapse: collapse; font-size: 13px; }\n.am-md th {\n  text-align: left; font: 11px/1.3 var(--font-mono); color: var(--ink-2); font-weight: 400;\n  padding: 6px 10px; border-bottom: 1px solid var(--line-2);\n}\n.am-md td { padding: 7px 10px; border-bottom: 1px solid var(--line-2); vertical-align: top; }\n.am-md tbody tr:nth-child(even) td { background: var(--fill); }\n.am-table-wrap { overflow-x: auto; }\n.am-code {\n  margin: 0; padding: 12px 14px; background: var(--fill); border: 1px solid var(--line-2);\n  border-radius: var(--radius); overflow-x: auto; font-size: 12.5px; line-height: 1.5;\n}\n\n/* \u2500\u2500 \u72B6\u6001\u5FBD\u7AE0 ok / no / warn \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-status { white-space: nowrap; font-weight: 500; }\n.am-status--ok { color: var(--ok); }\n.am-status--no { color: var(--err); }\n.am-status--warn { color: var(--warn); }\n.am-status-icon { display: inline-block; width: 1.1em; font-weight: 700; }\n\n/* \u2500\u2500 callout \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-callout {\n  border: 1px solid var(--line-2); border-left: 3px solid var(--accent); background: var(--accent-bg);\n  padding: 10px 14px; border-radius: var(--radius);\n}\n.am-callout--ok { border-left-color: var(--ok); background: var(--ok-bg); }\n.am-callout--warn { border-left-color: var(--warn); background: var(--warn-bg); }\n.am-callout--err { border-left-color: var(--err); background: var(--err-bg); }\n.am-callout-title { font-weight: 600; margin-bottom: 4px; }\n\n/* \u2500\u2500 kv \u6807\u9898\u680F\u683C \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-kv {\n  display: grid; grid-template-columns: repeat(var(--kv-cols, 2), minmax(0, 1fr)); margin: 0;\n  border-top: var(--bw) solid var(--line); border-left: var(--bw) solid var(--line);\n}\n.am-kv-cell { border-right: var(--bw) solid var(--line); border-bottom: var(--bw) solid var(--line); padding: 6px 10px 8px; min-width: 0; }\n.am-kv-cell--wide { grid-column: 1 / -1; }\n.am-kv dt { font: 11px/1.4 var(--font-mono); color: var(--ink-2); }\n.am-kv dd { margin: 2px 0 0; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }\n.am-kv-cell--wide dd { font-size: 17px; font-weight: 600; }\nhtml[data-theme="shadcn"] .am-kv { border-color: var(--line); border-radius: var(--radius); overflow: hidden; }\n\n/* \u2500\u2500 timeline \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-timeline { list-style: none; margin: 0; padding: 0; }\n.am-timeline--h { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); padding-top: 4px; }\n.am-timeline--h li { position: relative; text-align: center; padding: 0 6px; }\n.am-timeline--h li::before {\n  content: ""; position: absolute; top: 31px; left: 0; right: 0; border-top: var(--bw) solid var(--line);\n}\n.am-timeline--h li:first-child::before { left: 50%; }\n.am-timeline--h li:last-child::before { right: 50%; }\n.am-tl-when { display: block; font-size: 15px; font-weight: 500; height: 24px; }\n.am-tl-dot {\n  position: relative; display: block; width: 11px; height: 11px; margin: 2px auto 8px;\n  border: var(--bw) solid var(--line); border-radius: 50%; background: var(--paper);\n}\n.am-tl-item--hi .am-tl-dot { background: var(--accent); border-color: var(--accent); }\n.am-tl-title { display: block; font-size: 12.5px; font-weight: 500; }\n.am-tl-text { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.45; }\n.am-timeline--v li { position: relative; padding: 0 0 14px 22px; }\n.am-timeline--v li::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: -6px; border-left: var(--bw) solid var(--line-2); }\n.am-timeline--v li:last-child::before { display: none; }\n.am-timeline--v .am-tl-dot { position: absolute; left: 0; top: 4px; margin: 0; }\n.am-timeline--v .am-tl-when { display: inline; height: auto; font: 12px var(--font-mono); color: var(--ink-2); margin-right: 8px; }\n.am-timeline--v .am-tl-title { display: inline; font-size: 14px; }\n.am-timeline--v .am-tl-text { margin-top: 2px; }\n\n/* \u2500\u2500 annot \u53E5\u5B50\u6807\u6CE8 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-annot + .am-annot { border-top: 1px solid var(--line-2); padding-top: 12px; }\n.am-annot-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }\n.am-annot-meta { font: 11px var(--font-mono); font-weight: 400; color: var(--ink-2); }\n.am-annot-scroll { overflow-x: auto; }\n.am-annot-line {\n  position: relative; display: inline-block; white-space: pre; font: 14px/1.6 var(--font-mono);\n  padding-bottom: calc(var(--rows, 0) * 17px + 14px);\n}\n.am-annot-line--wrap { display: block; white-space: normal; padding-bottom: 10px; }\n.am-annot-line--wrap .am-seg { white-space: nowrap; }\n.am-seg { position: relative; }\n.am-seg::after {\n  content: ""; position: absolute; left: 1px; right: 1px; top: calc(100% + 1px); height: 5px;\n  border: 1px solid var(--accent); border-top: 0;\n}\n.am-seg-n {\n  position: absolute; left: 0; top: calc(100% + 8px + var(--row, 0) * 17px);\n  font: 11px/16px var(--font-sans); color: var(--accent); white-space: nowrap;\n}\n.am-seg--err { color: var(--err); }\n.am-seg--err::after { border-color: var(--err); }\n.am-seg--err .am-seg-n { color: var(--err); }\n.am-annot-caption { font-size: 12px; color: var(--ink-2); }\n\n/* \u2500\u2500 limits \u9650\u503C\u6761 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-lim + .am-lim { margin-top: 14px; }\n.am-lim-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 4px; }\n.am-lim-val { font: 12px var(--font-mono); color: var(--accent); white-space: nowrap; }\n.am-lim-track { position: relative; height: 12px; border: 1px solid var(--line-2); background: var(--fill); border-radius: calc(var(--radius) / 2); }\n.am-lim-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-bg); border-right: 1px solid var(--accent); }\n.am-lim-mark { position: absolute; top: -4px; bottom: -4px; border-left: 2px solid var(--accent); }\n.am-lim.is-over .am-lim-fill { background: var(--err-bg); border-right-color: var(--err); }\n.am-lim.is-over .am-lim-val { color: var(--err); }\n.am-lim-ticks { position: relative; height: 16px; font: 10px/16px var(--font-mono); color: var(--ink-3); }\n.am-lim-ticks span { position: absolute; transform: translateX(-50%); }\n.am-lim-ticks span:first-child { transform: none; }\n.am-lim-note { font-size: 11px; color: var(--ink-2); margin-left: 6px; }\n\n/* \u2500\u2500 tree \u7ED3\u6784\u6811 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-tree { font-size: 13px; }\n.am-tree-root { display: flex; justify-content: center; position: relative; padding-bottom: 18px; }\n.am-tree-root::after { content: ""; position: absolute; bottom: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }\n.am-tree-root--solo { padding-bottom: 12px; }\n.am-tree-root--solo::after { display: none; }\n.am-tree-box {\n  border: var(--bw) solid var(--line); background: var(--paper); padding: 6px 14px; text-align: center;\n  border-radius: var(--radius); font-weight: 600;\n}\n.am-tree-box small { display: block; font-weight: 400; color: var(--ink-2); font-size: 12px; }\n.am-tree-box--root { background: var(--accent-bg); font-size: 15px; padding: 8px 28px; }\n.am-tree-cols { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); }\n.am-tree-col { position: relative; padding: 18px 8px 0; min-width: 0; }\n.am-tree-col::before { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: var(--bw) solid var(--line); }\n.am-tree-col:first-child::before { left: 50%; }\n.am-tree-col:last-child::before { right: 50%; }\n.am-tree-col::after { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }\n.am-tree-list, .am-tree-list ul { list-style: none; margin: 0; padding: 0; }\n.am-tree-col > .am-tree-list { margin: 8px 0 0 14px; }\n.am-tree-list ul { margin-left: 16px; }\n.am-tree-list li { position: relative; padding: 3px 0 3px 18px; }\n.am-tree-list li::before { content: ""; position: absolute; left: 0; top: 0.95em; width: 12px; border-top: 1px solid var(--ink-3); }\n.am-tree-list li::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1px solid var(--ink-3); }\n.am-tree-list li:last-child::after { bottom: auto; height: 0.95em; }\n.am-tree-tag { font: 11px var(--font-mono); color: var(--ink-3); margin-right: 4px; }\n.am-tree code { font: 12px var(--font-mono); }\n.am-tree-sub { display: block; font-size: 11.5px; color: var(--ink-2); }\n.am-tree-hi > .am-tree-label { color: var(--accent); font-weight: 600; }\n\n/* \u2500\u2500 \u56FE\uFF08flow / sequence\uFF09\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-diagram { margin: 0; overflow-x: auto; text-align: center; }\n.am-diagram svg { max-width: 100%; height: auto; font-family: var(--font-sans); }\n.am-diagram text { fill: var(--ink); font-size: 13px; }\n.am-node-shape { fill: var(--paper); stroke: var(--line); stroke-width: var(--bw); }\n.am-node--hi .am-node-shape { fill: var(--accent-bg); stroke: var(--accent); }\n.am-node--hi text { fill: var(--accent); font-weight: 600; }\n.am-edge { fill: none; stroke: var(--ink-2); stroke-width: 1.3; }\n.am-edge--dashed { stroke-dasharray: 5 4; }\n.am-arrow { fill: var(--ink-2); }\n.am-edge-label rect { fill: var(--paper); }\n.am-diagram .am-edge-label text { fill: var(--accent); font-size: 11.5px; }\n.am-cluster { fill: var(--fill); stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 4 3; }\n.am-diagram .am-cluster-label { fill: var(--ink-2); font: 11px var(--font-mono); }\n.am-lifeline { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 4 4; }\n.am-actor { fill: var(--paper); stroke: var(--line); stroke-width: var(--bw); }\n.am-note { fill: var(--warn-bg); stroke: var(--warn); stroke-width: 1; }\n.am-diagram .am-step { fill: var(--ink-3); font: 10px var(--font-mono); }\n\n/* \u2500\u2500 doc \u7EBF\u6027\u8BB2\u89E3 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-doc { max-width: 1120px; margin: 0 auto; padding: 40px 28px 64px; }\n.am-doc-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }\n.am-doc-layout--notoc { grid-template-columns: minmax(0, 1fr); max-width: 860px; }\n.am-toc { position: sticky; top: 24px; font-size: 13px; }\n.am-toc a { display: block; color: var(--ink-2); text-decoration: none; padding: 4px 0 4px 10px; border-left: 2px solid var(--line-2); }\n.am-toc a:hover { color: var(--ink); border-left-color: var(--accent); }\n.am-doc-body > .am-panel + .am-panel { margin-top: 20px; }\n\n/* \u2500\u2500 \u54CD\u5E94\u5F0F\u4E0E\u6253\u5370 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n@media (max-width: 1100px) {\n  .am-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }\n  .am-grid > .am-panel { grid-column: auto !important; }\n  .am-grid > .am-panel.am-span-wide { grid-column: 1 / -1 !important; }\n}\n@media (max-width: 760px) {\n  .am-sheet, .am-doc { padding: 56px 12px 24px; }\n  .am-head { padding-right: 0; }\n  .am-grid { grid-template-columns: minmax(0, 1fr); }\n  .am-grid > .am-panel.am-span-wide { grid-column: auto !important; }\n  html[data-theme="blueprint"] .am-frame { padding: 0; border: 0; }\n  html[data-theme="blueprint"] .am-frame::before, html[data-theme="blueprint"] .am-ruler { display: none; }\n  .am-doc-layout { grid-template-columns: minmax(0, 1fr); }\n  .am-toc { position: static; }\n  .am-timeline--h { grid-template-columns: minmax(0, 1fr); }\n  .am-timeline--h li { padding-bottom: 10px; }\n  .am-timeline--h li::before { display: none; }\n  .am-tree-cols { grid-template-columns: minmax(0, 1fr); }\n  /* fixed \u5DE5\u5177\u680F\u5728\u624B\u673A\u4E0A\u4F1A\u4E00\u76F4\u538B\u4F4F\u6B63\u6587\uFF1A\u6539\u4E3A\u53EA\u505C\u5728\u9875\u9762\u9876\u90E8\u3002 */\n  .am-toolbar { position: absolute; }\n}\n.am-colophon { text-align: center; padding: 0 0 28px; font: 11px var(--font-mono); color: var(--ink-3); }\n\n@media print {\n  .am-toolbar { display: none; }\n  body { background: var(--paper); }\n  .am-panel { break-inside: avoid; box-shadow: none; }\n}\n.am-panel--bare { border: 0; background: transparent; box-shadow: none; }\n.am-panel--bare > .am-panel-body { padding: 0; }\n.am-panel--bare .am-kv { background: var(--paper); }\n\n/* \u2550\u2550 research fork: excalidraw / uml \u56FE\u3001\u7814\u7A76\u6A21\u677F\u3001\u524D\u7F6E\u5361\u7247\u3001\u53D1\u73B0\u3001\u672F\u8BED \u2550\u2550 */\n\n/* \u2500\u2500 \u56FE\u5916\u58F3\uFF08excalidraw / uml\uFF09\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-fig { margin: 0; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--paper); text-align: left; }\n.am-fig-q { display: flex; gap: 8px; align-items: baseline; padding: 7px 12px; border-bottom: 1px solid var(--line-2); font: 12px/1.4 var(--font-mono); color: var(--ink-2); }\n.am-fig-q b { color: var(--ink); font-weight: 600; white-space: nowrap; }\n.am-fig-q span { flex: 1; font-family: var(--font-sans); font-size: 13px; color: var(--ink); }\n.am-fig-q i { font-style: normal; font-size: 10.5px; color: var(--ink-3); border: 1px solid var(--line-2); padding: 0 6px; white-space: nowrap; border-radius: var(--radius); }\n.am-fig-canvas { padding: 14px; overflow-x: auto; display: flex; justify-content: center; }\n.am-fig-canvas svg { max-width: 100%; height: auto; }\n.am-fig-pending { font: 12px var(--font-mono); color: var(--ink-3); padding: 28px 0; }\n.am-fig-cap { padding: 8px 12px; border-top: 1px solid var(--line-2); font-size: 13px; color: var(--ink-2); }\n.am-fig-cap b { color: var(--ink); font-weight: 600; }\n.am-fig-cap b + * { margin-left: 0; }\n.am-fig-dl { display: block; margin: 0 12px 10px auto; font-size: 11px; padding: 4px 8px; }\n/* \u6697\u8272\u6A21\u5F0F\uFF1A\u70D8\u7119\u51FA\u7684 SVG \u662F\u4EAE\u8272\u5E95\u7A3F\uFF0C\u6574\u4F53\u53CD\u76F8\uFF08\u4E0E Excalidraw \u81EA\u8EAB\u7684\u6697\u8272\u5BFC\u51FA\u4E00\u81F4\uFF09\u3002 */\nhtml[data-mode="dark"] .am-fig-canvas svg { filter: invert(0.92) hue-rotate(180deg); }\n@media (prefers-color-scheme: dark) { html[data-mode="auto"] .am-fig-canvas svg { filter: invert(0.92) hue-rotate(180deg); } }\n#am-render-errors { position: fixed; bottom: 12px; right: 12px; max-width: 520px; z-index: 20; white-space: pre-wrap;\n  background: var(--err); color: #fff; font: 12px/1.45 var(--font-mono); padding: 10px 12px; border-radius: var(--radius); }\n\n/* \u2500\u2500 research \u6A21\u677F \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-research { max-width: 1320px; margin: 0 auto; padding: 36px 28px 64px; }\n.am-paths { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: -6px 0 22px; font: 11px var(--font-mono); color: var(--ink-3); }\n.am-paths span { margin-right: 4px; letter-spacing: .04em; }\n.am-paths .am-btn[aria-pressed="true"] { background: var(--head-bg); color: var(--head-fg); border-color: var(--head-bg); }\n.am-overview { margin-bottom: 32px; }\n.am-research .am-doc-layout { grid-template-columns: 210px minmax(0, 1fr); }\n.am-research .am-doc-body { max-width: 980px; }\nhtml[data-path="5"] [data-depth="2"], html[data-path="5"] [data-depth="3"], html[data-path="30"] [data-depth="3"] { display: none !important; }\n.am-panel[data-depth="3"] > .am-panel-head h2::after { content: "deep"; margin-left: 8px; font: 10px var(--font-mono); color: var(--ink-3); border: 1px solid var(--line-2); padding: 0 5px; border-radius: var(--radius); }\n\n/* \u2500\u2500 prereq \u524D\u7F6E\u77E5\u8BC6\u5361\u7247\uFF08\u540C\u4E00\u9762\u677F\u5185\u81EA\u52A8\u6210\u7F51\u683C\uFF09\u2500\u2500 */\n.am-panel-body:has(> .am-prereq) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr)); gap: 14px; }\n.am-panel-body:has(> .am-prereq) > :not(.am-prereq) { grid-column: 1 / -1; }\n.am-panel-body:has(> .am-prereq) > * + * { margin-top: 0; }\n.am-prereq { border: var(--bw) solid var(--line); border-radius: var(--radius); background: var(--paper); scroll-margin-top: 16px; }\n.am-prereq > header { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line-2); }\n.am-prereq > header h3 { margin: 0; font-size: 14px; flex: 1; }\n.am-prereq-id { font: 600 11px var(--font-mono); border: 1px solid var(--line); padding: 1px 5px; border-radius: var(--radius); white-space: nowrap; }\n.am-prereq-id--l1 { background: var(--head-bg); color: var(--head-fg); border-color: var(--head-bg); }\n.am-prereq-time { font: 11px var(--font-mono); color: var(--ink-3); white-space: nowrap; }\n.am-prereq dl { margin: 0; padding: 8px 12px 10px; font-size: 13px; }\n.am-prereq dt { font: 10.5px var(--font-mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin-top: 8px; }\n.am-prereq dt:first-child { margin-top: 0; }\n.am-prereq dd { margin: 2px 0 0; }\n.am-prereq dd > :first-child { margin-top: 0; } .am-prereq dd > :last-child { margin-bottom: 0; }\n.am-prereq dd p { margin: 0 0 4px; }\n.am-prereq-mis { color: var(--err); }\n.am-prereq-needs { margin: 0; padding: 0 12px 10px; font: 11px var(--font-mono); color: var(--ink-3); }\n\n/* \u2500\u2500 finding \u53D1\u73B0\u5361\u7247 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-finding { border: var(--bw) solid var(--line); border-radius: var(--radius); background: var(--paper); scroll-margin-top: 16px; }\n.am-finding + .am-finding { margin-top: 14px; }\n.am-finding > header { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line-2); }\n.am-finding > header h3 { margin: 0; font-size: 14.5px; flex: 1; }\n.am-finding-id { font: 600 12px var(--font-mono); background: var(--head-bg); color: var(--head-fg); padding: 2px 7px; border-radius: var(--radius); }\n.am-conf { font: 11px var(--font-mono); border: 1px solid currentColor; padding: 1px 6px; white-space: nowrap; border-radius: var(--radius); }\n.am-conf--high { color: var(--ok); } .am-conf--medium { color: var(--warn); } .am-conf--low { color: var(--err); }\n.am-finding dl { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 4px 12px; margin: 0; padding: 10px 12px; font-size: 13.5px; }\n.am-finding dt { font: 10.5px var(--font-mono); color: var(--ink-3); text-transform: uppercase; padding-top: 3px; }\n.am-finding dd { margin: 0; }\n.am-finding dd > :first-child { margin-top: 0; } .am-finding dd > :last-child { margin-bottom: 0; }\n.am-kind { font: 10.5px var(--font-mono); padding: 0 5px; border-radius: 3px; margin-right: 3px; }\n.am-kind--observed { background: var(--ok-bg); color: var(--ok); }\n.am-kind--inferred { background: var(--warn-bg); color: var(--warn); }\n.am-kind--speculative { background: var(--err-bg); color: var(--err); }\n\n/* \u2500\u2500 glossary \u672F\u8BED\u8868 + [[\u672F\u8BED]] \u60AC\u505C \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.am-glossary { display: grid; grid-template-columns: minmax(130px, 220px) minmax(0, 1fr); margin: 0; border-top: var(--bw) solid var(--line); font-size: 13.5px; }\n.am-glossary dt, .am-glossary dd { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--line-2); scroll-margin-top: 16px; }\n.am-glossary dt { font-weight: 600; }\n.am-gl-alias { display: block; font: 11px var(--font-mono); color: var(--ink-3); font-weight: 400; }\n.am-gl-not { display: block; font-size: 12px; color: var(--err); }\n.am-glossary :target { background: var(--warn-bg); }\na.am-term { color: inherit; text-decoration: none; border-bottom: 1px dashed var(--accent); position: relative; }\na.am-term:hover::after, a.am-term:focus::after {\n  content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 30; width: max-content; max-width: 320px;\n  white-space: normal; background: var(--head-bg); color: var(--head-fg); font: 12px/1.45 var(--font-sans); padding: 7px 9px;\n  border-radius: var(--radius); box-shadow: 0 6px 18px rgba(0,0,0,.18); pointer-events: none;\n}\n/* \u2500\u2500 research \u79FB\u52A8\u7AEF \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n   research \u7684\u684C\u9762\u89C4\u5219\uFF08\u5982 .am-research .am-doc-layout\uFF0C\u4F18\u5148\u7EA7 0,2,0\uFF09\u5199\u5728\u901A\u7528 760px \u65AD\u70B9\u4E4B\u540E\u3001\n   \u4F18\u5148\u7EA7\u4E5F\u66F4\u9AD8\uFF0C\u4F1A\u538B\u8FC7\u65AD\u70B9\u91CC\u7684\u5355\u680F\u89C4\u5219\uFF080,1,0\uFF09\uFF0C\u624B\u673A\u4E0A\u6B63\u6587\u53EA\u5269\u7EA6 80px \u5BBD\u3002\n   \u6240\u4EE5\u5FC5\u987B\u5728\u6240\u6709 research \u684C\u9762\u89C4\u5219\u4E4B\u540E\uFF0C\u7528\u540C\u7B49\u4F18\u5148\u7EA7\u91CD\u65B0\u58F0\u660E\u79FB\u52A8\u7AEF\u7248\u5F0F\u3002 */\n@media (max-width: 760px) {\n  .am-research { padding: 56px 12px 24px; }\n  .am-research .am-doc-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }\n  .am-research .am-doc-body { max-width: none; }\n  .am-research .am-toc { position: static; }\n  .am-paths { margin: 0 0 16px; }\n  .am-finding > header { flex-wrap: wrap; }\n  .am-finding dl { grid-template-columns: minmax(0, 1fr); }\n  .am-finding dt { padding-top: 6px; }\n  .am-glossary { grid-template-columns: minmax(0, 1fr); }\n  .am-glossary dt { border-bottom: 0; padding-bottom: 0; }\n  a.am-term:hover::after, a.am-term:focus::after { max-width: min(320px, 80vw); }\n  /* \u56FE\uFF1A\u95EE\u9898\u5355\u72EC\u5360\u4E00\u884C\uFF1B\u56FE\u4FDD\u6301\u53EF\u8BFB\u5C3A\u5BF8\uFF08\u2265560px\uFF09\uFF0C\u5728\u753B\u5E03\u5185\u6A2A\u5411\u6EDA\u52A8\uFF0C\u800C\u4E0D\u662F\u7F29\u5230\u770B\u4E0D\u6E05\u3002 */\n  .am-fig-q { flex-wrap: wrap; }\n  .am-fig-q span { flex: 1 1 100%; order: 2; }\n  .am-fig-canvas { justify-content: flex-start; -webkit-overflow-scrolling: touch; }\n  .am-fig-canvas svg { min-width: 560px; }\n}\n@media print {\n  html[data-path] [data-depth] { display: block !important; }\n  .am-paths, .am-fig-dl { display: none; }\n}\n';
-var RUNTIME_JS = "(() => {\n  const root = document.documentElement;\n  const cycle = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];\n  const label = (btn, value) => {\n    const map = JSON.parse(btn.dataset.labels || '{}');\n    btn.textContent = map[value] || value;\n  };\n  const bind = (name, attr, values) => {\n    const btn = document.querySelector(`[data-am=\"${name}\"]`);\n    if (!btn) return;\n    label(btn, root.getAttribute(attr));\n    btn.addEventListener('click', () => {\n      const next = cycle(values, root.getAttribute(attr));\n      root.setAttribute(attr, next);\n      label(btn, next);\n    });\n  };\n  bind('theme', 'data-theme', ['blueprint', 'shadcn']);\n  bind('mode', 'data-mode', ['auto', 'light', 'dark']);\n\n  const copyBtn = document.querySelector('[data-am=\"copy\"]');\n  copyBtn?.addEventListener('click', async () => {\n    const text = document.getElementById('am-source').value;\n    try {\n      await navigator.clipboard.writeText(text);\n    } catch {\n      const ta = Object.assign(document.createElement('textarea'), { value: text });\n      document.body.append(ta);\n      ta.select();\n      document.execCommand('copy');\n      ta.remove();\n    }\n    const original = copyBtn.textContent;\n    copyBtn.textContent = copyBtn.dataset.done;\n    setTimeout(() => { copyBtn.textContent = original; }, 1400);\n  });\n\n  // \u9605\u8BFB\u8DEF\u5F84\uFF08research \u6A21\u677F\uFF09\uFF1A5 / 30 / deep\uFF0C\u6309 data-depth \u8FC7\u6EE4\uFF1B\u9009\u62E9\u8BB0\u5728 localStorage\u3002\n  const pathBtns = [...document.querySelectorAll('[data-am-path]')];\n  if (pathBtns.length) {\n    const key = `am-path:${location.pathname}`;\n    const setPath = (p) => {\n      root.dataset.path = p;\n      pathBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.amPath === p)));\n      try { localStorage.setItem(key, p); } catch { /* \u65E0\u75D5\u6A21\u5F0F\u4E0B\u5FFD\u7565 */ }\n    };\n    pathBtns.forEach((b) => b.addEventListener('click', () => setPath(b.dataset.amPath)));\n    let saved = null;\n    try { saved = localStorage.getItem(key); } catch { /* ignore */ }\n    setPath(/[?&]shot\\b/.test(location.search) ? 'deep' : saved || 'deep');\n  }\n\n  // \u70D8\u7119\u540E\u7684 Excalidraw \u56FE\uFF1A\u4E0B\u8F7D .excalidraw \u6587\u4EF6\uFF08\u5143\u7D20\u6570\u636E\u5DF2\u5185\u5D4C\uFF0C\u79BB\u7EBF\u53EF\u7528\uFF09\u3002\n  for (const btn of document.querySelectorAll('[data-am=\"excal-dl\"]')) {\n    btn.addEventListener('click', () => {\n      const fig = btn.closest('figure');\n      const data = fig?.querySelector('script.am-excal-file')?.textContent;\n      if (!data) return;\n      const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));\n      Object.assign(document.createElement('a'), { href: url, download: `${fig.dataset.name || fig.id}.excalidraw` }).click();\n      setTimeout(() => URL.revokeObjectURL(url), 2000);\n    });\n  }\n})();\n";
-var DIAGRAM_JS = "// \u56FE\u5F62\u8FD0\u884C\u65F6\uFF1A\u53EA\u5728\u9875\u9762\u542B excalidraw / uml \u56FE\u4E14\u5C1A\u672A\u70D8\u7119\u65F6\u5185\u8054\u3002\n// \u4ECE CDN \u52A0\u8F7D Mermaid \u4E0E Excalidraw\uFF0C\u6E32\u67D3\u540E\u5728 <html> \u4E0A\u5199 data-am-live=\"ok|error\"\uFF0C\u4F9B am bake / am shot \u7B49\u5F85\u3002\n// am bake \u7528\u672C\u673A Chrome \u6267\u884C\u672C\u811A\u672C\uFF0C\u7136\u540E\u5220\u9664\u672C\u811A\u672C\uFF0C\u5F97\u5230\u96F6\u4F9D\u8D56\u7684\u5355\u6587\u4EF6\u9875\u9762\u3002\nconst CDN = {\n  mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs',\n  excalidraw: 'https://esm.sh/@excalidraw/excalidraw@0.18.0?bundle-deps',\n};\nconst root = document.documentElement;\nconst $$ = (s, r = document) => [...r.querySelectorAll(s)];\nconst errors = [];\nconst fail = (fig, e) => {\n  let msg = String(e && e.message ? e.message : e).split('\\n').slice(0, 4).join(' ');\n  // Mermaid \u62A5\u7684\u662F\u56FE\u5185\u884C\u53F7\uFF1A\u6362\u7B97\u6210\u6E90\u7A3F\u884C\u53F7\uFF08\u56F4\u680F\u884C + \u56FE\u5185\u884C\uFF09\uFF0C\u5E76\u622A\u77ED\u5197\u957F\u7684 Expecting \u5217\u8868\u3002\n  const inner = Number(msg.match(/on line (\\d+)/)?.[1] ?? 0);\n  msg = msg.replace(/(Expecting .{0,90}).*$/, '$1\u2026');\n  errors.push({ fig: fig?.id || '', line: Number(fig?.dataset.line || 0) + inner, kind: fig?.dataset.amLive || '', message: msg });\n};\nconst stage = (s) => { root.dataset.amStage = s; };\nconst canvasOf = (fig) => fig.querySelector('.am-fig-canvas');\nconst done = (fig) => { fig.dataset.amDone = '1'; };\n\n// \u2500\u2500 UML (Mermaid) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nasync function renderUml(figs) {\n  stage('uml:import');\n  let mermaid;\n  try {\n    ({ default: mermaid } = await import(CDN.mermaid));\n  } catch (e) {\n    figs.forEach((f) => fail(f, `\u65E0\u6CD5\u52A0\u8F7D Mermaid\uFF08${e.message}\uFF09\uFF1A\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5`));\n    return;\n  }\n  const font = getComputedStyle(document.body).fontFamily;\n  mermaid.initialize({\n    startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: font,\n    themeVariables: {\n      fontFamily: font, fontSize: '14px', primaryColor: '#ffffff', primaryBorderColor: '#16181d', primaryTextColor: '#16181d',\n      secondaryColor: '#e4ecf8', tertiaryColor: '#f3f5f8', lineColor: '#4b5260', noteBkgColor: '#fdf3e2',\n      noteBorderColor: '#a8620a', actorBkg: '#ffffff', actorBorder: '#16181d', signalColor: '#16181d', labelBoxBkgColor: '#f3f5f8',\n    },\n    sequence: { mirrorActors: false, actorMargin: 60, messageMargin: 36 },\n    flowchart: { curve: 'basis', padding: 12 },\n  });\n  let i = 0;\n  for (const fig of figs) {\n    stage(`uml:${fig.id}`);\n    try {\n      const src = JSON.parse(fig.querySelector('script.am-uml-src').textContent);\n      // \u6BCF\u5F20\u56FE\u7528\u552F\u4E00 id \u5355\u72EC\u6E32\u67D3\uFF1Amermaid.run \u6279\u91CF\u6E32\u67D3\u4F1A\u590D\u7528 id\uFF0C\u5BFC\u81F4 SVG \u9519\u4F4D\u3002\n      const { svg } = await mermaid.render(`am-mmd-${Date.now().toString(36)}-${i++}`, src);\n      canvasOf(fig).innerHTML = svg;\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 Excalidraw \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst EX = {\n  bg: { blue: '#a5d8ff', green: '#b2f2bb', yellow: '#ffec99', red: '#ffc9c9', violet: '#d0bfff', gray: '#e9ecef', orange: '#ffd8a8', teal: '#96f2d7', white: '#ffffff', none: 'transparent' },\n  stroke: { ink: '#1e1e1e', blue: '#1971c2', red: '#e03131', green: '#2f9e44', gray: '#868e96', violet: '#6741d9', orange: '#e8590c' },\n};\n// \u8FB9\u7684\u7AEF\u70B9\u8D34\u5230\u5F62\u72B6\u8FB9\u7F18\uFF08\u77E9\u5F62 / \u692D\u5706 / \u83F1\u5F62\uFF09\u3002\nfunction clip(n, tx, ty) {\n  const cx = n.x + n.w / 2;\n  const cy = n.y + n.h / 2;\n  const dx = tx - cx;\n  const dy = ty - cy;\n  if (!dx && !dy) return [cx, cy];\n  const hw = n.w / 2;\n  const hh = n.h / 2;\n  let t;\n  if (n.shape === 'ellipse') t = 1 / Math.sqrt((dx / hw) ** 2 + (dy / hh) ** 2);\n  else if (n.shape === 'diamond') t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);\n  else t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);\n  const gap = 6 / Math.hypot(dx, dy);\n  return [cx + dx * (t + gap), cy + dy * (t + gap)];\n}\nfunction toSkeleton(spec) {\n  const G = { w: 340, h: 150, ...(spec.grid || {}) };\n  const D = { w: 180, h: 70, fontSize: 18, roughness: 1, strokeWidth: 2, fontFamily: 5, ...(spec.defaults || {}) };\n  const nodes = new Map();\n  const out = [];\n  const common = (o) => ({\n    roughness: o.roughness ?? D.roughness, strokeWidth: o.strokeWidth ?? D.strokeWidth,\n    strokeColor: EX.stroke[o.strokeColor] || o.strokeColor || EX.stroke.ink, strokeStyle: o.stroke || 'solid',\n  });\n  for (const n of spec.nodes || []) {\n    const w = n.w ?? D.w;\n    const h = n.h ?? D.h;\n    nodes.set(n.id, { ...n, w, h, shape: n.shape || 'rectangle', x: n.x ?? (n.col ?? 0) * G.w + (n.dx || 0), y: n.y ?? (n.row ?? 0) * G.h + (n.dy || 0) });\n  }\n  for (const b of spec.boxes || []) {\n    let { x, y, w, h } = b;\n    if (b.around) {\n      const ns = b.around.map((id) => nodes.get(id)).filter(Boolean);\n      const p = b.pad ?? 30;\n      x = Math.min(...ns.map((n) => n.x)) - p;\n      y = Math.min(...ns.map((n) => n.y)) - p - (b.label ? 22 : 0);\n      w = Math.max(...ns.map((n) => n.x + n.w)) + p - x;\n      h = Math.max(...ns.map((n) => n.y + n.h)) + p - y;\n    }\n    out.push({ type: 'rectangle', x, y, width: w, height: h, ...common({ stroke: 'dashed', strokeColor: 'gray', ...b }), backgroundColor: EX.bg[b.color] || b.color || 'transparent', fillStyle: b.fill || 'solid', opacity: b.opacity ?? 60, roundness: { type: 3 } });\n    if (b.label) out.push({ type: 'text', x: x + 10, y: y + 6, text: b.label, fontSize: b.fontSize ?? 14, fontFamily: D.fontFamily, strokeColor: EX.stroke[b.labelColor] || b.labelColor || EX.stroke.gray });\n  }\n  for (const n of nodes.values()) {\n    const el = { type: n.shape, id: n.id, x: n.x, y: n.y, width: n.w, height: n.h, ...common(n), backgroundColor: EX.bg[n.color ?? 'white'] || n.color, fillStyle: n.fill || 'solid' };\n    if (n.shape === 'rectangle' && n.rounded !== false) el.roundness = { type: 3 };\n    if (n.label) el.label = { text: n.label, fontSize: n.fontSize ?? D.fontSize, fontFamily: D.fontFamily, strokeColor: EX.stroke[n.textColor] || n.textColor || EX.stroke.ink };\n    out.push(el);\n  }\n  for (const e of spec.edges || []) {\n    const a = nodes.get(e.from);\n    const b = nodes.get(e.to);\n    const via = e.via || [];\n    const first = via[0] || [b.x + b.w / 2, b.y + b.h / 2];\n    const last = via[via.length - 1] || [a.x + a.w / 2, a.y + a.h / 2];\n    const [sx, sy] = clip(a, ...first);\n    const [ex, ey] = clip(b, ...last);\n    const pts = [[sx, sy], ...via, [ex, ey]].map(([px, py]) => [px - sx, py - sy]);\n    const el = {\n      type: 'arrow', x: sx, y: sy, points: pts, width: Math.abs(ex - sx) || 1, height: Math.abs(ey - sy) || 1,\n      ...common({ ...e, stroke: e.dashed ? 'dashed' : e.dotted ? 'dotted' : 'solid' }),\n      start: { id: a.id }, end: { id: b.id },\n      startArrowhead: e.arrow === 'both' ? (e.head || 'arrow') : null, endArrowhead: e.arrow === 'none' ? null : (e.head || 'arrow'),\n    };\n    if (e.label) el.label = { text: e.label, fontSize: e.fontSize ?? 15, fontFamily: D.fontFamily };\n    out.push(el);\n  }\n  for (const t of spec.texts || []) out.push({ type: 'text', x: t.x, y: t.y, text: t.text, fontSize: t.fontSize ?? 16, fontFamily: D.fontFamily, strokeColor: EX.stroke[t.color] || t.color || EX.stroke.ink, textAlign: t.align || 'left' });\n  for (const r of spec.raw || []) out.push(r);\n  return out;\n}\n// Excalidraw \u7528 canvas \u91CF\u5B57\u5BBD\uFF1B\u624B\u7ED8\u5B57\u4F53\u52A0\u8F7D\u524D\u4F1A\u91CF\u7A84\uFF0C\u6807\u7B7E\u88AB\u622A\u65AD\u3001\u8FDE\u7EBF\u906E\u7F69\u8FC7\u5C0F\u3002\n// \u5148\u5BFC\u51FA\u4E00\u6B21\uFF0C\u628A SVG \u91CC\u5185\u5D4C\u7684\u5B57\u4F53\u6CE8\u518C\u5230 document\uFF0C\u518D\u6B63\u5F0F\u8F6C\u6362\u3002\nasync function warmFonts(X, specs) {\n  const warm = [];\n  for (const sp of specs) { try { warm.push(...X.convertToExcalidrawElements(toSkeleton(sp))); } catch { /* \u6B63\u5F0F\u6E32\u67D3\u65F6\u518D\u62A5\u9519 */ } }\n  if (!warm.length) return;\n  const svg = await X.exportToSvg({ elements: warm, appState: {}, files: {} });\n  const css = [...svg.querySelectorAll('style')].map((s) => s.textContent).join('\\n');\n  for (const m of css.matchAll(/@font-face\\s*{([^}]*)}/g)) {\n    const fam = /font-family:\\s*[\"']?([^\"';]+)[\"']?/.exec(m[1])?.[1];\n    const src = /src:\\s*url\\(([^)]+)\\)/.exec(m[1])?.[1]?.replace(/^[\"']|[\"']$/g, '');\n    if (!fam || !src) continue;\n    try { const ff = new FontFace(fam, `url(${src})`); document.fonts.add(ff); await ff.load(); } catch { /* \u5B57\u4F53\u5931\u8D25\u53EA\u5F71\u54CD\u91CF\u5BBD */ }\n  }\n}\nasync function renderExcalidraw(figs) {\n  stage('excalidraw:import');\n  let X;\n  try {\n    X = await import(CDN.excalidraw);\n  } catch (e) {\n    figs.forEach((f) => fail(f, `\u65E0\u6CD5\u52A0\u8F7D Excalidraw\uFF08${e.message}\uFF09\uFF1A\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5`));\n    return;\n  }\n  const specs = figs.map((f) => JSON.parse(f.querySelector('script.am-excal-spec').textContent));\n  stage('excalidraw:fonts');\n  try { await warmFonts(X, specs); } catch { /* \u7EE7\u7EED\u6E32\u67D3 */ }\n  for (const [i, fig] of figs.entries()) {\n    stage(`excalidraw:${fig.id}`);\n    try {\n      const spec = specs[i];\n      const elements = X.convertToExcalidrawElements(toSkeleton(spec), { regenerateIds: false });\n      const svg = await X.exportToSvg({ elements, appState: { exportBackground: false, viewBackgroundColor: '#ffffff', exportPadding: 16 }, files: {} });\n      svg.removeAttribute('width');\n      svg.removeAttribute('height');\n      svg.style.width = `${Math.min(svg.viewBox.baseVal.width * (spec.scale || 1), 1100)}px`;\n      canvasOf(fig).replaceChildren(svg);\n      const file = { type: 'excalidraw', version: 2, source: 'answer-me-with-html', elements, appState: { viewBackgroundColor: '#ffffff', gridSize: 20 }, files: {} };\n      const store = Object.assign(document.createElement('script'), { type: 'application/json', className: 'am-excal-file' });\n      store.textContent = JSON.stringify(file).replace(/</g, '\\\\u003c');\n      const btn = Object.assign(document.createElement('button'), { type: 'button', className: 'am-btn am-fig-dl', textContent: '\u2193 .excalidraw' });\n      btn.dataset.am = 'excal-dl';\n      btn.title = 'excalidraw.com \u2192 Open';\n      btn.addEventListener('click', () => {\n        const url = URL.createObjectURL(new Blob([store.textContent], { type: 'application/json' }));\n        Object.assign(document.createElement('a'), { href: url, download: `${fig.dataset.name || fig.id}.excalidraw` }).click();\n        setTimeout(() => URL.revokeObjectURL(url), 2000);\n      });\n      canvasOf(fig).after(store, btn);\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 boot \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst pending = $$('figure[data-am-live]:not([data-am-done])');\nconst uml = pending.filter((f) => f.dataset.amLive === 'uml');\nconst excal = pending.filter((f) => f.dataset.amLive === 'excalidraw');\nstage('render');\nawait Promise.all([uml.length && renderUml(uml), excal.length && renderExcalidraw(excal)]);\nconst banner = document.getElementById('am-render-errors');\nif (banner) {\n  banner.hidden = !errors.length;\n  banner.textContent = errors.map((e) => `${e.fig} (L${e.line} ${e.kind}): ${e.message}`).join('\\n');\n}\nroot.dataset.amErrors = JSON.stringify(errors);\nstage('done');\nroot.dataset.amLive = errors.length ? 'error' : 'ok';\n";
+var VERSION = "0.5.0-research.1";
+var BASE_CSS = `/* Answer me with HTML base \u2014 uses theme variables only, never hard-coded colors (theme tokens and decorations: themes/<name>.js). Exception: the var() fallbacks of diagrams (flow / sequence) equal the blueprint light tokens, guarded by a test. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+code, pre, kbd { font-family: var(--font-mono); }
+
+/* \u2500\u2500 Toolbar \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-toolbar {
+  position: fixed; top: 12px; inset-inline-end: 12px; z-index: 10; display: flex; gap: 6px;
+}
+.am-btn {
+  font: 12px/1 var(--font-sans); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line-2); border-radius: var(--radius); padding: 7px 10px; cursor: pointer;
+}
+.am-btn:hover { border-color: var(--ink-3); }
+.am-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Theme and mode lists: a label and a native select inside one button-like box */
+.am-pick {
+  display: flex; align-items: center; gap: 6px; font: 12px/1 var(--font-sans); color: var(--ink-2); background: var(--paper);
+  border: 1px solid var(--line-2); border-radius: var(--radius); padding-block: 0; padding-inline: 10px 4px;
+}
+.am-pick:hover { border-color: var(--ink-3); }
+.am-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.am-pick select {
+  font: inherit; color: var(--ink); background: transparent; border: 0; padding: 6px 2px; cursor: pointer; outline: none;
+}
+.am-pick option { color: var(--ink); background: var(--paper); }
+
+/* \u2500\u2500 Header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-head { margin: 0 0 20px; padding-inline-end: 300px; }
+.am-head h1 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -0.01em; }
+.am-sub { margin: 4px 0 0; color: var(--ink-2); }
+.am-head-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.am-head-meta b { font-family: var(--font-mono); font-weight: 400; color: var(--ink-3); margin-inline-end: 6px; }
+.am-intro { margin-top: 12px; max-width: 80ch; }
+
+/* \u2500\u2500 sheet template \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-sheet { max-width: 1680px; margin: 0 auto; padding: 32px 28px 40px; }
+.am-frame { position: relative; }
+.am-grid {
+  display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 20px; align-items: start;
+}
+.am-ruler { display: none; }
+.am-ruler span { flex: 1; display: flex; align-items: center; justify-content: center; }
+.am-ruler--top, .am-ruler--bottom { left: 18px; right: 18px; height: 18px; }
+.am-ruler--top { top: 0; }
+.am-ruler--bottom { bottom: 0; }
+.am-ruler--left, .am-ruler--right { top: 18px; bottom: 18px; width: 18px; flex-direction: column; }
+.am-ruler--left { left: 0; }
+.am-ruler--right { right: 0; }
+.am-ruler--top span + span, .am-ruler--bottom span + span { border-inline-start: 1px solid var(--line); }
+.am-ruler--left span + span, .am-ruler--right span + span { border-top: 1px solid var(--line); }
+
+/* \u2500\u2500 Panels \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-panel {
+  background: var(--paper); border: var(--bw) solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); min-width: 0; overflow: hidden;
+}
+.am-panel-head {
+  display: flex; align-items: stretch; gap: 0; border-bottom: var(--bw) solid var(--line); min-height: 34px;
+}
+.am-panel-id {
+  display: flex; align-items: center; justify-content: center; min-width: 34px; padding: 0 8px;
+  background: var(--head-bg); color: var(--head-fg); font-weight: 600; font-size: 14px;
+}
+.am-panel-head h2 { margin: 0; padding: 7px 12px; font-size: 15px; font-weight: 600; flex: 1; display: flex; align-items: center; }
+.am-panel-meta { align-self: center; padding: 0 12px; font: 11px/1.3 var(--font-mono); color: var(--ink-2); text-align: end; }
+.am-panel-body { padding: 14px 16px 16px; }
+.am-panel-body > * + * { margin-top: 12px; }
+
+/* \u2500\u2500 Markdown body \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-md > :first-child { margin-top: 0; }
+.am-md > :last-child { margin-bottom: 0; }
+.am-md p { margin: 0 0 8px; }
+.am-md ul, .am-md ol { margin: 0 0 8px; padding-inline-start: 20px; }
+.am-md li + li { margin-top: 3px; }
+.am-md h3, .am-md h4 { margin: 14px 0 6px; font-size: 13px; }
+.am-md a { color: var(--accent); }
+.am-md blockquote { margin: 0 0 8px; padding: 2px 12px; border-inline-start: 3px solid var(--line-2); color: var(--ink-2); }
+.am-md :not(pre) > code { font-size: 0.9em; background: var(--fill); padding: 1px 5px; border-radius: 4px; }
+.am-md hr { border: 0; border-top: 1px solid var(--line-2); margin: 12px 0; }
+.am-md table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.am-md th {
+  text-align: start; font: 11px/1.3 var(--font-mono); color: var(--ink-2); font-weight: 400;
+  padding: 6px 10px; border-bottom: 1px solid var(--line-2);
+}
+/* th { text-align: start } outranks the align attribute from Markdown alignment, so restore right and center columns explicitly. */
+.am-md th[align="right"] { text-align: right; }
+.am-md th[align="center"] { text-align: center; }
+.am-md td { padding: 7px 10px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+.am-md tbody tr:nth-child(even) td { background: var(--fill); }
+.am-table-wrap { overflow-x: auto; }
+/* Images scale down to the panel and never past 70% of the window height, keeping their shape. */
+.am-md img { max-width: 100%; max-height: 70vh; height: auto; }
+.am-figure { margin: 0; text-align: center; }
+.am-figure img { display: block; margin: 0 auto; border: 1px solid var(--line-2); border-radius: var(--radius); }
+.am-figure figcaption { margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--ink-2); }
+.am-code {
+  margin: 0; padding: 12px 14px; background: var(--fill); border: 1px solid var(--line-2);
+  border-radius: var(--radius); overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+}
+/* Ask: a decision the reader makes; the suggested option starts selected */
+.am-ask { margin: 10px 0; padding: 10px 12px 8px; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--fill); min-width: 0; }
+/* The question floats inside the box, so a long question wraps like text instead of riding on the border */
+.am-ask-q { float: left; width: 100%; padding: 0; margin-bottom: 4px; font-weight: 600; }
+/* Two columns: the control, then the label, tag and note, which wrap under the label and never under the control */
+.am-ask-opt { clear: both; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: baseline; padding: 5px 2px; cursor: pointer; }
+.am-ask-opt input { margin: 0; accent-color: var(--accent); position: relative; top: 2px; }
+.am-ask-tag { display: inline-block; font-size: 11px; line-height: 1.5; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+.am-ask-note { display: block; color: var(--ink-2); }
+/* Comment box under each panel, and the Reply sheet */
+.am-comment-btn {
+  display: flex; flex-shrink: 0; align-self: center; margin-block: 0; margin-inline: auto 6px; color: var(--ink-3); background: transparent;
+  border: 1px solid transparent; border-radius: var(--radius); padding: 3px; cursor: pointer;
+}
+.am-panel-meta + .am-comment-btn { margin-inline-start: 0; }
+.am-panel:hover .am-comment-btn, .am-comment-btn:focus-visible, .am-comment-btn[aria-expanded="true"] { border-color: var(--line-2); color: var(--ink-2); }
+.am-panel .am-comment-btn.am-comment-btn--on { color: var(--accent); border-color: var(--accent); }
+.am-panel--bare { position: relative; }
+.am-panel--bare > .am-comment-btn { position: absolute; top: 4px; inset-inline-end: 0; }
+.am-comment { padding: 0 14px 12px; }
+.am-comment textarea, .am-reply textarea {
+  width: 100%; font: 13px/1.5 var(--font-sans); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line-2); border-radius: var(--radius); padding: 8px 10px; resize: vertical;
+}
+.am-comment textarea:focus-visible, .am-reply textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.am-btn--reply { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.am-btn--reply:hover { opacity: .88; }
+.am-reply {
+  width: min(640px, calc(100vw - 32px)); padding: 16px; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line-2); border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+.am-reply::backdrop { background: rgba(0,0,0,.35); }
+.am-reply-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 10px; }
+.am-reply-head span { color: var(--ink-2); font-size: 13px; }
+.am-reply textarea { font-family: var(--font-mono); font-size: 12.5px; }
+.am-reply-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.am-reply .am-btn:disabled { opacity: .5; cursor: default; }
+/* Code block: a header (title or path:lines, language, copy), then one span per line; numbered blocks show the line number in a gutter */
+.am-codeblock { margin: 10px 0; min-width: 0; }
+.am-codeblock .am-code { border-top-left-radius: 0; border-top-right-radius: 0; padding: 10px 0; }
+.am-code-head {
+  display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 12px; font: 12px/1.3 var(--font-sans); color: var(--ink-2);
+  background: var(--paper); border: 1px solid var(--line-2); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0;
+}
+.am-code-title { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.am-code-lang { margin-left: auto; color: var(--ink-3); text-transform: lowercase; }
+.am-code-copy { font: 12px/1 var(--font-sans); color: var(--ink-2); background: transparent; border: 1px solid var(--line-2); border-radius: var(--radius); padding: 4px 8px; cursor: pointer; margin-left: auto; }
+.am-code-lang + .am-code-copy { margin-left: 0; }
+.am-code-copy:hover { border-color: var(--ink-3); color: var(--ink); }
+.am-code-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.am-code code { display: block; min-width: max-content; }
+.am-ln { display: block; padding: 0 14px; min-height: 1.5em; white-space: pre; }
+.am-ln--hl { background: var(--accent-bg); box-shadow: inset 3px 0 0 var(--accent); }
+.am-code--num .am-ln::before {
+  content: attr(data-n); display: inline-block; width: 3.5ch; margin-right: 12px; text-align: right; color: var(--ink-3);
+  user-select: none; -webkit-user-select: none;
+}
+
+/* \u2500\u2500 Status badges ok / no / warn \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-status { white-space: nowrap; font-weight: 500; }
+.am-status--ok { color: var(--ok); }
+.am-status--no { color: var(--err); }
+.am-status--warn { color: var(--warn); }
+.am-status-icon { display: inline-block; width: 1.1em; font-weight: 700; }
+
+/* \u2500\u2500 callout \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-callout {
+  border: 1px solid var(--line-2); border-inline-start: 3px solid var(--accent); background: var(--accent-bg);
+  padding: 10px 14px; border-radius: var(--radius);
+}
+.am-callout--ok { border-inline-start-color: var(--ok); background: var(--ok-bg); }
+.am-callout--warn { border-inline-start-color: var(--warn); background: var(--warn-bg); }
+.am-callout--err { border-inline-start-color: var(--err); background: var(--err-bg); }
+.am-callout-title { font-weight: 600; margin-bottom: 4px; }
+
+/* \u2500\u2500 kv title block \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-kv {
+  display: grid; grid-template-columns: repeat(var(--kv-cols, 2), minmax(0, 1fr)); margin: 0;
+  border-top: var(--bw) solid var(--line); border-inline-start: var(--bw) solid var(--line);
+}
+.am-kv-cell { border-inline-end: var(--bw) solid var(--line); border-bottom: var(--bw) solid var(--line); padding: 6px 10px 8px; min-width: 0; }
+.am-kv-cell--wide { grid-column: 1 / -1; }
+.am-kv dt { font: 11px/1.4 var(--font-mono); color: var(--ink-2); }
+.am-kv dd { margin: 2px 0 0; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.am-kv-cell--wide dd { font-size: 17px; font-weight: 600; }
+
+/* \u2500\u2500 timeline \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-timeline { list-style: none; margin: 0; padding: 0; }
+.am-timeline--h { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); padding-top: 4px; }
+.am-timeline--h li { position: relative; text-align: center; padding: 0 6px; }
+.am-timeline--h li::before {
+  content: ""; position: absolute; top: 31px; left: 0; right: 0; border-top: var(--bw) solid var(--line);
+}
+.am-timeline--h li:first-child::before { inset-inline-start: 50%; }
+.am-timeline--h li:last-child::before { inset-inline-end: 50%; }
+.am-tl-when { display: block; font-size: 15px; font-weight: 500; height: 24px; }
+.am-tl-dot {
+  position: relative; display: block; width: 11px; height: 11px; margin: 2px auto 8px;
+  border: var(--bw) solid var(--line); border-radius: 50%; background: var(--paper);
+}
+.am-tl-item--hi .am-tl-dot { background: var(--accent); border-color: var(--accent); }
+.am-tl-title { display: block; font-size: 12.5px; font-weight: 500; }
+.am-tl-text { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.am-timeline--v li { position: relative; padding: 0 0 14px; padding-inline-start: 22px; }
+.am-timeline--v li::before { content: ""; position: absolute; inset-inline-start: 5px; top: 6px; bottom: -6px; border-inline-start: var(--bw) solid var(--line-2); }
+.am-timeline--v li:last-child::before { display: none; }
+.am-timeline--v .am-tl-dot { position: absolute; inset-inline-start: 0; top: 4px; margin: 0; }
+.am-timeline--v .am-tl-when { display: inline; height: auto; font: 12px var(--font-mono); color: var(--ink-2); margin-inline-end: 8px; }
+.am-timeline--v .am-tl-title { display: inline; font-size: 14px; }
+.am-timeline--v .am-tl-text { margin-top: 2px; }
+/* .am-tl-wrap is the container (src/components/timeline.js): a horizontal timeline answers to the width it has, not to the width of the window, since a
+   sheet puts panels two or three to a row. Below 560 px (about 90 px for each of the six items a timeline has by default) its dates
+   wrap and the dots cover them, so it lays out like timeline v: line and dots at the start, text beside them. */
+.am-tl-wrap { container-type: inline-size; }
+@container (max-width: 560px) {
+  .am-timeline--h { display: block; padding-top: 0; }
+  .am-timeline--h li { text-align: start; padding: 0 0 14px; padding-inline-start: 22px; }
+  .am-timeline--h li::before, .am-timeline--h li:first-child::before {
+    top: 6px; bottom: -6px; inset-inline-start: 5px; inset-inline-end: auto; border-top: 0; border-inline-start: var(--bw) solid var(--line-2);
+  }
+  .am-timeline--h li:last-child::before { display: none; }
+  .am-timeline--h .am-tl-dot { position: absolute; inset-inline-start: 0; top: 4px; margin: 0; }
+  .am-timeline--h .am-tl-when { display: inline; height: auto; font: 12px var(--font-mono); color: var(--ink-2); margin-inline-end: 8px; }
+  .am-timeline--h .am-tl-title { display: inline; font-size: 14px; }
+  .am-timeline--h .am-tl-text { margin-top: 2px; }
+}
+
+/* \u2500\u2500 annot sentence notes \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-annot + .am-annot { border-top: 1px solid var(--line-2); padding-top: 12px; }
+.am-annot-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.am-annot-meta { font: 11px var(--font-mono); font-weight: 400; color: var(--ink-2); }
+.am-annot-scroll { overflow-x: auto; }
+.am-annot-line {
+  position: relative; display: inline-block; white-space: pre; font: 14px/1.6 var(--font-mono);
+  padding-bottom: calc(var(--rows, 0) * 17px + 14px);
+}
+.am-annot-line--wrap { display: block; white-space: normal; padding-bottom: 10px; }
+.am-annot-line--wrap .am-seg { white-space: nowrap; }
+.am-seg { position: relative; }
+.am-seg::after {
+  content: ""; position: absolute; left: 1px; right: 1px; top: calc(100% + 1px); height: 5px;
+  border: 1px solid var(--accent); border-top: 0;
+}
+.am-seg-n {
+  position: absolute; inset-inline-start: 0; top: calc(100% + 8px + var(--row, 0) * 17px);
+  font: 11px/16px var(--font-sans); color: var(--accent); white-space: nowrap;
+}
+.am-seg--err { color: var(--err); }
+.am-seg--err::after { border-color: var(--err); }
+.am-seg--err .am-seg-n { color: var(--err); }
+.am-annot-caption { font-size: 12px; color: var(--ink-2); }
+
+/* \u2500\u2500 limits bars \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-lim + .am-lim { margin-top: 14px; }
+.am-lim-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 4px; }
+.am-lim-val { font: 12px var(--font-mono); color: var(--accent); white-space: nowrap; }
+.am-lim-track { position: relative; height: 12px; border: 1px solid var(--line-2); background: var(--fill); border-radius: calc(var(--radius) / 2); }
+.am-lim-fill { position: absolute; inset-inline-start: 0; top: 0; bottom: 0; background: var(--accent-bg); border-inline-end: 1px solid var(--accent); }
+.am-lim-mark { position: absolute; top: -4px; bottom: -4px; border-left: 2px solid var(--accent); }
+.am-lim.is-over .am-lim-fill { background: var(--err-bg); border-inline-end-color: var(--err); }
+.am-lim.is-over .am-lim-val { color: var(--err); }
+.am-lim-ticks { position: relative; height: 16px; font: 10px/16px var(--font-mono); color: var(--ink-3); }
+.am-lim-ticks span { position: absolute; transform: translateX(-50%); }
+.am-lim-ticks span:first-child { transform: none; }
+.am-lim-note { font-size: 11px; color: var(--ink-2); margin-inline-start: 6px; }
+
+/* \u2500\u2500 tree \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-tree { font-size: 13px; }
+.am-tree-root { display: flex; justify-content: center; position: relative; padding-bottom: 18px; }
+.am-tree-root::after { content: ""; position: absolute; bottom: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }
+.am-tree-root--solo { padding-bottom: 12px; }
+.am-tree-root--solo::after { display: none; }
+.am-tree-box {
+  border: var(--bw) solid var(--line); background: var(--paper); padding: 6px 14px; text-align: center;
+  border-radius: var(--radius); font-weight: 600;
+}
+.am-tree-box small { display: block; font-weight: 400; color: var(--ink-2); font-size: 12px; }
+.am-tree-box--root { background: var(--accent-bg); font-size: 15px; padding: 8px 28px; }
+.am-tree-cols { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); }
+.am-tree-col { position: relative; padding: 18px 8px 0; min-width: 0; }
+.am-tree-col::before { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: var(--bw) solid var(--line); }
+.am-tree-col:first-child::before { inset-inline-start: 50%; }
+.am-tree-col:last-child::before { inset-inline-end: 50%; }
+.am-tree-col::after { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }
+.am-tree-list, .am-tree-list ul { list-style: none; margin: 0; padding: 0; }
+.am-tree-col > .am-tree-list { margin: 8px 0 0; margin-inline-start: 14px; }
+.am-tree-list ul { margin-inline-start: 16px; }
+.am-tree-list li { position: relative; padding: 3px 0; padding-inline-start: 18px; }
+.am-tree-list li::before { content: ""; position: absolute; inset-inline-start: 0; top: 0.95em; width: 12px; border-top: 1px solid var(--ink-3); }
+.am-tree-list li::after { content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; border-inline-start: 1px solid var(--ink-3); }
+.am-tree-list li:last-child::after { bottom: auto; height: 0.95em; }
+.am-tree-tag { font: 11px var(--font-mono); color: var(--ink-3); margin-inline-end: 4px; }
+.am-tree code { font: 12px var(--font-mono); }
+.am-tree-sub { display: block; font-size: 11.5px; color: var(--ink-2); }
+.am-tree-hi > .am-tree-label { color: var(--accent); font-weight: 600; }
+
+/* \u2500\u2500 Diagrams (flow / sequence) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-diagram { margin: 0; overflow-x: auto; text-align: center; }
+/* Embedded previews can lose html[data-theme]; the fallbacks keep diagrams readable, and defined theme variables still win. */
+.am-diagram svg { max-width: 100%; height: auto; font-family: var(--font-sans, sans-serif); }
+.am-diagram text { fill: var(--ink, #16181d); font-size: 13px; }
+.am-node-shape { fill: var(--paper, #ffffff); stroke: var(--line, #1d2026); stroke-width: var(--bw, 1.5px); }
+.am-node--hi .am-node-shape { fill: var(--accent-bg, #e4ecf8); stroke: var(--accent, #1d5fbf); }
+.am-node--hi text { fill: var(--accent, #1d5fbf); font-weight: 600; }
+.am-edge { fill: none; stroke: var(--ink-2, #4b5260); stroke-width: 1.3; }
+.am-edge--dashed { stroke-dasharray: 5 4; }
+.am-arrow { fill: var(--ink-2, #4b5260); }
+.am-edge-label rect { fill: var(--paper, #ffffff); }
+.am-diagram .am-edge-label text { fill: var(--accent, #1d5fbf); font-size: 11.5px; }
+.am-cluster { fill: var(--fill, #f3f5f8); stroke: var(--line-2, #d6dae1); stroke-width: 1; stroke-dasharray: 4 3; }
+.am-diagram .am-cluster-label { fill: var(--ink-2, #4b5260); font: 11px var(--font-mono, monospace); }
+.am-lifeline { stroke: var(--ink-3, #8b929e); stroke-width: 1; stroke-dasharray: 4 4; }
+.am-actor { fill: var(--paper, #ffffff); stroke: var(--line, #1d2026); stroke-width: var(--bw, 1.5px); }
+.am-note { fill: var(--warn-bg, #fdf3e2); stroke: var(--warn, #a8620a); stroke-width: 1; }
+.am-diagram .am-step { fill: var(--ink-3, #8b929e); font: 10px var(--font-mono, monospace); }
+
+.am-diagram-expand {
+  /* In flow and sticky: it sits at the end edge (right on a left-to-right page) and stays in view when the diagram scrolls sideways.
+     It takes its own row above the drawing, so it never covers a node at the top-right corner of the drawing. */
+  position: sticky; inset-inline-start: calc(100% - 36px); z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0; margin: 0 0 4px; margin-inline: auto 8px;
+  color: var(--ink-2); background: var(--paper);
+  border: var(--bw, 1px) solid var(--line-2); border-radius: var(--radius);
+  cursor: pointer; opacity: 0.72;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s, background 0.15s;
+}
+.am-diagram:hover .am-diagram-expand,
+.am-diagram-expand:focus-visible { opacity: 1; }
+.am-diagram-expand:hover {
+  opacity: 1; color: var(--ink); border-color: var(--accent); background: var(--fill);
+}
+.am-diagram-expand:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* \u2500\u2500 Diagram Lightbox and Pan-Zoom Viewer \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-lightbox {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column;
+  touch-action: none;
+}
+.am-lightbox[hidden] { display: none !important; }
+
+.am-lightbox-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.am-lightbox-header {
+  position: absolute; top: 12px; left: 24px; right: 24px; height: 36px;
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 10; pointer-events: none;
+}
+.am-lightbox-title {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: rgba(255, 255, 255, 0.92);
+  font: 13px/1 var(--font-sans, sans-serif); font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw;
+}
+.am-lightbox-title svg { stroke: rgba(255, 255, 255, 0.85); flex-shrink: 0; }
+.am-lightbox-actions {
+  display: flex; align-items: center; gap: 8px; pointer-events: auto;
+}
+.am-lightbox-close {
+  width: 32px; height: 32px;
+  background: var(--paper);
+  border: var(--bw, 1px) solid var(--line-2);
+  border-radius: 50%;
+  color: var(--ink);
+  font-size: 15px; line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s, color 0.15s, transform 0.15s, border-color 0.15s;
+}
+.am-lightbox-close:hover {
+  color: var(--accent); border-color: var(--accent); background: var(--fill); transform: scale(1.05);
+}
+.am-lightbox-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.am-lightbox-stage {
+  position: absolute;
+  top: 54px; bottom: 20px; left: 24px; right: 24px;
+  background: var(--paper);
+  border: var(--bw, 1px) solid var(--line-2);
+  border-radius: max(var(--radius), 14px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.am-lightbox-stage.am-panning { cursor: grabbing; }
+
+.am-lightbox-canvas {
+  position: absolute; left: 0; top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  pointer-events: none;
+}
+.am-lightbox-canvas svg {
+  max-width: none !important;
+  max-height: none !important;
+  display: block;
+  font-family: var(--font-sans, sans-serif);
+}
+
+/* \u2500\u2500 doc template \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-doc { max-width: 1120px; margin: 0 auto; padding: 40px 28px 64px; }
+.am-doc-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+.am-doc-layout--notoc { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
+.am-toc { position: sticky; top: 24px; font-size: 13px; }
+.am-toc a { display: block; color: var(--ink-2); text-decoration: none; padding: 4px 0; padding-inline-start: 10px; border-inline-start: 2px solid var(--line-2); }
+.am-toc a:hover { color: var(--ink); border-inline-start-color: var(--accent); }
+.am-doc-body > .am-panel + .am-panel { margin-top: 20px; }
+
+/* \u2500\u2500 Responsive and print \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+@media (max-width: 1100px) {
+  .am-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .am-grid > .am-panel { grid-column: auto !important; }
+  .am-grid > .am-panel.am-span-wide { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 760px) {
+  .am-sheet, .am-doc { padding: 56px 12px 24px; }
+  .am-head { padding-inline-end: 0; }
+  .am-grid { grid-template-columns: minmax(0, 1fr); }
+  .am-grid > .am-panel.am-span-wide { grid-column: auto !important; }
+  .am-doc-layout { grid-template-columns: minmax(0, 1fr); }
+  .am-toc { position: static; }
+  .am-tree-cols { grid-template-columns: minmax(0, 1fr); }
+  /* Tables and diagrams keep their size: the wrapper scrolls horizontally when they overflow. A cell is never narrower than about
+     two short words, so a phone does not stack them one per line. On wider screens the sheet layout (src/runtime/layout-dom.js)
+     gives a table panel the width its columns read well at. */
+  .am-md th, .am-md td { min-width: 8em; }
+  .am-diagram svg { max-width: none; }
+  .am-lightbox-header { top: 8px; left: 12px; right: 12px; }
+  .am-lightbox-stage { top: 46px; bottom: 12px; left: 12px; right: 12px; border-radius: max(var(--radius), 10px); }
+  /* Research fork: a fixed toolbar keeps covering the text on a phone, so it stays at the top of the page instead. */
+  .am-toolbar { position: absolute; }
+}
+.am-colophon { text-align: center; padding: 0 0 28px; font: 11px var(--font-mono); color: var(--ink-3); }
+.am-colophon a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+@media print {
+  .am-toolbar, .am-diagram-expand, .am-lightbox, .am-code-copy, .am-comment-btn, .am-comment, .am-reply { display: none !important; }
+  body { background: var(--paper); }
+  .am-panel { break-inside: avoid; box-shadow: none; }
+}
+/* Printed on paper narrower than three columns, the two-column grid left a hole beside every panel next to a full-width one
+   (a wide table, a wide diagram): one panel per row instead. */
+@media print and (max-width: 1100px) {
+  .am-grid { grid-template-columns: minmax(0, 1fr); }
+  .am-grid > .am-panel { grid-column: auto !important; }
+}
+.am-panel--bare { border: 0; background: transparent; box-shadow: none; }
+.am-panel--bare > .am-panel-body { padding: 0; }
+.am-panel--bare .am-kv { background: var(--paper); }
+
+/* Remark mode: block marks with a note, collected into the Reply copy (src/runtime/remark.js). Each kind borrows a status colour of
+   the theme, so a mark reads in light and dark mode on every theme. */
+.am-btn--remark.is-on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.am-remark-hover { outline: 1px dashed var(--ink-3); outline-offset: 2px; cursor: pointer; }
+:is(.am-mark, .am-remark-kind)[data-kind="suggestion"] { --mark: var(--warn); --mark-bg: var(--warn-bg); }
+:is(.am-mark, .am-remark-kind)[data-kind="keep"] { --mark: var(--ok); --mark-bg: var(--ok-bg); }
+:is(.am-mark, .am-remark-kind)[data-kind="question"] { --mark: var(--accent); --mark-bg: var(--accent-bg); }
+:is(.am-mark, .am-remark-kind)[data-kind="concern"] { --mark: var(--err); --mark-bg: var(--err-bg); }
+.am-mark { border-inline-start: 3px solid var(--mark); padding-inline-start: 10px; background: var(--mark-bg); border-radius: 1px; }
+/* The note chip sits inside the marked block (a table takes it as its caption, a list item puts it before its sub-list), so lists and
+   grids keep their children. */
+.am-mark-note {
+  display: block; margin-block-start: 4px; font: 12px/1.5 var(--font-sans); letter-spacing: normal; text-transform: none;
+  color: var(--ink-2); white-space: pre-wrap; caption-side: bottom; text-align: start;
+}
+.am-mark-note b { color: var(--ink); font-weight: 600; }
+caption.am-mark-note { display: table-caption; }
+/* Table rows have their own backgrounds, so a tint on the table would show on every other row only: the bar marks a table. */
+table.am-mark { background: none; }
+.am-remark-pop {
+  position: absolute; z-index: 40; width: min(264px, calc(100vw - 16px)); padding: 8px; display: grid; gap: 6px;
+  color: var(--ink); background: var(--paper); border: 1px solid var(--line-2); border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0, 0, 0, .14);
+}
+.am-remark-pop[hidden] { display: none; }
+.am-remark-kinds { display: flex; gap: 6px; flex-wrap: wrap; }
+.am-remark-kind { font: 12px/1 var(--font-sans); color: var(--ink-2); background: var(--paper); border: 1px solid var(--line-2); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.am-remark-kind:hover { border-color: var(--ink-3); }
+.am-remark-kind[aria-pressed="true"] { color: var(--ink); border-color: var(--mark); background: var(--mark-bg); }
+.am-remark-kind:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.am-remark-pop textarea { font: 13px/1.5 var(--font-sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line-2); border-radius: var(--radius); padding: 6px 8px; resize: vertical; }
+.am-remark-actions { display: flex; gap: 6px; }
+.am-remark-actions .am-btn:disabled { opacity: .5; cursor: default; }
+@media print { .am-remark-pop { display: none !important; } }
+
+/* \u2550\u2550 Research fork: excalidraw / uml figures, research template, prerequisite cards, findings, glossary \u2550\u2550 */
+
+/* \u2500\u2500 Figure shell (excalidraw / uml) \u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-fig { margin: 0; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--paper); text-align: start; }
+.am-fig-q { display: flex; gap: 8px; align-items: baseline; padding: 7px 12px; border-bottom: 1px solid var(--line-2); font: 12px/1.4 var(--font-mono); color: var(--ink-2); }
+.am-fig-q b { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.am-fig-q span { flex: 1; font-family: var(--font-sans); font-size: 13px; color: var(--ink); }
+.am-fig-q i { font-style: normal; font-size: 10.5px; color: var(--ink-3); border: 1px solid var(--line-2); padding: 0 6px; white-space: nowrap; border-radius: var(--radius); }
+.am-fig-canvas { padding: 14px; overflow-x: auto; display: flex; justify-content: center; }
+.am-fig-canvas svg { max-width: 100%; height: auto; }
+.am-fig-pending { font: 12px var(--font-mono); color: var(--ink-3); padding: 28px 0; }
+.am-fig-cap { padding: 8px 12px; border-top: 1px solid var(--line-2); font-size: 13px; color: var(--ink-2); }
+.am-fig-cap b { color: var(--ink); font-weight: 600; }
+.am-fig-cap b + * { margin-inline-start: 0; }
+.am-fig-dl { display: block; margin-block: 0 10px; margin-inline: auto 12px; font-size: 11px; padding: 4px 8px; }
+/* Dark mode: a baked SVG is drawn on a light ground, so it is inverted as a whole (as Excalidraw's own dark export does). */
+html[data-mode="dark"] .am-fig-canvas svg { filter: invert(0.92) hue-rotate(180deg); }
+@media (prefers-color-scheme: dark) { html[data-mode="auto"] .am-fig-canvas svg { filter: invert(0.92) hue-rotate(180deg); } }
+#am-render-errors { position: fixed; bottom: 12px; inset-inline-end: 12px; max-width: 520px; z-index: 20; white-space: pre-wrap;
+  background: var(--err); color: #fff; font: 12px/1.45 var(--font-mono); padding: 10px 12px; border-radius: var(--radius); }
+
+/* \u2500\u2500 research template \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-research { max-width: 1320px; margin: 0 auto; padding: 36px 28px 64px; }
+.am-paths { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: -6px 0 22px; font: 11px var(--font-mono); color: var(--ink-3); }
+.am-paths span { margin-inline-end: 4px; letter-spacing: .04em; }
+.am-paths .am-btn[aria-pressed="true"] { background: var(--head-bg); color: var(--head-fg); border-color: var(--head-bg); }
+.am-overview { margin-bottom: 32px; }
+.am-research .am-doc-layout { grid-template-columns: 210px minmax(0, 1fr); }
+.am-research .am-doc-body { max-width: 980px; }
+html[data-path="5"] [data-depth="2"], html[data-path="5"] [data-depth="3"], html[data-path="30"] [data-depth="3"] { display: none !important; }
+.am-panel[data-depth="3"] > .am-panel-head h2::after { content: "deep"; margin-inline-start: 8px; font: 10px var(--font-mono); color: var(--ink-3); border: 1px solid var(--line-2); padding: 0 5px; border-radius: var(--radius); }
+
+/* \u2500\u2500 prereq cards (a grid when one panel holds several) \u2500\u2500 */
+.am-panel-body:has(> .am-prereq) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr)); gap: 14px; }
+.am-panel-body:has(> .am-prereq) > :not(.am-prereq) { grid-column: 1 / -1; }
+.am-panel-body:has(> .am-prereq) > * + * { margin-top: 0; }
+.am-prereq { border: var(--bw) solid var(--line); border-radius: var(--radius); background: var(--paper); scroll-margin-top: 16px; }
+.am-prereq > header { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line-2); }
+.am-prereq > header h3 { margin: 0; font-size: 14px; flex: 1; }
+.am-prereq-id { font: 600 11px var(--font-mono); border: 1px solid var(--line); padding: 1px 5px; border-radius: var(--radius); white-space: nowrap; }
+.am-prereq-id--l1 { background: var(--head-bg); color: var(--head-fg); border-color: var(--head-bg); }
+.am-prereq-time { font: 11px var(--font-mono); color: var(--ink-3); white-space: nowrap; }
+.am-prereq dl { margin: 0; padding: 8px 12px 10px; font-size: 13px; }
+.am-prereq dt { font: 10.5px var(--font-mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin-top: 8px; }
+.am-prereq dt:first-child { margin-top: 0; }
+.am-prereq dd { margin: 2px 0 0; }
+.am-prereq dd > :first-child { margin-top: 0; } .am-prereq dd > :last-child { margin-bottom: 0; }
+.am-prereq dd p { margin: 0 0 4px; }
+.am-prereq-mis { color: var(--err); }
+.am-prereq-needs { margin: 0; padding: 0 12px 10px; font: 11px var(--font-mono); color: var(--ink-3); }
+
+/* \u2500\u2500 finding cards \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-finding { border: var(--bw) solid var(--line); border-radius: var(--radius); background: var(--paper); scroll-margin-top: 16px; }
+.am-finding + .am-finding { margin-top: 14px; }
+.am-finding > header { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line-2); }
+.am-finding > header h3 { margin: 0; font-size: 14.5px; flex: 1; }
+.am-finding-id { font: 600 12px var(--font-mono); background: var(--head-bg); color: var(--head-fg); padding: 2px 7px; border-radius: var(--radius); }
+.am-conf { font: 11px var(--font-mono); border: 1px solid currentColor; padding: 1px 6px; white-space: nowrap; border-radius: var(--radius); }
+.am-conf--high { color: var(--ok); } .am-conf--medium { color: var(--warn); } .am-conf--low { color: var(--err); }
+.am-finding dl { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 4px 12px; margin: 0; padding: 10px 12px; font-size: 13.5px; }
+.am-finding dt { font: 10.5px var(--font-mono); color: var(--ink-3); text-transform: uppercase; padding-top: 3px; }
+.am-finding dd { margin: 0; }
+.am-finding dd > :first-child { margin-top: 0; } .am-finding dd > :last-child { margin-bottom: 0; }
+.am-kind { font: 10.5px var(--font-mono); padding: 0 5px; border-radius: 3px; margin-inline-end: 3px; }
+.am-kind--observed { background: var(--ok-bg); color: var(--ok); }
+.am-kind--inferred { background: var(--warn-bg); color: var(--warn); }
+.am-kind--speculative { background: var(--err-bg); color: var(--err); }
+
+/* \u2500\u2500 glossary + [[term]] hover \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.am-glossary { display: grid; grid-template-columns: minmax(130px, 220px) minmax(0, 1fr); margin: 0; border-top: var(--bw) solid var(--line); font-size: 13.5px; }
+.am-glossary dt, .am-glossary dd { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--line-2); scroll-margin-top: 16px; }
+.am-glossary dt { font-weight: 600; }
+.am-gl-alias { display: block; font: 11px var(--font-mono); color: var(--ink-3); font-weight: 400; }
+.am-gl-not { display: block; font-size: 12px; color: var(--err); }
+.am-glossary :target { background: var(--warn-bg); }
+a.am-term { color: inherit; text-decoration: none; border-bottom: 1px dashed var(--accent); position: relative; }
+a.am-term:hover::after, a.am-term:focus::after {
+  content: attr(data-tip); position: absolute; inset-inline-start: 0; top: calc(100% + 6px); z-index: 30; width: max-content; max-width: 320px;
+  white-space: normal; background: var(--head-bg); color: var(--head-fg); font: 12px/1.45 var(--font-sans); padding: 7px 9px;
+  border-radius: var(--radius); box-shadow: 0 6px 18px rgba(0,0,0,.18); pointer-events: none;
+}
+/* \u2500\u2500 research on a phone \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+   The research desktop rules (such as .am-research .am-doc-layout, specificity 0,2,0) come after the generic 760px breakpoint
+   and are more specific, so they beat its one-column rule (0,1,0) and leave the body about 80px wide on a phone.
+   The phone layout is declared again here, after every research desktop rule, at the same specificity. */
+@media (max-width: 760px) {
+  .am-research { padding: 56px 12px 24px; }
+  .am-research .am-doc-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .am-research .am-doc-body { max-width: none; }
+  .am-research .am-toc { position: static; }
+  .am-paths { margin: 0 0 16px; }
+  .am-finding > header { flex-wrap: wrap; }
+  .am-finding dl { grid-template-columns: minmax(0, 1fr); }
+  .am-finding dt { padding-top: 6px; }
+  .am-glossary { grid-template-columns: minmax(0, 1fr); }
+  .am-glossary dt { border-bottom: 0; padding-bottom: 0; }
+  a.am-term:hover::after, a.am-term:focus::after { max-width: min(320px, 80vw); }
+  /* Figures: the question gets its own line; the drawing keeps a readable size (560px or more) and scrolls inside its canvas instead of shrinking. */
+  .am-fig-q { flex-wrap: wrap; }
+  .am-fig-q span { flex: 1 1 100%; order: 2; }
+  .am-fig-canvas { justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+  .am-fig-canvas svg { min-width: 560px; }
+}
+@media print {
+  html[data-path] [data-depth] { display: block !important; }
+  .am-paths, .am-fig-dl { display: none; }
+}
+`;
+var RUNTIME_JS = "(() => {\n  const root = document.documentElement;\n  // A host that serves this page inside its own document leaves the real root without the page's settings. The toolbar keeps a copy;\n  // set back what the root lacks, before anything below reads the root. A root's own value, even an empty one, is never replaced.\n  const carrier = document.querySelector('.am-toolbar');\n  for (const [attr, key] of [['lang', 'data-am-root-lang'], ['dir', 'data-am-root-dir'], ['data-theme', 'data-am-root-theme'], ['data-mode', 'data-am-root-mode'], ['data-style', 'data-am-root-style']]) {\n    if (root.getAttribute(attr) === null && carrier?.getAttribute(key) != null) root.setAttribute(attr, carrier.getAttribute(key));\n  }\n  // Each toolbar list sets one root attribute; its options name the values, so the runtime names no theme or mode.\n  for (const [name, attr] of [['theme', 'data-theme'], ['mode', 'data-mode']]) {\n    const select = document.querySelector(`select[data-am=\"${name}\"]`);\n    if (!select) continue;\n    select.value = root.getAttribute(attr);\n    select.addEventListener('change', () => root.setAttribute(attr, select.value));\n  }\n\n  const copyText = async (text) => {\n    try {\n      await navigator.clipboard.writeText(text);\n    } catch {\n      const ta = Object.assign(document.createElement('textarea'), { value: text });\n      document.body.append(ta);\n      ta.select();\n      document.execCommand('copy');\n      ta.remove();\n    }\n  };\n  // The button reads its label from data-done for a moment after a copy.\n  const flash = (btn) => {\n    const original = btn.textContent;\n    btn.textContent = btn.dataset.done;\n    setTimeout(() => { btn.textContent = original; }, 1400);\n  };\n\n  const copyBtn = document.querySelector('[data-am=\"copy\"]');\n  copyBtn?.addEventListener('click', async () => {\n    const nodes = document.querySelectorAll('#am-source');\n    await copyText(nodes[nodes.length - 1]?.value ?? '');\n    flash(copyBtn);\n  });\n\n  // Research fork \u2014 reading paths (research template): 5 / 30 / deep filter panels by data-depth; the choice is kept in localStorage.\n  const pathBtns = [...document.querySelectorAll('[data-am-path]')];\n  if (pathBtns.length) {\n    const key = `am-path:${location.pathname}`;\n    const setPath = (p) => {\n      root.dataset.path = p;\n      pathBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.amPath === p)));\n      try { localStorage.setItem(key, p); } catch { /* private mode: not kept */ }\n    };\n    pathBtns.forEach((b) => b.addEventListener('click', () => setPath(b.dataset.amPath)));\n    let saved = null;\n    try { saved = localStorage.getItem(key); } catch { /* ignore */ }\n    setPath(/[?&]shot\\b/.test(location.search) ? 'deep' : saved || 'deep');\n  }\n\n  // Research fork \u2014 a baked Excalidraw figure: download it as a .excalidraw file (the element data is embedded, so this works offline).\n  for (const btn of document.querySelectorAll('[data-am=\"excal-dl\"]')) {\n    btn.addEventListener('click', () => {\n      const fig = btn.closest('figure');\n      const data = fig?.querySelector('script.am-excal-file')?.textContent;\n      if (!data) return;\n      const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));\n      Object.assign(document.createElement('a'), { href: url, download: `${fig.dataset.name || fig.id}.excalidraw` }).click();\n      setTimeout(() => URL.revokeObjectURL(url), 2000);\n    });\n  }\n\n  // Each code block copies its own lines, without the line numbers.\n  for (const btn of document.querySelectorAll('[data-am=\"copy-code\"]')) {\n    btn.addEventListener('click', async () => {\n      const lines = btn.closest('.am-codeblock')?.querySelectorAll('.am-ln') ?? [];\n      await copyText([...lines].map((l) => l.textContent).join('\\n'));\n      flash(btn);\n    });\n  }\n\n  // \u2500\u2500 Diagram Lightbox & Pan-Zoom Viewer \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const diagrams = document.querySelectorAll('.am-diagram:not(.am-lightbox-canvas)');\n  const lb = document.querySelector('.am-lightbox');\n  if (diagrams.length && lb) {\n    const backdrop = lb.querySelector('.am-lightbox-backdrop');\n    const titleText = lb.querySelector('.am-lightbox-title-text');\n    const stage = lb.querySelector('.am-lightbox-stage');\n    const canvas = lb.querySelector('.am-lightbox-canvas');\n    const closeBtn = lb.querySelector('.am-lightbox-close');\n    const expandLabel = lb.getAttribute('data-expand') || 'Expand diagram';\n\n    let scale = 1, x = 0, y = 0, fitScale = 1, curVw = 800, curVh = 600;\n    let isDragging = false, activePointerId = null, startX = 0, startY = 0, origX = 0, origY = 0;\n    let lastTrigger = null;\n\n    const apply = () => {\n      canvas.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;\n    };\n\n    const zoomTo = (newScale, pivotX, pivotY) => {\n      newScale = Math.max(0.2, Math.min(6.0, newScale));\n      if (Math.abs(newScale - scale) < 0.0001) return;\n      const r = newScale / scale;\n      x = pivotX - (pivotX - x) * r;\n      y = pivotY - (pivotY - y) * r;\n      scale = newScale;\n      apply();\n    };\n\n    const open = (diag, trigger) => {\n      const svg = [...diag.children].find((el) => el.tagName.toLowerCase() === 'svg');\n      if (!svg) return;\n      lastTrigger = trigger;\n\n      const panel = diag.closest('.am-panel');\n      const panelTitle = panel?.querySelector('.am-panel-head h2')?.textContent?.trim() || panel?.querySelector('h2')?.textContent?.trim() || lb.getAttribute('aria-label') || 'Diagram viewer';\n      if (titleText) titleText.textContent = panelTitle;\n\n      const clone = svg.cloneNode(true);\n      const defElements = clone.querySelectorAll('[id]');\n      if (defElements.length) {\n        const idMap = new Map();\n        defElements.forEach((el, i) => {\n          const oldId = el.id;\n          const newId = `${oldId}-lb-${i}`;\n          idMap.set(oldId, newId);\n          el.id = newId;\n        });\n        const urlAttrs = ['marker-start', 'marker-mid', 'marker-end', 'fill', 'stroke', 'filter', 'clip-path', 'mask'];\n        clone.querySelectorAll('*').forEach((el) => {\n          for (const attr of urlAttrs) {\n            const val = el.getAttribute(attr);\n            if (val && val.startsWith('url(#')) {\n              const id = val.slice(5, -1);\n              if (idMap.has(id)) el.setAttribute(attr, `url(#${idMap.get(id)})`);\n            }\n          }\n          const href = el.getAttribute('href') || el.getAttribute('xlink:href');\n          if (href && href.startsWith('#')) {\n            const id = href.slice(1);\n            if (idMap.has(id)) {\n              if (el.hasAttribute('href')) el.setAttribute('href', `#${idMap.get(id)}`);\n              if (el.hasAttribute('xlink:href')) el.setAttribute('xlink:href', `#${idMap.get(id)}`);\n            }\n          }\n        });\n      }\n\n      const vb = svg.viewBox?.baseVal;\n      curVw = (vb && vb.width > 0) ? vb.width : (parseFloat(svg.getAttribute('width')) || svg.clientWidth || 800);\n      curVh = (vb && vb.height > 0) ? vb.height : (parseFloat(svg.getAttribute('height')) || svg.clientHeight || 600);\n      clone.style.width = `${curVw}px`;\n      clone.style.height = `${curVh}px`;\n      canvas.innerHTML = '';\n      canvas.append(clone);\n      lb.removeAttribute('hidden');\n      document.body.style.overflow = 'hidden';\n\n      const rect = stage.getBoundingClientRect();\n      const pad = 48;\n      const availW = Math.max(100, rect.width - pad * 2);\n      const availH = Math.max(100, rect.height - pad * 2);\n      fitScale = Math.min(availW / curVw, availH / curVh, 1.0);\n      scale = fitScale;\n      x = (rect.width - curVw * scale) / 2;\n      y = (rect.height - curVh * scale) / 2;\n      apply();\n      closeBtn.focus();\n    };\n\n    const close = () => {\n      if (lb.hasAttribute('hidden')) return;\n      lb.setAttribute('hidden', '');\n      canvas.innerHTML = '';\n      document.body.style.overflow = '';\n      lastTrigger?.focus();\n    };\n\n    stage.addEventListener('wheel', (e) => {\n      e.preventDefault();\n      const rect = stage.getBoundingClientRect();\n      const dy = e.deltaMode === 1 ? e.deltaY * 16 : (e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY);\n      const factor = Math.exp(-Math.max(-200, Math.min(200, dy)) * 0.0015);\n      zoomTo(scale * factor, e.clientX - rect.left, e.clientY - rect.top);\n    }, { passive: false });\n\n    stage.addEventListener('pointerdown', (e) => {\n      if (e.button !== 0 || isDragging) return;\n      isDragging = true;\n      activePointerId = e.pointerId;\n      startX = e.clientX;\n      startY = e.clientY;\n      origX = x;\n      origY = y;\n      stage.setPointerCapture(e.pointerId);\n      stage.classList.add('am-panning');\n    });\n\n    stage.addEventListener('pointermove', (e) => {\n      if (!isDragging || e.pointerId !== activePointerId) return;\n      x = origX + (e.clientX - startX);\n      y = origY + (e.clientY - startY);\n      apply();\n    });\n\n    const endDrag = (e) => {\n      if (!isDragging || e.pointerId !== activePointerId) return;\n      isDragging = false;\n      activePointerId = null;\n      stage.classList.remove('am-panning');\n      try { stage.releasePointerCapture(e.pointerId); } catch {}\n    };\n    stage.addEventListener('pointerup', endDrag);\n    stage.addEventListener('pointercancel', endDrag);\n\n    stage.addEventListener('dblclick', () => {\n      const rect = stage.getBoundingClientRect();\n      scale = fitScale;\n      x = (rect.width - curVw * scale) / 2;\n      y = (rect.height - curVh * scale) / 2;\n      apply();\n    });\n\n    closeBtn.addEventListener('click', close);\n    backdrop.addEventListener('click', close);\n    window.addEventListener('keydown', (e) => {\n      if (e.key === 'Escape' && !lb.hasAttribute('hidden')) close();\n    });\n\n    lb.addEventListener('keydown', (e) => {\n      if (e.key !== 'Tab') return;\n      const focusables = lb.querySelectorAll('button:not([disabled]), [tabindex]:not([tabindex=\"-1\"])');\n      if (!focusables.length) return;\n      const first = focusables[0];\n      const last = focusables[focusables.length - 1];\n      if (e.shiftKey && document.activeElement === first) {\n        e.preventDefault();\n        last.focus();\n      } else if (!e.shiftKey && document.activeElement === last) {\n        e.preventDefault();\n        first.focus();\n      }\n    });\n\n    const expandSvg = '<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" y1=\"3\" x2=\"14\" y2=\"10\"></line><line x1=\"3\" y1=\"21\" x2=\"10\" y2=\"14\"></line></svg>';\n    diagrams.forEach((diag) => {\n      const btn = document.createElement('button');\n      btn.type = 'button';\n      btn.className = 'am-diagram-expand';\n      btn.title = expandLabel;\n      btn.setAttribute('aria-label', expandLabel);\n      btn.innerHTML = expandSvg;\n      btn.addEventListener('click', () => open(diag, btn));\n      diag.prepend(btn);\n    });\n  }\n})();\n(() => {\n// The reply a reader copies from the page: one Markdown text with the decisions, the panel comments and the block remarks.\n// A plain ES module for tests; the page gets it with its `export` keyword dropped (src/runtime/compose.js).\n// decisions: [{ panel, question, picked: [label], suggested: [label], touched }]; comments: [{ panel, title, text }];\n// remarks: [{ panel, quote, kind, note }], where quote is the start of the marked block and kind is a key of ui.kinds.\n// Comment and remark text is quoted line by line, so text the reader typed cannot pass as part of the structure.\n// rtl: the page reads right to left, so the arrow before each answer points left, the way the text runs.\nfunction replyText({ title, decisions, comments, remarks = [], ui, rtl = false }) {\n  const arrow = rtl ? '\u2190' : '\u2192';\n  const out = [`# Re: ${title}`];\n  if (decisions.length) {\n    out.push('', `## ${ui.decisions}`);\n    decisions.forEach((d, i) => {\n      const answer = d.picked.length ? d.picked.map((l) => `**${l}**`).join(', ') : '**\u2014**';\n      const same = d.picked.length === d.suggested.length && d.picked.every((l) => d.suggested.includes(l));\n      const why = same ? (d.touched ? ui.confirmed : ui.untouched) : `${ui.was}: ${d.suggested.join(', ') || '\u2014'}`;\n      out.push(`${i + 1}. [${d.panel}] ${d.question}`, `   ${arrow} ${answer} _(${why})_`);\n    });\n  }\n  const written = comments.filter((c) => c.text.trim());\n  const quoted = (text) => (text.trim() ? text.trim().split('\\n').map((l) => `  > ${l}`) : []);\n  if (written.length) {\n    out.push('', `## ${ui.comments}`);\n    for (const c of written) out.push(`- **${c.panel} \xB7 ${c.title}**`, ...quoted(c.text));\n  }\n  if (remarks.length) {\n    out.push('', `## ${ui.remarks}`);\n    for (const r of remarks) {\n      const label = [r.panel, ui.kinds?.[r.kind] ?? r.kind].filter(Boolean).join(' \xB7 ');\n      out.push(`- **${label}** \"${r.quote}\"`, ...quoted(r.note));\n    }\n  }\n  if (written.length || remarks.some((r) => r.note.trim())) out.push('', `_${ui.typed}_`);\n  return `${out.join('\\n')}\\n`;\n}\n\n// Answer on the page: every panel gets a Comment box, and the Reply button collects the ask answers, the comments and the remarks\n// into one Markdown reply (replyText) to copy back to the agent. Answers and comments stay in localStorage across reloads.\n// The remark script (remark.js) adds the blocks the reader marked, through window.__amRemarkData.\nconst replyBtn = document.querySelector('[data-am=\"reply\"]');\nconst COMMENT_ICON = '<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"></path></svg>';\nif (replyBtn) {\n  const ui = JSON.parse(replyBtn.dataset.ui);\n  const storeKey = `am-reply:${location.pathname}`;\n  const panels = [...document.querySelectorAll('.am-panel')];\n  const asks = [...document.querySelectorAll('.am-ask')];\n  // Answers are saved by question text, so they still match after am patch has renumbered the asks.\n  // Page text without the word joiners a right-to-left page puts after a Hebrew prefix hyphen (src/bidi.js): the reply and the saved\n  // answers hold the text as the draft wrote it.\n  const WJ = new RegExp(String.fromCharCode(0x2060), 'g');\n  const textOf = (el) => el?.textContent.replace(WJ, '').trim();\n  const keyOf = (ask) => textOf(ask.querySelector('legend')) ?? ask.dataset.ask;\n  const touched = new Set();\n  const boxes = new Map();\n\n  const load = () => {\n    try {\n      return JSON.parse(localStorage.getItem(storeKey)) || {};\n    } catch {\n      return {};\n    }\n  };\n  const save = () => {\n    const state = {\n      asks: Object.fromEntries(asks.map((a) => [keyOf(a), { picked: picked(a), touched: touched.has(a) }])),\n      comments: Object.fromEntries([...boxes].map(([id, box]) => [id, box.value]).filter(([, text]) => text.trim())),\n    };\n    try {\n      localStorage.setItem(storeKey, JSON.stringify(state));\n    } catch {\n      // Storage may be off (private window, file:// policy); answers then last until the page closes.\n    }\n  };\n  const picked = (ask) => [...ask.querySelectorAll('input')].filter((i) => i.checked).map((i) => i.value);\n  const panelOf = (el) => {\n    const panel = el.closest('.am-panel');\n    return { id: panel?.id.replace(/^panel-/, '') ?? '', title: textOf(panel?.querySelector('.am-panel-head h2')) ?? '' };\n  };\n\n  const saved = load();\n  for (const ask of asks) {\n    const inputs = [...ask.querySelectorAll('input')];\n    const state = saved.asks?.[keyOf(ask)];\n    // A saved answer applies only while every picked option still exists on the page.\n    if (state && state.picked.every((v) => inputs.some((i) => i.value === v))) {\n      for (const input of inputs) input.checked = state.picked.includes(input.value);\n      if (state.touched) touched.add(ask);\n    }\n    // A click counts even on the option that is already picked: the reader confirms the suggestion.\n    const answer = () => {\n      touched.add(ask);\n      save();\n    };\n    ask.addEventListener('change', answer);\n    ask.addEventListener('click', (e) => { if (e.target.matches('input')) answer(); });\n  }\n\n  for (const panel of panels) {\n    const id = panel.id.replace(/^panel-/, '');\n    // An icon only: narrow panels have no room for a word next to the title.\n    const btn = Object.assign(document.createElement('button'), { type: 'button', className: 'am-comment-btn', title: ui.comment, innerHTML: COMMENT_ICON });\n    btn.setAttribute('aria-label', `${ui.comment} ${id}`);\n    btn.setAttribute('aria-expanded', 'false');\n    const wrap = Object.assign(document.createElement('div'), { className: 'am-comment', hidden: true });\n    const box = Object.assign(document.createElement('textarea'), { rows: 3, placeholder: ui.commentHint, value: saved.comments?.[id] ?? '' });\n    box.setAttribute('aria-label', `${ui.comment} ${id}`);\n    wrap.append(box);\n    const show = (open) => {\n      wrap.hidden = !open;\n      btn.setAttribute('aria-expanded', String(open));\n    };\n    btn.addEventListener('click', () => {\n      show(wrap.hidden);\n      if (!wrap.hidden) box.focus();\n    });\n    box.addEventListener('input', () => {\n      btn.classList.toggle('am-comment-btn--on', Boolean(box.value.trim()));\n      save();\n    });\n    btn.classList.toggle('am-comment-btn--on', Boolean(box.value.trim()));\n    if (box.value.trim()) show(true);\n    (panel.querySelector('.am-panel-head') ?? panel).append(btn);\n    panel.append(wrap);\n    boxes.set(id, box);\n  }\n\n  const sheet = document.createElement('dialog');\n  sheet.className = 'am-reply';\n  sheet.setAttribute('aria-label', ui.title);\n  sheet.innerHTML = '<div class=\"am-reply-head\"><strong></strong><span></span></div><textarea readonly rows=\"14\"></textarea><div class=\"am-reply-actions\"><button type=\"button\" class=\"am-btn\" data-act=\"copy\"></button><button type=\"button\" class=\"am-btn\" data-act=\"close\"></button></div>';\n  sheet.querySelector('strong').textContent = ui.title;\n  sheet.querySelector('span').textContent = ui.hint;\n  const text = sheet.querySelector('textarea');\n  const copy = sheet.querySelector('[data-act=\"copy\"]');\n  const close = sheet.querySelector('[data-act=\"close\"]');\n  copy.textContent = ui.copy;\n  close.textContent = ui.close;\n  document.body.append(sheet);\n\n  const compose = () => {\n    const decisions = asks.map((ask) => ({\n      panel: panelOf(ask).id,\n      question: textOf(ask.querySelector('legend')) ?? '',\n      picked: picked(ask),\n      suggested: [...ask.querySelectorAll('input[data-suggested]')].map((i) => i.value),\n      touched: touched.has(ask),\n    }));\n    const comments = [...boxes].map(([id, box]) => ({ panel: id, title: panelOf(box).title, text: box.value }));\n    const remarks = window.__amRemarkData?.() ?? [];\n    const empty = !decisions.length && !comments.some((c) => c.text.trim()) && !remarks.length;\n    const title = textOf(document.querySelector('.am-head h1')) ?? document.title;\n    return empty ? '' : replyText({ title, decisions, comments, remarks, ui, rtl: document.documentElement.dir === 'rtl' });\n  };\n\n  replyBtn.addEventListener('click', () => {\n    const reply = compose();\n    text.value = reply || ui.empty;\n    copy.disabled = !reply;\n    if (sheet.showModal) sheet.showModal();\n    else sheet.setAttribute('open', '');\n    (reply ? copy : close).focus();\n  });\n  close.addEventListener('click', () => (sheet.close ? sheet.close() : sheet.removeAttribute('open')));\n  copy.addEventListener('click', async () => {\n    try {\n      await navigator.clipboard.writeText(text.value);\n    } catch {\n      text.select();\n      document.execCommand('copy');\n    }\n    copy.textContent = ui.done;\n    setTimeout(() => { copy.textContent = ui.copy; }, 1400);\n  });\n}\n})();\n(() => {\n// Text helpers for remark mode (src/runtime/remark.js): how a marked block is named and quoted.\n// A plain ES module for tests; the page gets it with its `export` keyword dropped (src/runtime/compose.js).\n// A block keeps its mark across `am patch` because the key is its panel, its tag and the start of its text, not its position.\n\nconst collapse = (text) => String(text).replace(/\\s+/g, ' ').trim();\n\n// The start of a block's text with whitespace collapsed: the readable identity of the block.\nfunction fingerprint(text, len = 80) {\n  return collapse(text).slice(0, len);\n}\n\n// What the reply quotes of a block: the start of its text, with an ellipsis when it is cut.\nfunction quote(text, len = 60) {\n  const t = collapse(text);\n  return t.length > len ? `${t.slice(0, len).trimEnd()}\u2026` : t;\n}\n\n// Two blocks with the same text (two identical list items) get the same base key. The n-th one in the page gets \"\\t<n>\" added;\n// a tab cannot be in a fingerprint, which has its whitespace collapsed, so the new key never meets another base key.\nfunction occurrenceKeys(bases) {\n  const seen = new Map();\n  return bases.map((base) => {\n    const n = seen.get(base) ?? 0;\n    seen.set(base, n + 1);\n    return n ? `${base}\\t${n}` : base;\n  });\n}\n\n// Remark mode: the reader turns it on, clicks a block, tags it (suggestion, keep, question, concern) and may add a note.\n// A mark shows as a bar and a note chip inside the block, lives in localStorage like panel comments, and the Reply button carries it\n// back to the agent: reply.js calls window.__amRemarkData, and replyText (reply-text.js) writes the Remarks section.\n(() => {\n  const btn = document.querySelector('[data-am=\"remark\"]');\n  if (!btn) return;\n  const ui = JSON.parse(btn.dataset.ui);\n  const KINDS = ['suggestion', 'keep', 'question', 'concern'];\n  const storeKey = `am-remark:${location.pathname}`;\n  // The one definition of a block a reader can mark: the content under <main>. The page and panel titles are left out, because the\n  // reply reads them as text; a panel has its Comment button.\n  const BLOCK = 'main :is(h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,table,dd,dt,figure):not(.am-head *, .am-panel-head *)';\n  // A click on these does what it always did.\n  const LIVE = '.am-remark-pop, .am-toolbar, a, button, input, textarea, select, label';\n  const blockAt = (target) => (target.closest(LIVE) ? null : target.closest(BLOCK));\n\n  const WJ = new RegExp(String.fromCharCode(0x2060), 'g'); // word joiners of a right-to-left page (src/bidi.js); not part of the draft's text\n  const inlineBox = new WeakMap();\n  const isInline = (el) => {\n    if (!inlineBox.has(el)) inlineBox.set(el, getComputedStyle(el).display.startsWith('inline'));\n    return inlineBox.get(el);\n  };\n  // The text of a block as the reader sees it: separate lines, cells and timeline parts are joined by a space (textContent would run\n  // \"2026\" and \"Ship\" together), and the note chip is not part of it.\n  const blockText = (el) => {\n    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);\n    let text = '';\n    let last = null;\n    for (let node = walker.nextNode(); node; node = walker.nextNode()) {\n      if (node.parentElement.closest('.am-mark-note')) continue;\n      let box = node.parentElement;\n      while (box !== el && isInline(box)) box = box.parentElement;\n      if (last && box !== last) text += ' ';\n      text += node.data.replace(WJ, '');\n      last = box;\n    }\n    return text;\n  };\n\n  const panelOf = (el) => el.closest('.am-panel')?.id.replace(/^panel-/, '') ?? '';\n  // Block keys, in page order. Built when first needed: a page nobody marked pays nothing.\n  let keys = null;\n  const keyMap = () => {\n    if (!keys) {\n      const blocks = [...document.querySelectorAll(BLOCK)];\n      const ids = occurrenceKeys(blocks.map((el) => `${panelOf(el)}|${el.localName}|${fingerprint(blockText(el))}`));\n      keys = new Map(blocks.map((el, i) => [el, ids[i]]));\n    }\n    return keys;\n  };\n\n  const load = () => {\n    try {\n      const saved = JSON.parse(localStorage.getItem(storeKey));\n      return Array.isArray(saved) ? saved.filter((m) => typeof m?.key === 'string' && KINDS.includes(m.kind)) : [];\n    } catch {\n      return [];\n    }\n  };\n  // A mark whose block is gone from the page stays stored (it may return with `am patch`); it is neither painted nor sent.\n  const marks = new Map(load().map((m) => [m.key, { key: m.key, kind: m.kind, note: String(m.note ?? '') }]));\n  const save = () => {\n    try {\n      localStorage.setItem(storeKey, JSON.stringify([...marks.values()]));\n    } catch {\n      // Storage may be off (private window, a sandboxed page); marks then last until the page closes.\n    }\n  };\n\n  const chip = (el, mark) => {\n    const note = document.createElement(el.localName === 'table' ? 'caption' : 'span');\n    note.className = 'am-mark-note';\n    const kind = document.createElement('b');\n    kind.textContent = ui.kinds[mark.kind];\n    note.append(kind, mark.note ? ` ${mark.note}` : '');\n    return note;\n  };\n  const clearChip = (el) => el.querySelector(':scope > .am-mark-note')?.remove();\n  const paint = (el, mark) => {\n    clearChip(el);\n    el.classList.add('am-mark');\n    el.dataset.kind = mark.kind;\n    // Inside the block, so a list item stays a child of its list. A table takes it as its caption; a list item with a sub-list shows\n    // it under its own text, before the sub-list.\n    const sub = el.querySelector(':scope > ul, :scope > ol');\n    if (el.localName === 'table') el.prepend(chip(el, mark));\n    else if (sub) sub.before(chip(el, mark));\n    else el.append(chip(el, mark));\n  };\n  const unpaint = (el) => {\n    clearChip(el);\n    el.classList.remove('am-mark');\n    delete el.dataset.kind;\n  };\n  if (marks.size) for (const [el, key] of keyMap()) if (marks.has(key)) paint(el, marks.get(key));\n\n  // The popover edits one block. Save stays off until a kind is picked.\n  const pop = document.createElement('div');\n  pop.className = 'am-remark-pop';\n  pop.hidden = true;\n  pop.setAttribute('role', 'dialog');\n  pop.setAttribute('aria-label', ui.button);\n  document.body.append(pop);\n  let opener = null;\n  let anchor = null;\n  const close = (restoreFocus) => {\n    if (pop.hidden) return;\n    pop.hidden = true;\n    if (restoreFocus) (opener?.isConnected && opener !== document.body ? opener : btn).focus();\n  };\n  const place = () => {\n    const rect = anchor.getBoundingClientRect();\n    const rtl = getComputedStyle(document.documentElement).direction === 'rtl';\n    const x = rtl ? rect.right - pop.offsetWidth : rect.left;\n    // Under the block; a block taller than the window gets the popover at the bottom of the window instead.\n    const y = Math.min(rect.bottom + 6, window.innerHeight - pop.offsetHeight - 8);\n    pop.style.left = `${window.scrollX + Math.min(Math.max(8, x), window.innerWidth - pop.offsetWidth - 8)}px`;\n    pop.style.top = `${window.scrollY + Math.max(8, y)}px`;\n  };\n  const make = (tag, props) => Object.assign(document.createElement(tag), props);\n  const open = (el) => {\n    const key = keyMap().get(el);\n    const mark = marks.get(key);\n    let kind = mark?.kind ?? '';\n    opener = document.activeElement;\n    anchor = el;\n\n    const note = make('textarea', { rows: 2, placeholder: ui.hint, value: mark?.note ?? '' });\n    note.setAttribute('aria-label', ui.hint);\n    const keep = make('button', { type: 'button', className: 'am-btn', textContent: ui.save, disabled: !kind });\n    keep.addEventListener('click', () => {\n      const saved = { key, kind, note: note.value.trim() };\n      marks.set(key, saved);\n      save();\n      paint(el, saved);\n      close(true);\n    });\n    const actions = make('div', { className: 'am-remark-actions' });\n    actions.append(keep);\n    if (mark) {\n      const drop = make('button', { type: 'button', className: 'am-btn', textContent: ui.remove });\n      drop.addEventListener('click', () => {\n        marks.delete(key);\n        save();\n        unpaint(el);\n        close(true);\n      });\n      actions.append(drop);\n    }\n    const kindBtns = KINDS.map((k) => {\n      const kb = make('button', { type: 'button', className: 'am-remark-kind', textContent: ui.kinds[k] });\n      kb.dataset.kind = k;\n      kb.setAttribute('aria-pressed', String(k === kind));\n      kb.addEventListener('click', () => {\n        kind = k;\n        for (const other of kindBtns) other.setAttribute('aria-pressed', String(other === kb));\n        keep.disabled = false;\n      });\n      return kb;\n    });\n    pop.replaceChildren(make('div', { className: 'am-remark-kinds' }), note, actions);\n    pop.firstChild.append(...kindBtns);\n    pop.hidden = false;\n    place();\n    (kindBtns.find((b) => b.dataset.kind === kind) ?? kindBtns[0]).focus({ preventScroll: true });\n  };\n\n  // Picking works only while remark mode is on. A click on a marked block edits its mark, on a plain block starts one.\n  // The block under the pointer gets an outline: the same blockAt decides what is outlined and what a click picks.\n  let hover = null;\n  const track = (e) => {\n    const el = e.type === 'mouseout' && e.relatedTarget === null ? null : blockAt(e.target);\n    if (el === hover) return;\n    hover?.classList.remove('am-remark-hover');\n    hover = el;\n    hover?.classList.add('am-remark-hover');\n  };\n  const pick = (e) => {\n    const el = blockAt(e.target);\n    if (el) open(el);\n  };\n  const setMode = (on) => {\n    btn.classList.toggle('is-on', on);\n    btn.setAttribute('aria-pressed', String(on));\n    const toggle = on ? 'addEventListener' : 'removeEventListener';\n    document.body[toggle]('click', pick);\n    document.body[toggle]('mouseover', track);\n    document.body[toggle]('mouseout', track);\n    if (!on) {\n      track({ type: 'mouseout', relatedTarget: null });\n      close(false);\n    }\n  };\n  btn.addEventListener('click', () => setMode(btn.getAttribute('aria-pressed') !== 'true'));\n  document.addEventListener('keydown', (e) => {\n    if (e.key === 'Escape') close(true);\n  });\n  // A click outside the popover closes it; the same click may then start another mark.\n  document.addEventListener('click', (e) => {\n    if (!pop.hidden && !pop.contains(e.target)) close(false);\n  }, true);\n  setMode(false);\n\n  // What the Reply button reads: the marked blocks that are on the page, in page order.\n  window.__amRemarkData = () => {\n    if (!marks.size) return [];\n    const live = [];\n    for (const [el, key] of keyMap()) {\n      const mark = marks.get(key);\n      if (mark) live.push({ panel: panelOf(el), quote: quote(blockText(el)), kind: mark.kind, note: mark.note });\n    }\n    return live;\n  };\n})();\n})();\n(() => {\n// Pure planner for justified (\"photo wall\") rows on sheet pages. No DOM access.\n//\n// This file must stay inlinable into the page script: top-level declarations only, no imports, and the exports are\n// `planLayout` and the constants the DOM adapter shares (STEP, MAX_SCALE, MIN_SCALE). The page build strips the `export ` keyword,\n// and test/layout-plan.test.js checks that this still works.\n//\n// planLayout({ width, gap, cols, panels }) -> { rows: [{ columns: [{ panels: [index, ...], width }], height }] }\n//\n// Input (all lengths in px):\n//   width   container width\n//   gap     space between columns, and between two panels stacked in one column\n//   cols    most columns in one row (the planner never uses more than MAX_COLUMNS, but spans stay shares of `cols`)\n//   panels  one entry per panel, in reading order:\n//     samples   [{ w, h }] panel height at sampled widths, ascending by w (heights between samples are interpolated)\n//     minWidth  narrowest feasible width (clamped to `width`)\n//     maxWidth  widest useful width; beyond it the panel only gains empty space (default: no limit)\n//     natural   natural diagram width for a diagram-only panel (default: none)\n//     pad       panel width not used by the diagram (padding and border; default 0)\n//     span      the author's width hint in grid columns (default 1); span >= cols keeps the panel alone in its row\n//\n// Output: { rows, maxScale }. Rows are in reading order; a row is a list of columns (at most `cols`); a column holds one panel or two\n// consecutive panels, stacked. For integer inputs the column widths plus the gaps between them equal `width`.\n// Rows are chosen by dynamic programming over break points; widths by a search in STEP px steps. Cost per row:\n//   H = tallest column; waste = sum((H - columnHeight) * columnWidth) + sum over diagrams wider than maxWidth of (w - maxWidth) * h\n//   dev = sum(((w - preferred) / oneColumn)^2) + SCALE_WEIGHT * sum over diagrams of (ln(scale) / ln(MAX_SCALE))^2\n//   cost = waste / 1000 + PREF_WEIGHT * dev * H\n// Scale band: diagrams on one page stay at similar sizes. With the result's `maxScale` as the diagram size limit, a diagram is\n// shown at scale min(maxScale, (width - pad) / natural). The planner tries a few bands [lo, lo * BAND_RATIO] (lo in BAND_LOS) and\n// keeps the cheapest plan in which no diagram is narrower than scale lo and none is shown above the band's top, so the largest and\n// smallest diagram scale on the page differ by at most BAND_RATIO. A panel wider than its diagram's top size keeps the diagram at\n// that size, and the page script must set the diagram's max-width to natural * maxScale. The band starts no higher than the\n// largest scale the page allows the least roomy diagram, so one wide diagram lowers the band for the others.\n// If no band is feasible the plan is made without a band (maxScale = MAX_SCALE); if no plan fits (or the input is unusable) the\n// result is a single column: one panel per row at the full width.\n\nconst STEP = 10;\nconst MAX_SCALE = 1.25;\nconst MIN_SCALE = 0.75; // the narrowest a diagram is shown, as a share of its natural width\nconst MAX_COLUMNS = 6; // rows with more columns are unreadable, and the search grows steeply with the column count\nconst BAND_RATIO = 1.25; // the largest and smallest diagram scale on a page differ by at most this\nconst BAND_LOS = [MIN_SCALE, 0.85, 0.95, 1]; // lower ends tried for the band; lo * BAND_RATIO is the upper end (1.25 means no upper limit)\nconst SCALE_WEIGHT = 3;\nconst PREF_WEIGHT = 0.15;\n\nfunction heightAt(samples, w) {\n  const i = samples.findIndex((s) => s.w >= w);\n  if (i === -1) return samples[samples.length - 1].h;\n  if (i === 0) return samples[0].h;\n  const a = samples[i - 1];\n  const b = samples[i];\n  return a.h + ((b.h - a.h) * (w - a.w)) / (b.w - a.w);\n}\n\n// Every way to split `len` consecutive panels into columns of 1 or 2 panels, as lists of column sizes.\nfunction splits(len) {\n  if (len === 0) return [[]];\n  return [1, 2].filter((k) => k <= len).flatMap((k) => splits(len - k).map((rest) => [k, ...rest]));\n}\n\nfunction singleColumn(width, panels) {\n  return { rows: panels.map((_, i) => ({ columns: [{ panels: [i], width }], height: 0 })) };\n}\n\nfunction planLayout({ width, gap = 0, cols = 3, panels }) {\n  const usable = Number.isFinite(width) && width > 0 && panels.every((p) => Array.isArray(p.samples) && p.samples.length > 0);\n  if (!usable) return singleColumn(width, panels);\n\n  // `cols` stays the unit of the author's spans; no row gets more than MAX_COLUMNS columns however large `cols` is.\n  const maxColumns = Math.min(cols, MAX_COLUMNS);\n  const oneColumn = Math.max(1, (width - gap * (cols - 1)) / cols);\n  // Per-panel limits. With a band [lo, lo * BAND_RATIO], a diagram is no narrower than scale lo and shown at most at the top of the\n  // band: a wider panel keeps it at that size and gains empty space, which the cost counts as waste.\n  const prepare = (lo) => panels.map((p) => {\n    const pad = p.pad ?? 0;\n    const diagram = lo > 0 && p.natural > 0;\n    const scaleCap = diagram ? Math.min(MAX_SCALE, lo * BAND_RATIO) : MAX_SCALE;\n    return {\n      ...p,\n      minWidth: Math.min(width, Math.max(Math.ceil(p.minWidth || 0), diagram ? Math.ceil(p.natural * lo + pad) : 0)),\n      maxWidth: Math.min(p.maxWidth ?? Infinity, diagram ? p.natural * scaleCap + pad : Infinity),\n      scaleCap,\n      pad,\n      preferred: Math.min(width, (p.span ?? 1) * oneColumn + ((p.span ?? 1) - 1) * gap),\n      alone: (p.span ?? 1) >= cols,\n    };\n  });\n  let info = prepare(0);\n  // Beyond its maxWidth a panel only gains empty space, so its height stops changing there (matters when a band lowers maxWidth).\n  const heightOf = (p, w) => heightAt(p.samples, Math.min(w, p.maxWidth));\n  const columnHeight = (col, w) => col.reduce((h, k) => h + heightOf(info[k], w), 0) + gap * (col.length - 1);\n\n  function bestColumns(columns) {\n    const avail = width - gap * (columns.length - 1);\n    const mins = columns.map((c) => Math.max(...c.map((k) => info[k].minWidth)));\n    const minsFrom = mins.map((_, n) => mins.slice(n).reduce((s, w) => s + w, 0));\n    if (minsFrom[0] > avail) return null;\n    let best = null;\n    const evaluate = (ws) => {\n      const hs = ws.map((w, n) => columnHeight(columns[n], w));\n      const H = Math.max(...hs);\n      let waste = 0;\n      let dev = 0;\n      ws.forEach((w, n) => {\n        waste += (H - hs[n]) * w;\n        for (const k of columns[n]) {\n          const p = info[k];\n          if (w > p.maxWidth) waste += (w - p.maxWidth) * heightOf(p, w);\n          dev += ((w - p.preferred) / oneColumn) ** 2;\n          if (p.natural > 0) {\n            const scale = Math.min(p.scaleCap, Math.max(w - p.pad, 1) / p.natural);\n            dev += SCALE_WEIGHT * (Math.log(scale) / Math.log(MAX_SCALE)) ** 2;\n          }\n        }\n      });\n      const cost = waste / 1000 + PREF_WEIGHT * dev * H;\n      if (!best || cost < best.cost) best = { cost, ws, height: H, columns };\n    };\n    const choose = (n, used, ws) => {\n      if (n === columns.length - 1) {\n        const w = avail - used;\n        if (w >= mins[n]) evaluate([...ws, w]);\n        return;\n      }\n      for (let w = mins[n]; used + w + minsFrom[n + 1] <= avail; w += STEP) choose(n + 1, used + w, [...ws, w]);\n    };\n    choose(0, 0, []);\n    return best;\n  }\n\n  // Best columns for one row of panels i..j.\n  function bestRow(i, j) {\n    if (j > i && info.slice(i, j + 1).some((p) => p.alone)) return null;\n    let best = null;\n    for (const split of splits(j - i + 1)) {\n      if (split.length > maxColumns) continue;\n      let next = i;\n      const columns = split.map((size) => Array.from({ length: size }, () => next++));\n      const r = bestColumns(columns);\n      if (r && (!best || r.cost < best.cost)) best = r;\n    }\n    return best;\n  }\n\n  // Row breaks in reading order, for the band set up in `info`. A row holds at most 2 * maxColumns panels. Null if nothing fits.\n  function solve() {\n    const n = panels.length;\n    const total = Array(n + 1).fill(Infinity);\n    const from = Array(n + 1).fill(-1);\n    const chosen = Array(n + 1).fill(null);\n    total[0] = 0;\n    for (let j = 1; j <= n; j++) {\n      for (let i = Math.max(0, j - 2 * maxColumns); i < j; i++) {\n        if (total[i] === Infinity) continue;\n        const r = bestRow(i, j - 1);\n        if (r && total[i] + r.cost < total[j]) {\n          total[j] = total[i] + r.cost;\n          from[j] = i;\n          chosen[j] = r;\n        }\n      }\n    }\n    if (total[n] === Infinity) return null;\n    const rows = [];\n    for (let j = n; j > 0; j = from[j]) {\n      const r = chosen[j];\n      rows.unshift({ columns: r.columns.map((panelsInColumn, c) => ({ panels: panelsInColumn, width: r.ws[c] })), height: r.height });\n    }\n    return { rows, cost: total[n] };\n  }\n\n  let best = null;\n  const diagrams = panels.filter((p) => p.natural > 0);\n  if (diagrams.length > 1) {\n    // No diagram can be shown larger than the page allows, so the band cannot start above the smallest of those limits.\n    const reach = Math.min(...diagrams.map((p) => Math.min(MAX_SCALE, Math.max(width - (p.pad ?? 0), 1) / p.natural)));\n    for (const lo of new Set([...BAND_LOS.filter((x) => x < reach), reach])) {\n      info = prepare(lo);\n      const r = solve();\n      if (r && (!best || r.cost < best.cost)) best = { ...r, maxScale: Math.min(MAX_SCALE, lo * BAND_RATIO) };\n    }\n    info = prepare(0);\n  }\n  best ??= solve();\n  return best ? { rows: best.rows, maxScale: best.maxScale ?? MAX_SCALE } : singleColumn(width, panels);\n}\n\n// DOM adapter for the sheet's justified (\"photo wall\") layout. Not a module: compose.js puts it after src/runtime/layout-plan.js\n// (which defines planLayout and the shared STEP, MAX_SCALE, MIN_SCALE) inside one function scope of the page script.\n//\n// It measures every panel at sampled widths, asks planLayout for rows and column widths, and applies them with flexbox.\n// The rendered HTML keeps the plain CSS grid: with JavaScript off, at the single-column breakpoint, or while printing, the grid is what\n// shows (the planned widths belong to the screen width, so print never gets a mix of the two); after printing the layout comes back.\n\nconst grid = document.querySelector('.am-grid');\nconst panels = grid ? [...grid.children].filter((el) => el.classList.contains('am-panel')) : [];\n\nif (panels.length > 1) {\n  const SINGLE_COLUMN = '(max-width: 760px)'; // the single-column breakpoint in src/themes/base.css\n  const TWO_COLUMNS = '(max-width: 1100px)'; // below this the CSS grid has two columns\n  const SAMPLE_STEP = 20; // width sampling step, px; the planner interpolates between samples\n  const TEXT_MIN = 260; // text keeps at least about 16 CJK characters per line\n  const TABLE_COL_MIN = 96; // per table column, px\n  const TABLE_COL_COMFORT = 220; // a table column this wide reads three or four words per line\n  const KV_COL_MIN = 120; // per key-value column, px: a value of two short words stays on one line\n  const DIAGRAM_MIN = 160;\n  const RESIZE_DELAY = 150;\n  const OVERFLOWING = '.am-table-wrap, .am-diagram, .am-annot-scroll, pre';\n\n  // The first-row cells of each table carry the column widths fitTables() sets, so restore() resets them too.\n  const tables = [...grid.querySelectorAll('.am-table-wrap > table')];\n  const headCells = (table) => [...(table.rows[0]?.cells ?? [])];\n  const original = new Map([grid, ...panels, ...grid.querySelectorAll('.am-diagram > svg'), ...tables.flatMap(headCells)].map((el) => [el, el.getAttribute('style')]));\n  const restoreStyle = (el) => (original.get(el) === null ? el.removeAttribute('style') : el.setAttribute('style', original.get(el)));\n\n  // Back to the plain grid markup and styles.\n  const restore = () => {\n    for (const box of grid.querySelectorAll(':scope > .am-col')) box.replaceWith(...box.children);\n    for (const el of original.keys()) restoreStyle(el);\n  };\n\n  // The author's width hint, rendered as data-span only when the author wrote one. The inline grid-column is the no-JavaScript fallback\n  // and may hold spans the server added, so it is never read here.\n  const spanHint = (el) => Number(el.dataset.span) || 1;\n  const diagramOnly = (el) => {\n    const body = el.querySelector(':scope > .am-panel-body');\n    return body && body.children.length === 1 ? body.querySelector(':scope > .am-diagram > svg') : null;\n  };\n  const naturalWidth = (svg) => Number(svg.getAttribute('width')) || 0;\n\n  // The width each column of a table reads well at: its natural width, but no wider than TABLE_COL_COMFORT unless its longest word\n  // needs more. Below it the cells wrap one word per line, so a panel with a table is not planned narrower than the sum, and\n  // fitTables() keeps each column at its share (the browser would otherwise give the room to the longest column).\n  const columnWidths = new Map();\n  function comfortableWidth(table) {\n    const saved = table.getAttribute('style');\n    const columns = (width) => {\n      table.style.width = width;\n      return headCells(table).map((cell) => cell.getBoundingClientRect().width);\n    };\n    const most = columns('max-content');\n    const least = columns('min-content');\n    if (saved === null) table.removeAttribute('style');\n    else table.setAttribute('style', saved);\n    // A max-content column comes out a fraction under its text in Chrome, enough to wrap the last word, so it gets one pixel more.\n    const want = most.map((w, i) => Math.min(Math.ceil(w) + 1, Math.max(least[i], TABLE_COL_COMFORT)));\n    columnWidths.set(table, { least, want });\n    return want.reduce((sum, w) => sum + w, 0);\n  }\n\n  // After the layout: each column gets at least its comfortable width, scaled down toward its longest word when the panel came out\n  // narrower than planned (a page narrower than the table), so a table scrolls sideways only when even its longest words do not fit.\n  function fitTables() {\n    for (const [table, { least, want }] of columnWidths) {\n      // Each width is rounded up to a whole pixel (a column a fraction too narrow wraps its last word), so keep a pixel per column spare.\n      const room = table.parentElement.clientWidth - want.length;\n      const low = least.reduce((s, w) => s + w, 0);\n      const high = want.reduce((s, w) => s + w, 0);\n      const k = high > room ? Math.max(0, (room - low) / (high - low || 1)) : 1;\n      headCells(table).forEach((cell, i) => { cell.style.minWidth = `${Math.ceil(least[i] + (want[i] - least[i]) * k)}px`; });\n    }\n  }\n\n  // Height (and, for panels with tables or code, the narrowest width without sideways scrolling) at sampled widths.\n  // Only one panel is displayed while it is measured, so each width change lays out that panel alone.\n  function measure(width) {\n    grid.style.display = 'block';\n    for (const el of panels) {\n      el.style.display = 'none';\n      el.style.boxSizing = 'border-box';\n      for (const svg of el.querySelectorAll('.am-diagram > svg')) {\n        svg.style.width = '100%';\n        svg.style.maxWidth = `${naturalWidth(svg) * MAX_SCALE}px`;\n      }\n    }\n    const info = panels.map((el) => {\n      const svg = diagramOnly(el);\n      const svgs = [...el.querySelectorAll('.am-diagram > svg')];\n      const scrollers = el.querySelectorAll(OVERFLOWING);\n      const tableCols = Math.max(0, ...[...el.querySelectorAll('table tr:first-child')].map((tr) => tr.children.length));\n      el.style.display = '';\n      el.style.width = `${width}px`;\n      const pad = svg ? el.offsetWidth - svg.parentElement.clientWidth : 0;\n      const natural = svg ? naturalWidth(svg) : 0;\n      const shrunk = Math.max(0, ...svgs.map((s) => naturalWidth(s) * MIN_SCALE)) + (svg ? pad : 34);\n      const tableFloors = [...el.querySelectorAll('.am-table-wrap > table')].map((t) => comfortableWidth(t) + el.offsetWidth - t.parentElement.clientWidth);\n      // A key-value grid gets the same care: the room a table gains must not squeeze a neighbouring grid to one word per line.\n      const kvs = [...el.querySelectorAll('.am-kv')].map((kv) => (Number(kv.style.getPropertyValue('--kv-cols')) || 1) * KV_COL_MIN + el.offsetWidth - kv.clientWidth);\n      const floor = svg ? Math.max(DIAGRAM_MIN, natural * MIN_SCALE + pad) : Math.max(TEXT_MIN, shrunk, tableCols * TABLE_COL_MIN + 34, ...tableFloors, ...kvs);\n      const from = Math.min(width, Math.floor(floor / STEP) * STEP);\n      const samples = [];\n      let fits = null;\n      for (let w = from; ; w += SAMPLE_STEP) {\n        w = Math.min(w, width);\n        el.style.width = `${w}px`;\n        if (fits === null && !svg && scrollers.length && ![...scrollers].some((s) => s.scrollWidth > s.clientWidth + 1)) fits = w;\n        samples.push({ w, h: el.offsetHeight });\n        if (w === width) break;\n      }\n      el.style.display = 'none';\n      return {\n        samples,\n        minWidth: svg ? floor : Math.max(floor, fits ?? (scrollers.length ? width : 0)),\n        maxWidth: svg ? natural * MAX_SCALE + pad : Infinity,\n        natural,\n        pad,\n        span: spanHint(el),\n      };\n    });\n    for (const el of panels) {\n      el.style.display = '';\n      el.style.width = '';\n    }\n    return info;\n  }\n\n  // Each column gets a fixed width. A row adds up to the full width, so flex-wrap breaks rows by itself.\n  // Stacked panels go into a column wrapper whose last panel absorbs the extra height.\n  function apply(plan, gap) {\n    grid.style.display = 'flex';\n    grid.style.flexWrap = 'wrap';\n    grid.style.alignItems = 'stretch';\n    grid.style.gap = `${gap}px`;\n    for (const el of panels) {\n      el.style.gridColumn = '';\n      el.style.gridRow = '';\n      el.style.flex = '0 0 auto';\n    }\n    for (const row of plan.rows) {\n      for (const col of row.columns) {\n        const width = `${col.width}px`;\n        if (col.panels.length === 1) {\n          panels[col.panels[0]].style.width = width;\n          continue;\n        }\n        const box = document.createElement('div');\n        box.className = 'am-col';\n        box.style.cssText = `width:${width};flex:0 0 auto;display:flex;flex-direction:column;gap:${gap}px`;\n        panels[col.panels[0]].before(box);\n        for (const k of col.panels) {\n          panels[k].style.width = '';\n          box.append(panels[k]);\n        }\n        panels[col.panels[col.panels.length - 1]].style.flex = '1 1 auto';\n      }\n    }\n  }\n\n  // Diagram-only panels show their diagram at most at the top of the page's scale band; a wider panel gains empty space instead.\n  function capDiagrams(maxScale) {\n    for (const el of panels) {\n      const svg = diagramOnly(el);\n      if (svg) svg.style.maxWidth = `${naturalWidth(svg) * maxScale}px`;\n    }\n  }\n\n  const containerWidth = () => Math.floor(grid.getBoundingClientRect().width);\n\n  function justify() {\n    if (printing || printQuery.matches) return;\n    try {\n      // A vertical scrollbar can appear or vanish once the rows change height; plan again if the width moved.\n      let planned = -1;\n      for (let pass = 0; pass < 3 && planned !== containerWidth(); pass++) {\n        restore();\n        if (matchMedia(SINGLE_COLUMN).matches) return;\n        planned = containerWidth();\n        const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;\n        const cols = Math.max(1, Number(getComputedStyle(grid).getPropertyValue('--cols')) || 3);\n        const plan = planLayout({ width: planned, gap, cols: matchMedia(TWO_COLUMNS).matches ? Math.min(cols, 2) : cols, panels: measure(planned) });\n        apply(plan, gap);\n        capDiagrams(plan.maxScale);\n        fitTables();\n      }\n      // The width never settled: columns planned for another width would overflow or leave gaps, so show the plain grid.\n      if (planned !== containerWidth()) restore();\n    } catch {\n      restore();\n    }\n  }\n\n  // Printing: back to the plain grid (spans and all), and the layout again afterwards. Browsers disagree on which of the\n  // `beforeprint` event and the print media query change fires first, or at all, so listen to both; both are idempotent.\n  // While `printing` is set (beforeprint to afterprint) justify() does nothing, so a late resize cannot bring flex widths into the print layout.\n  let printing = false;\n  const printQuery = matchMedia('print');\n  let timer = 0;\n  const later = () => {\n    clearTimeout(timer);\n    timer = setTimeout(justify, RESIZE_DELAY);\n  };\n  const toPrint = () => {\n    clearTimeout(timer);\n    restore();\n  };\n  justify();\n  addEventListener('resize', later);\n  addEventListener('beforeprint', () => {\n    printing = true;\n    toPrint();\n  });\n  addEventListener('afterprint', () => {\n    printing = false;\n    later();\n  });\n  printQuery.addEventListener('change', (e) => (e.matches ? toPrint() : later()));\n  // Late changes to panel heights: web fonts arriving, and images inside the grid finishing their load (load does not bubble, so capture it).\n  document.fonts?.ready.then(later);\n  grid.addEventListener('load', later, true);\n  // Switching theme changes paddings and fonts, hence panel heights.\n  document.querySelector('[data-am=\"theme\"]')?.addEventListener('click', later);\n}\n})();\n";
+var RTL_JS = `(() => {
+// A letter of a right-to-left script. One definition for the page builder (src/bidi.js) and for the right-to-left page script
+// (src/runtime/reply-view.js), so the two cannot drift apart. A plain ES module; the page script gets this file in front of
+// reply-view.js, with its \`export\` keyword dropped and reply-view.js's import of it removed (src/runtime/compose.js).
+const RTL_LETTER = /[\\p{Script=Hebrew}\\p{Script=Arabic}\\p{Script=Syriac}\\p{Script=Thaana}\\p{Script=Nko}\\p{Script=Samaritan}\\p{Script=Mandaic}]/u;
+
+// Right-to-left pages only: src/render.js adds this script after the page script when the page reads right to left.
+// The Reply sheet holds the reply as Markdown in a textarea, and a textarea gives the whole text one direction. Lines that start
+// with markup or Latin letters ("# Re: ...", "1. [E] ...", "- **A \xB7 ...**") then come out reordered for a Hebrew reader.
+// This script shows the reply drawn instead: headings, bold answers and quoted comments, each line in its own direction.
+// The textarea stays in the sheet as what Copy copies, so the copied text does not change.
+// A plain ES module for tests; the page gets it with its \`export\` keyword dropped and rtl-letter.js in front of it in place of the
+// import (src/runtime/compose.js).
+
+const escHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+// A line with a right-to-left letter reads right to left; a line without one (an English comment, a path) reads left to right.
+const dirOf = (s) => (RTL_LETTER.test(s) ? 'rtl' : 'ltr');
+
+// The only inline Markdown src/runtime/reply-text.js writes: **answer**, _(note)_ and the "quote" of a remark. Each piece is isolated in its own direction,
+// so a Latin answer inside a Hebrew line keeps its place, and "A \xB7 title" still starts with the panel letter.
+const piece = (tag, text) => \`<\${tag}><bdi dir="\${dirOf(text)}">\${text}</bdi></\${tag}>\`;
+function inline(s) {
+  return escHtml(s)
+    .replace(/\\*\\*(.+?)\\*\\*/g, (_, t) => piece('strong', t))
+    .replace(/(^|\\s)_(.+?)_(?=\\s|$)/g, (_, pre, t) => pre + piece('em', t))
+    // The quoted start of a marked block ("- **A \xB7 concern** "text""): isolated, so Latin text in a Hebrew line keeps its place.
+    .replace(/&quot;(.+)&quot;$/, (_, t) => \`&quot;<bdi dir="\${dirOf(t)}">\${t}</bdi>&quot;\`);
+}
+
+// The reply text (src/runtime/reply-text.js) as HTML, one block per line.
+function replyViewHtml(text) {
+  return text
+    .replace(/\\n$/, '')
+    .split('\\n')
+    .map((line) => {
+      const dir = dirOf(line);
+      let m;
+      if (!line.trim()) return '<div class="am-rv-gap"></div>';
+      if ((m = line.match(/^(#{1,2}) (.*)$/))) return \`<div class="am-rv-h\${m[1].length}" dir="\${dir}">\${inline(m[2])}</div>\`;
+      if ((m = line.match(/^(\\d+)\\. \\[([^\\]]*)\\] (.*)$/))) {
+        return \`<div class="am-rv-q" dir="\${dir}"><bdi>\${m[1]}.</bdi> <bdi class="am-rv-tag">\${escHtml(m[2])}</bdi> \${inline(m[3])}</div>\`;
+      }
+      if ((m = line.match(/^ {3}([\u2190\u2192]) (.*)$/))) return \`<div class="am-rv-a" dir="\${dir}">\${m[1]} \${inline(m[2])}</div>\`;
+      if ((m = line.match(/^- (.*)$/))) return \`<div class="am-rv-c" dir="\${dir}">\${inline(m[1])}</div>\`;
+      // A comment line is shown exactly as the reader typed it.
+      if ((m = line.match(/^ {2}> ?(.*)$/))) return \`<div class="am-rv-quote" dir="\${dirOf(m[1])}">\${escHtml(m[1]) || '&nbsp;'}</div>\`;
+      return \`<div dir="\${dir}">\${inline(line)}</div>\`;
+    })
+    .join('');
+}
+
+if (typeof document !== 'undefined') {
+  const button = document.querySelector('[data-am="reply"]');
+  const sheet = document.querySelector('dialog.am-reply');
+  const source = sheet?.querySelector('textarea');
+  if (button && source) {
+    const view = Object.assign(document.createElement('div'), { className: 'am-reply-view', tabIndex: 0 });
+    source.before(view);
+    sheet.classList.add('am-reply--view');
+    // Runs after the page script's own handler, which has just filled the textarea.
+    button.addEventListener('click', () => {
+      view.innerHTML = replyViewHtml(source.value);
+      view.scrollTop = 0;
+    });
+  }
+}
+})();
+`;
+var DIFF_CSS = "/* Diff block (only on pages that have one): red and green lines, a hunk row, and two gutters, old and new, drawn from data-o / data-n.\n   The hues are fixed and mixed into the theme's own --fill and --ink, so they read as green and red in every theme, light and dark. */\n.am-codeblock--diff { --diff-add: #1f9d4d; --diff-del: #d1344a; }\n.am-code-stat { display: inline-flex; gap: 6px; flex: none; font: 12px/1.3 var(--font-mono); }\n.am-code-stat-add { color: color-mix(in srgb, var(--diff-add) 75%, var(--ink)); }\n.am-code-stat-del { color: color-mix(in srgb, var(--diff-del) 75%, var(--ink)); }\n.am-code--diff .am-ln { display: flex; padding: 0 14px 0 0; }\n.am-code--diff:not(.am-code--dnum) .am-ln { padding-left: 14px; }\n.am-code--dnum .am-ln::before, .am-code--dnum .am-ln::after {\n  flex: none; box-sizing: content-box; width: 3.5ch; padding: 0 6px; text-align: right; color: var(--ink-3);\n  user-select: none; -webkit-user-select: none;\n}\n.am-code--dnum .am-ln::before { content: attr(data-o); order: -2; }\n.am-code--dnum .am-ln::after { content: attr(data-n); order: -1; margin-right: 10px; }\n.am-ln--add { background: color-mix(in srgb, var(--diff-add) 14%, var(--fill)); }\n.am-ln--del { background: color-mix(in srgb, var(--diff-del) 14%, var(--fill)); }\n.am-ln--add::before, .am-ln--add::after { background: color-mix(in srgb, var(--diff-add) 28%, var(--fill)); }\n.am-ln--del::before, .am-ln--del::after { background: color-mix(in srgb, var(--diff-del) 28%, var(--fill)); }\n.am-code--diff .am-ln--hl { box-shadow: none; }\n.am-code--diff .am-ln--hl::before { box-shadow: inset 3px 0 0 var(--accent); }\n.am-code--diff .am-ln--ctx.am-ln--hl { background: var(--accent-bg); }\n.am-code--diff .am-ln--hunk { display: block; min-height: 0; padding: 1px 14px; font-size: 11.5px; color: var(--ink-3); background: color-mix(in srgb, var(--accent) 8%, var(--fill)); }\n.am-code--dnum .am-ln--hunk::before, .am-code--dnum .am-ln--hunk::after { content: none; }\n.am-code--diff .am-ln--meta { display: none; }\n";
+var DELTA_CSS = `/* Change markers (only on pages that have one). Only the Changes view (.am-view-changes) draws change styling: colors, strike-through, faded items
+   and badges. Before and After look like a plain diagram, and the items that do not exist in the view are hidden.
+   The colors are the theme's --ok, --err and --warn, so every theme and mode works. A view hides items with visibility, so nothing moves. */
+.am-view-before [data-delta="added"], .am-view-after [data-delta="removed"] { visibility: hidden; }
+.am-view-before .am-delta-badge, .am-view-after .am-delta-badge { visibility: hidden; }
+/* A list label's badge is inline and would indent the label like a nesting level, so there it takes no space; the other badges are positioned and move nothing. */
+.am-view-before .am-tree-label > .am-delta-badge, .am-view-after .am-tree-label > .am-delta-badge { display: none; }
+
+.am-delta-badge--added { --badge: var(--ok, #1f9d4d); }
+.am-delta-badge--removed { --badge: var(--err, #c62828); }
+.am-delta-badge--changed { --badge: var(--warn, #a8620a); }
+
+/* flow */
+.am-view-changes .am-node[data-delta="added"] .am-node-shape { stroke: var(--ok, #1f9d4d); }
+.am-view-changes .am-node[data-delta="removed"] .am-node-shape { stroke: var(--err, #c62828); }
+.am-view-changes .am-node[data-delta="changed"] .am-node-shape { stroke: var(--warn, #a8620a); }
+.am-view-changes .am-node[data-delta="added"] > text { fill: var(--ok, #1f9d4d); }
+.am-view-changes .am-node[data-delta="removed"] > text { fill: var(--err, #c62828); }
+.am-view-changes [data-delta="added"] > .am-edge { stroke: var(--ok, #1f9d4d); }
+.am-view-changes [data-delta="removed"] > .am-edge { stroke: var(--err, #c62828); }
+.am-view-changes .am-arrow--added { fill: var(--ok, #1f9d4d); }
+.am-view-changes .am-arrow--removed { fill: var(--err, #c62828); }
+.am-view-changes [data-delta="added"] > .am-edge-label text { fill: var(--ok, #1f9d4d); }
+.am-view-changes [data-delta="removed"] > .am-edge-label text { fill: var(--err, #c62828); }
+.am-view-changes .am-cluster[data-delta="added"] { stroke: var(--ok, #1f9d4d); }
+.am-view-changes .am-cluster[data-delta="removed"] { stroke: var(--err, #c62828); }
+.am-view-changes .am-cluster-label[data-delta="added"] { fill: var(--ok, #1f9d4d); }
+.am-view-changes .am-cluster-label[data-delta="removed"] { fill: var(--err, #c62828); }
+.am-view-changes g[data-delta="removed"]:not(.am-delta-badge), .am-view-changes .am-cluster[data-delta="removed"], .am-view-changes .am-cluster-label[data-delta="removed"] { opacity: 0.55; }
+.am-view-changes .am-node[data-delta="removed"] > text, .am-view-changes g[data-delta="removed"] > .am-edge-label text, .am-view-changes .am-cluster-label[data-delta="removed"] { text-decoration: line-through; }
+.am-diagram .am-delta-badge circle { fill: var(--badge); stroke: var(--paper, #ffffff); stroke-width: 1.5; }
+.am-diagram .am-delta-badge text { fill: var(--paper, #ffffff); font: 700 11px var(--font-sans, sans-serif); text-decoration: none; }
+
+/* er: entities and relationships use the flow rules above (an entity is an .am-node, a relationship path and its end marks are .am-edge). A marked field row adds a tinted band,
+   colored text and its sign at the start of the row; Before and After show a plain schema, so the bands and signs hide there and the rows keep their place. */
+.am-view-before .am-er-band, .am-view-after .am-er-band, .am-view-before .am-er-sign, .am-view-after .am-er-sign { visibility: hidden; }
+.am-er-sign { font-weight: 700; }
+.am-view-changes .am-er-band[data-delta="added"] { fill: var(--ok-bg); }
+.am-view-changes .am-er-band[data-delta="removed"] { fill: var(--err-bg); }
+.am-view-changes .am-er-band[data-delta="changed"] { fill: var(--warn-bg); }
+.am-view-changes .am-er-sign[data-delta="added"], .am-view-changes .am-er-field[data-delta="added"], .am-view-changes .am-er-key[data-delta="added"] { fill: var(--ok); }
+.am-view-changes .am-er-sign[data-delta="removed"], .am-view-changes .am-er-field[data-delta="removed"], .am-view-changes .am-er-key[data-delta="removed"] { fill: var(--err); }
+.am-view-changes .am-er-sign[data-delta="changed"], .am-view-changes .am-er-field[data-delta="changed"], .am-view-changes .am-er-key[data-delta="changed"] { fill: var(--warn); }
+.am-view-changes .am-er-field[data-delta="removed"] { text-decoration: line-through; }
+.am-view-changes .am-node .am-er-sign[data-delta] { text-decoration: none; }
+
+/* tree */
+.am-tree .am-delta-badge {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 15px; height: 15px; flex: none;
+  border-radius: 50%; background: var(--badge); color: var(--paper); font: 700 11px/1 var(--font-mono, monospace); text-decoration: none;
+}
+.am-tree-box[data-delta] { position: relative; }
+.am-tree-box > .am-delta-badge { position: absolute; top: -8px; inset-inline-end: -8px; }
+.am-tree-label > .am-delta-badge { margin-inline-end: 6px; vertical-align: 1px; }
+.am-view-changes .am-tree-box[data-delta="added"] { border-color: var(--ok); }
+.am-view-changes .am-tree-box[data-delta="removed"] { border-color: var(--err); opacity: 0.55; text-decoration: line-through; }
+.am-view-changes .am-tree-box[data-delta="changed"] { border-color: var(--warn); }
+.am-view-changes .am-tree-list li[data-delta="added"] > .am-tree-label { color: var(--ok); }
+.am-view-changes .am-tree-list li[data-delta="removed"] > .am-tree-label { color: var(--err); text-decoration: line-through; }
+.am-view-changes .am-tree-list li[data-delta="changed"] > .am-tree-label { color: var(--warn); }
+.am-view-changes .am-tree-list li[data-delta="removed"] > .am-tree-label, .am-view-changes .am-tree-list li[data-delta="removed"] > .am-tree-sub { opacity: 0.55; }
+
+/* Connector lines in a view that hides siblings. A hidden node keeps its stretch of the line, so the line stays whole between the nodes that remain and
+   stops at the last one; the markup (data-line-before / data-line-after, see src/components/tree.js) names the stretches that differ from the usual look. */
+.am-view-before .am-tree-list li::after, .am-view-after .am-tree-list li::after,
+.am-view-before .am-tree-col::before, .am-view-after .am-tree-col::before { visibility: visible; }
+.am-view-before .am-tree-list li[data-line-before="full"]::after, .am-view-after .am-tree-list li[data-line-after="full"]::after { bottom: 0; height: auto; }
+.am-view-before .am-tree-list li[data-line-before="short"]::after, .am-view-after .am-tree-list li[data-line-after="short"]::after { bottom: auto; height: 0.95em; }
+.am-view-before .am-tree-list li[data-line-before="none"]::after, .am-view-after .am-tree-list li[data-line-after="none"]::after,
+.am-view-before .am-tree-col[data-line-before="none"]::before, .am-view-after .am-tree-col[data-line-after="none"]::before,
+.am-view-before .am-tree-root[data-line-before="none"]::after, .am-view-after .am-tree-root[data-line-after="none"]::after { display: none; }
+.am-view-before .am-tree-col[data-line-before="full"]::before, .am-view-after .am-tree-col[data-line-after="full"]::before { inset-inline: 0; }
+.am-view-before .am-tree-col[data-line-before="start"]::before, .am-view-after .am-tree-col[data-line-after="start"]::before { inset-inline: 50% 0; }
+.am-view-before .am-tree-col[data-line-before="end"]::before, .am-view-after .am-tree-col[data-line-after="end"]::before { inset-inline: 0 50%; }
+
+/* the count row and the switch */
+.am-delta-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; text-align: start; font: 12px/1.3 var(--font-mono, monospace); }
+.am-delta-count--added { color: var(--ok); }
+.am-delta-count--removed { color: var(--err); }
+.am-delta-count--changed { color: var(--warn); }
+.am-delta-switch { display: inline-flex; margin-inline-start: auto; border: var(--bw, 1px) solid var(--line-2); border-radius: var(--radius); overflow: hidden; }
+.am-delta-switch[hidden] { display: none; }
+.am-delta-switch button { font: inherit; padding: 3px 10px; color: var(--ink-2); background: var(--paper); border: 0; border-inline-start: 1px solid var(--line-2); cursor: pointer; }
+.am-delta-switch button:first-child { border-inline-start: 0; }
+.am-delta-switch button[aria-pressed="true"] { color: var(--ink); background: var(--accent-bg); font-weight: 600; }
+.am-delta-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media print { .am-delta-switch { display: none !important; } }
+`;
+var RTL_CSS = '/* Right-to-left pages (html[dir="rtl"]: Hebrew, Arabic, Persian, Urdu, Yiddish). base.css uses logical properties, so the layout\n   mirrors by itself; this file holds only what logical properties cannot say. A left-to-right page never carries it. */\n\n/* Code, diffs and paths read left to right in every language. Inline code is isolated, so the text around it keeps its order. */\nhtml[dir="rtl"] .am-codeblock, html[dir="rtl"] .am-code, html[dir="rtl"] pre { direction: ltr; text-align: left; }\nhtml[dir="rtl"] :not(pre) > code { direction: ltr; unicode-bidi: isolate; }\n\n/* Small labels use the monospace font. No common monospace font has Hebrew or Arabic letters, so the browser borrows a fixed-width\n   fallback that spaces the letters apart; letter spacing and capitals also break these scripts. Labels use the sans font instead. */\nhtml[dir="rtl"] .am-md th, html[dir="rtl"] .am-kv dt, html[dir="rtl"] .am-head-meta b, html[dir="rtl"] .am-panel-meta,\nhtml[dir="rtl"] .am-annot-meta, html[dir="rtl"] .am-tree-tag, html[dir="rtl"] .am-timeline--v .am-tl-when,\nhtml[dir="rtl"] .am-diagram .am-cluster-label, html[dir="rtl"] .am-delta-bar, html[dir="rtl"] .am-lim-val,\nhtml[dir="rtl"] .am-colophon, html[dir="rtl"] .am-reply textarea {\n  font-family: var(--font-sans); letter-spacing: normal; text-transform: none;\n}\nhtml[dir="rtl"] .am-head h1 { letter-spacing: normal; }\n/* The annotated sentence is set in the sans font too; src/components/annot.js measures the placement of its notes in that font. */\nhtml[dir="rtl"] .am-annot-line { font-family: var(--font-sans); }\n\n/* Diagram text: the drawing is already mirrored (src/components/flow.js, sequence.js); the text inside reads right to left. */\nhtml[dir="rtl"] .am-diagram svg { direction: rtl; }\n\n/* Limits scale: the ticks are placed from the right (src/components/limits.js), so each one centres on its point from that side. */\nhtml[dir="rtl"] .am-lim-ticks span { transform: translateX(50%); }\nhtml[dir="rtl"] .am-lim-ticks span:first-child { transform: none; }\n\n/* The limits value is written in the page language (src/languages/he.js: "420 of 1000 KB" in Hebrew words), so it reads right to left\n   like the label. The label, its note and the value are isolated from each other: "Redis" at the end of a label and "70%" at the\n   start of its note would otherwise run together as one left-to-right piece. */\nhtml[dir="rtl"] .am-lim-head > span, html[dir="rtl"] .am-lim-note, html[dir="rtl"] .am-lim-val { unicode-bidi: isolate; }\n\n/* Horizontal timeline: a date written the Hebrew way (15.11.2026) is wider than a year, and in a narrow panel the dates of\n   neighbouring items ran into each other ("1.12.202615.11.2026"). The date shrinks to fit its column, never above its usual 15px. */\nhtml[dir="rtl"] .am-timeline--h .am-tl-when { font-size: min(15px, calc(100cqi / var(--n, 1) / 6.2)); white-space: nowrap; }\n@container (max-width: 560px) {\n  html[dir="rtl"] .am-timeline--h .am-tl-when { font-size: 15px; }\n}\n\n/* Reply sheet: a textarea gives the whole Markdown reply one direction, so "1. [E] ..." and "# Re: ..." came out reordered.\n   src/runtime/reply-view.js draws the reply instead, each line in its own direction; the textarea stays as the copy source. */\nhtml[dir="rtl"] .am-reply--view textarea {\n  position: absolute; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; resize: none;\n}\nhtml[dir="rtl"] .am-reply-view {\n  max-height: min(60vh, 26em); overflow: auto; padding: 10px 12px; font: 14px/1.6 var(--font-sans); color: var(--ink);\n  background: var(--paper); border: 1px solid var(--line-2); border-radius: var(--radius); overflow-wrap: anywhere;\n}\nhtml[dir="rtl"] .am-reply-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }\nhtml[dir="rtl"] .am-reply-view > div { text-align: start; unicode-bidi: isolate; }\nhtml[dir="rtl"] .am-rv-gap { height: .5em; }\nhtml[dir="rtl"] .am-rv-h1 { font-weight: 700; font-size: 15px; }\nhtml[dir="rtl"] .am-rv-h2 { font-weight: 700; color: var(--ink-2); margin-top: 2px; }\nhtml[dir="rtl"] .am-rv-tag {\n  display: inline-block; min-width: 1.6em; padding: 0 4px; font-size: 12px; line-height: 1.5; text-align: center;\n  color: var(--ink-2); border: 1px solid var(--line-2); border-radius: var(--radius);\n}\nhtml[dir="rtl"] .am-rv-a { padding-inline-start: 1.6em; }\nhtml[dir="rtl"] .am-rv-a em { color: var(--ink-2); }\nhtml[dir="rtl"] .am-rv-quote { margin-inline-start: 1em; padding-inline-start: 10px; border-inline-start: 3px solid var(--line-2); color: var(--ink-2); white-space: pre-wrap; }\n\n/* Video player (src/video/render.js): the scenes lay out right to left like a page, and what video.css places with left / right mirrors here.\n   A theme mirrors its own placements with video.rtlCss. The controls row stays left to right, as in common video players: the play\n   button on the left, then the clock, the progress bar with its chapter ticks, the speed and the export button. */\nhtml[dir="rtl"][data-video] .amv-ruler--top span + span, html[dir="rtl"][data-video] .amv-ruler--bottom span + span { border-left: 0; border-right: 1px solid var(--line); }\nhtml[dir="rtl"][data-video] .amv-titleblock { text-align: right; }\n/* The title block labels and the scene header numbers use the monospace font in video.css: sans here, as for the small page labels above. */\nhtml[dir="rtl"][data-video] .amv-titleblock b, html[dir="rtl"][data-video] .amv-scene-meta { font-family: var(--font-sans); letter-spacing: normal; }\nhtml[dir="rtl"][data-video] .amv-titleblock div + div { border-left: 0; border-right: 1px solid var(--line); }\nhtml[dir="rtl"][data-video] .amv-controls { direction: ltr; }\n\n/* Remark mode: a note inside a code block reads in the page direction, not in the left-to-right direction of the code. */\nhtml[dir="rtl"] pre .am-mark-note { direction: rtl; }\n/* A code block reads left to right, so its inline start is its left edge; the mark bar goes to the right like the other marks. */\nhtml[dir="rtl"] pre.am-mark { border-inline-start: 0; padding-inline-start: 0; border-inline-end: 3px solid var(--mark); }\n';
+var DELTA_JS = "\n// \u2500\u2500 Change markers: the Before / Changes / After switch \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// The switch starts hidden because it needs this script. It swaps the am-view-* class of its diagram; the delta styles show the colors and badges only in\n// the Changes view and hide the items that do not exist in the view.\n(() => {\n  const VIEWS = ['before', 'changes', 'after'];\n  const setView = (el, view) => {\n    el.classList.remove(...VIEWS.map((v) => `am-view-${v}`));\n    el.classList.add(`am-view-${view}`);\n  };\n  for (const bar of document.querySelectorAll('.am-delta-bar')) {\n    const view = bar.parentElement;\n    const group = bar.querySelector('.am-delta-switch');\n    if (!group) continue;\n    group.hidden = false;\n    group.addEventListener('click', (e) => {\n      const btn = e.target.closest('button[data-view]');\n      if (!btn) return;\n      setView(view, btn.dataset.view);\n      for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === btn));\n    });\n  }\n  // The expand button copies only the drawing into the viewer; the viewer shows the view the diagram is in.\n  document.addEventListener('click', (e) => {\n    const host = e.target.closest?.('.am-diagram-expand')?.parentElement;\n    const canvas = document.querySelector('.am-lightbox-canvas');\n    const view = host && VIEWS.find((v) => host.classList.contains(`am-view-${v}`));\n    if (view && canvas) setView(canvas, view);\n  });\n})();\n";
+var DIAGRAM_JS = "// Research fork \u2014 the diagram runtime: inlined only when a page has excalidraw / uml figures that are not baked yet.\n// It loads Mermaid and Excalidraw from a CDN, draws the figures, then sets data-am-live=\"ok|error\" on <html> for am bake / am shot to wait on.\n// am bake runs this script in the local Chrome, copies the drawn figures into the page file and drops this script: a single file with no dependencies.\nconst CDN = {\n  mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs',\n  excalidraw: 'https://esm.sh/@excalidraw/excalidraw@0.18.0?bundle-deps',\n};\nconst root = document.documentElement;\nconst $$ = (s, r = document) => [...r.querySelectorAll(s)];\nconst errors = [];\nconst fail = (fig, e) => {\n  let msg = String(e && e.message ? e.message : e).split('\\n').slice(0, 4).join(' ');\n  // Mermaid reports the line inside the figure: turn it into the draft line (fence line + inner line), and cut the long Expecting list.\n  const inner = Number(msg.match(/on line (\\d+)/)?.[1] ?? 0);\n  msg = msg.replace(/(Expecting .{0,90}).*$/, '$1\u2026');\n  errors.push({ fig: fig?.id || '', line: Number(fig?.dataset.line || 0) + inner, kind: fig?.dataset.amLive || '', message: msg });\n};\nconst stage = (s) => { root.dataset.amStage = s; };\nconst canvasOf = (fig) => fig.querySelector('.am-fig-canvas');\nconst done = (fig) => { fig.dataset.amDone = '1'; };\n\n// \u2500\u2500 UML (Mermaid) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nasync function renderUml(figs) {\n  stage('uml:import');\n  let mermaid;\n  try {\n    ({ default: mermaid } = await import(CDN.mermaid));\n  } catch (e) {\n    figs.forEach((f) => fail(f, `cannot load Mermaid (${e.message}): check the network and try again`));\n    return;\n  }\n  const font = getComputedStyle(document.body).fontFamily;\n  mermaid.initialize({\n    startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: font,\n    themeVariables: {\n      fontFamily: font, fontSize: '14px', primaryColor: '#ffffff', primaryBorderColor: '#16181d', primaryTextColor: '#16181d',\n      secondaryColor: '#e4ecf8', tertiaryColor: '#f3f5f8', lineColor: '#4b5260', noteBkgColor: '#fdf3e2',\n      noteBorderColor: '#a8620a', actorBkg: '#ffffff', actorBorder: '#16181d', signalColor: '#16181d', labelBoxBkgColor: '#f3f5f8',\n    },\n    sequence: { mirrorActors: false, actorMargin: 60, messageMargin: 36 },\n    flowchart: { curve: 'basis', padding: 12 },\n  });\n  let i = 0;\n  for (const fig of figs) {\n    stage(`uml:${fig.id}`);\n    try {\n      const src = JSON.parse(fig.querySelector('script.am-uml-src').textContent);\n      // Each figure renders on its own with a unique id: mermaid.run reuses ids in a batch, which breaks the SVGs.\n      const { svg } = await mermaid.render(`am-mmd-${Date.now().toString(36)}-${i++}`, src);\n      canvasOf(fig).innerHTML = svg;\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 Excalidraw \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst EX = {\n  bg: { blue: '#a5d8ff', green: '#b2f2bb', yellow: '#ffec99', red: '#ffc9c9', violet: '#d0bfff', gray: '#e9ecef', orange: '#ffd8a8', teal: '#96f2d7', white: '#ffffff', none: 'transparent' },\n  stroke: { ink: '#1e1e1e', blue: '#1971c2', red: '#e03131', green: '#2f9e44', gray: '#868e96', violet: '#6741d9', orange: '#e8590c' },\n};\n// Snap an edge end to the shape outline (rectangle / ellipse / diamond).\nfunction clip(n, tx, ty) {\n  const cx = n.x + n.w / 2;\n  const cy = n.y + n.h / 2;\n  const dx = tx - cx;\n  const dy = ty - cy;\n  if (!dx && !dy) return [cx, cy];\n  const hw = n.w / 2;\n  const hh = n.h / 2;\n  let t;\n  if (n.shape === 'ellipse') t = 1 / Math.sqrt((dx / hw) ** 2 + (dy / hh) ** 2);\n  else if (n.shape === 'diamond') t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);\n  else t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);\n  const gap = 6 / Math.hypot(dx, dy);\n  return [cx + dx * (t + gap), cy + dy * (t + gap)];\n}\nfunction toSkeleton(spec) {\n  const G = { w: 340, h: 150, ...(spec.grid || {}) };\n  const D = { w: 180, h: 70, fontSize: 18, roughness: 1, strokeWidth: 2, fontFamily: 5, ...(spec.defaults || {}) };\n  const nodes = new Map();\n  const out = [];\n  const common = (o) => ({\n    roughness: o.roughness ?? D.roughness, strokeWidth: o.strokeWidth ?? D.strokeWidth,\n    strokeColor: EX.stroke[o.strokeColor] || o.strokeColor || EX.stroke.ink, strokeStyle: o.stroke || 'solid',\n  });\n  for (const n of spec.nodes || []) {\n    const w = n.w ?? D.w;\n    const h = n.h ?? D.h;\n    nodes.set(n.id, { ...n, w, h, shape: n.shape || 'rectangle', x: n.x ?? (n.col ?? 0) * G.w + (n.dx || 0), y: n.y ?? (n.row ?? 0) * G.h + (n.dy || 0) });\n  }\n  for (const b of spec.boxes || []) {\n    let { x, y, w, h } = b;\n    if (b.around) {\n      const ns = b.around.map((id) => nodes.get(id)).filter(Boolean);\n      const p = b.pad ?? 30;\n      x = Math.min(...ns.map((n) => n.x)) - p;\n      y = Math.min(...ns.map((n) => n.y)) - p - (b.label ? 22 : 0);\n      w = Math.max(...ns.map((n) => n.x + n.w)) + p - x;\n      h = Math.max(...ns.map((n) => n.y + n.h)) + p - y;\n    }\n    out.push({ type: 'rectangle', x, y, width: w, height: h, ...common({ stroke: 'dashed', strokeColor: 'gray', ...b }), backgroundColor: EX.bg[b.color] || b.color || 'transparent', fillStyle: b.fill || 'solid', opacity: b.opacity ?? 60, roundness: { type: 3 } });\n    if (b.label) out.push({ type: 'text', x: x + 10, y: y + 6, text: b.label, fontSize: b.fontSize ?? 14, fontFamily: D.fontFamily, strokeColor: EX.stroke[b.labelColor] || b.labelColor || EX.stroke.gray });\n  }\n  for (const n of nodes.values()) {\n    const el = { type: n.shape, id: n.id, x: n.x, y: n.y, width: n.w, height: n.h, ...common(n), backgroundColor: EX.bg[n.color ?? 'white'] || n.color, fillStyle: n.fill || 'solid' };\n    if (n.shape === 'rectangle' && n.rounded !== false) el.roundness = { type: 3 };\n    if (n.label) el.label = { text: n.label, fontSize: n.fontSize ?? D.fontSize, fontFamily: D.fontFamily, strokeColor: EX.stroke[n.textColor] || n.textColor || EX.stroke.ink };\n    out.push(el);\n  }\n  for (const e of spec.edges || []) {\n    const a = nodes.get(e.from);\n    const b = nodes.get(e.to);\n    const via = e.via || [];\n    const first = via[0] || [b.x + b.w / 2, b.y + b.h / 2];\n    const last = via[via.length - 1] || [a.x + a.w / 2, a.y + a.h / 2];\n    const [sx, sy] = clip(a, ...first);\n    const [ex, ey] = clip(b, ...last);\n    const pts = [[sx, sy], ...via, [ex, ey]].map(([px, py]) => [px - sx, py - sy]);\n    const el = {\n      type: 'arrow', x: sx, y: sy, points: pts, width: Math.abs(ex - sx) || 1, height: Math.abs(ey - sy) || 1,\n      ...common({ ...e, stroke: e.dashed ? 'dashed' : e.dotted ? 'dotted' : 'solid' }),\n      start: { id: a.id }, end: { id: b.id },\n      startArrowhead: e.arrow === 'both' ? (e.head || 'arrow') : null, endArrowhead: e.arrow === 'none' ? null : (e.head || 'arrow'),\n    };\n    if (e.label) el.label = { text: e.label, fontSize: e.fontSize ?? 15, fontFamily: D.fontFamily };\n    out.push(el);\n  }\n  for (const t of spec.texts || []) out.push({ type: 'text', x: t.x, y: t.y, text: t.text, fontSize: t.fontSize ?? 16, fontFamily: D.fontFamily, strokeColor: EX.stroke[t.color] || t.color || EX.stroke.ink, textAlign: t.align || 'left' });\n  for (const r of spec.raw || []) out.push(r);\n  return out;\n}\n// Excalidraw measures text on a canvas; before the hand-drawn font loads it measures too narrow, so labels are cut and edge masks are too small.\n// Export once first, register the fonts embedded in that SVG with the document, then convert for real.\nasync function warmFonts(X, specs) {\n  const warm = [];\n  for (const sp of specs) { try { warm.push(...X.convertToExcalidrawElements(toSkeleton(sp))); } catch { /* reported by the real render */ } }\n  if (!warm.length) return;\n  const svg = await X.exportToSvg({ elements: warm, appState: {}, files: {} });\n  const css = [...svg.querySelectorAll('style')].map((s) => s.textContent).join('\\n');\n  for (const m of css.matchAll(/@font-face\\s*{([^}]*)}/g)) {\n    const fam = /font-family:\\s*[\"']?([^\"';]+)[\"']?/.exec(m[1])?.[1];\n    const src = /src:\\s*url\\(([^)]+)\\)/.exec(m[1])?.[1]?.replace(/^[\"']|[\"']$/g, '');\n    if (!fam || !src) continue;\n    try { const ff = new FontFace(fam, `url(${src})`); document.fonts.add(ff); await ff.load(); } catch { /* a font failure only affects text measuring */ }\n  }\n}\nasync function renderExcalidraw(figs) {\n  stage('excalidraw:import');\n  let X;\n  try {\n    X = await import(CDN.excalidraw);\n  } catch (e) {\n    figs.forEach((f) => fail(f, `cannot load Excalidraw (${e.message}): check the network and try again`));\n    return;\n  }\n  const specs = figs.map((f) => JSON.parse(f.querySelector('script.am-excal-spec').textContent));\n  stage('excalidraw:fonts');\n  try { await warmFonts(X, specs); } catch { /* draw anyway */ }\n  for (const [i, fig] of figs.entries()) {\n    stage(`excalidraw:${fig.id}`);\n    try {\n      const spec = specs[i];\n      const elements = X.convertToExcalidrawElements(toSkeleton(spec), { regenerateIds: false });\n      const svg = await X.exportToSvg({ elements, appState: { exportBackground: false, viewBackgroundColor: '#ffffff', exportPadding: 16 }, files: {} });\n      svg.removeAttribute('width');\n      svg.removeAttribute('height');\n      svg.style.width = `${Math.min(svg.viewBox.baseVal.width * (spec.scale || 1), 1100)}px`;\n      canvasOf(fig).replaceChildren(svg);\n      const file = { type: 'excalidraw', version: 2, source: 'answer-me-with-html', elements, appState: { viewBackgroundColor: '#ffffff', gridSize: 20 }, files: {} };\n      const store = Object.assign(document.createElement('script'), { type: 'application/json', className: 'am-excal-file' });\n      store.textContent = JSON.stringify(file).replace(/</g, '\\\\u003c');\n      const btn = Object.assign(document.createElement('button'), { type: 'button', className: 'am-btn am-fig-dl', textContent: '\u2193 .excalidraw' });\n      btn.dataset.am = 'excal-dl';\n      btn.title = 'excalidraw.com \u2192 Open';\n      btn.addEventListener('click', () => {\n        const url = URL.createObjectURL(new Blob([store.textContent], { type: 'application/json' }));\n        Object.assign(document.createElement('a'), { href: url, download: `${fig.dataset.name || fig.id}.excalidraw` }).click();\n        setTimeout(() => URL.revokeObjectURL(url), 2000);\n      });\n      canvasOf(fig).after(store, btn);\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 boot \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst pending = $$('figure[data-am-live]:not([data-am-done])');\nconst uml = pending.filter((f) => f.dataset.amLive === 'uml');\nconst excal = pending.filter((f) => f.dataset.amLive === 'excalidraw');\nstage('render');\nawait Promise.all([uml.length && renderUml(uml), excal.length && renderExcalidraw(excal)]);\nconst banner = document.getElementById('am-render-errors');\nif (banner) {\n  banner.hidden = !errors.length;\n  banner.textContent = errors.map((e) => `${e.fig} (L${e.line} ${e.kind}): ${e.message}`).join('\\n');\n}\nroot.dataset.amErrors = JSON.stringify(errors);\nstage('done');\nroot.dataset.amLive = errors.length ? 'error' : 'ok';\n";
+var VIDEO_CSS = `/* Video player: the 1920\xD71080 stage scales to the window. All colors come from theme variables.
+   Theme-specific video tokens and decorations live in each theme's definition (themes/<name>.js). */
+html[data-video] {
+  /* Player controls stay out of the picture and ignore the theme: one fixed set of dark tokens */
+  --v-ctl-bg: #0b0d11; --v-ctl-line: #1d2330; --v-ctl-fg: #c9d1dc; --v-ctl-muted: #5b6576;
+  --v-ctl-btn: #141922; --v-ctl-btn-line: #2a3240; --v-ctl-accent: #58c4dd; --v-ctl-white: #fff;
+  --v-letterbox: #000;
+  --v-stage: var(--bg);
+  --v-cap-fg: var(--ink); --v-cap-bg: var(--paper); --v-cap-border: var(--line);
+  --v-title-font: var(--head-font);
+  --v-glow: none;
+}
+html[data-video], html[data-video] body { background: var(--v-letterbox); height: 100%; overflow: hidden; }
+html[data-video] body { font-size: 22px; }
+
+.amv-viewport { position: fixed; inset: 0 0 56px 0; overflow: hidden; }
+/* A video with more than one scene keeps a chapter strip above the controls (the player sets the attribute before anything measures). */
+html[data-chapters] .amv-viewport { bottom: 96px; }
+.amv-stage {
+  position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; overflow: hidden;
+  background: var(--v-stage); color: var(--ink); transform-origin: 50% 50%;
+}
+.amv-camera { position: absolute; inset: 0; transform-origin: 0 0; }
+.amv-overlay { position: absolute; inset: 0; pointer-events: none; }
+.amv-ghost { position: absolute; left: 0; top: 0; transform-origin: 0 0; margin: 0; }
+.amv-ghost svg { display: block; max-width: none; overflow: visible; }
+
+/* \u2500\u2500 Sheet frame (hidden unless a theme shows it) \u2500\u2500 */
+.amv-sheet { display: none; }
+.amv-ruler { position: absolute; display: flex; font: 13px/1 var(--font-mono); color: var(--ink-3); }
+.amv-ruler span { flex: 1; display: flex; align-items: center; justify-content: center; }
+.amv-ruler--top, .amv-ruler--bottom { left: 24px; right: 24px; height: 24px; }
+.amv-ruler--top { top: 0; }
+.amv-ruler--bottom { bottom: 0; }
+.amv-ruler--left, .amv-ruler--right { top: 24px; bottom: 24px; width: 24px; flex-direction: column; }
+.amv-ruler--left { left: 0; }
+.amv-ruler--right { right: 0; }
+.amv-ruler--top span + span, .amv-ruler--bottom span + span { border-left: 1px solid var(--line); }
+.amv-ruler--left span + span, .amv-ruler--right span + span { border-top: 1px solid var(--line); }
+
+/* \u2500\u2500 Scenes \u2500\u2500 */
+.amv-scene { position: absolute; inset: 0; visibility: hidden; }
+.amv-scene-head {
+  position: absolute; left: 72px; right: 72px; top: 72px; height: 64px; visibility: hidden;
+  display: flex; align-items: stretch; border: var(--bw) solid var(--line); background: var(--paper);
+  border-radius: var(--radius); overflow: hidden; color: var(--ink);
+}
+.amv-scene-n {
+  display: flex; align-items: center; justify-content: center; min-width: 64px; padding: 0 14px;
+  background: var(--head-bg); color: var(--head-fg); font: 700 30px var(--font-sans);
+}
+.amv-scene-title { flex: 1; display: flex; align-items: center; padding: 0 22px; font: 600 32px var(--v-title-font); }
+.amv-scene-meta { display: flex; align-items: center; padding: 0 22px; font: 16px var(--font-mono); color: var(--ink-2); letter-spacing: 0.06em; }
+
+.amv-body { position: absolute; left: 96px; right: 96px; top: 160px; height: 760px; display: grid; place-items: center; }
+.amv-fit { width: max-content; max-width: 1100px; transform-origin: 50% 50%; display: flex; flex-direction: column; gap: 28px; }
+.amv-fit .am-diagram { overflow: visible; }
+.amv-fit .am-diagram svg { max-width: none; overflow: visible; }
+/* The stage sizes .amv-fit to its content, which a size container would collapse to nothing; the stage is 1920 px wide, so a timeline stays horizontal. */
+.amv-fit .am-tl-wrap { container-type: normal; }
+.amv-fit .am-md { font-size: 26px; line-height: 1.6; }
+.amv-fit table { font-size: 24px; }
+.amv-fit th { font-size: 17px; }
+
+/* \u2500\u2500 Title card \u2500\u2500 */
+.amv-scene--title { display: grid; place-items: center; text-align: center; }
+.amv-title-wrap { max-width: 1500px; display: flex; flex-direction: column; align-items: center; }
+.amv-title { margin: 0; font: 700 96px/1.15 var(--v-title-font); color: var(--ink); letter-spacing: -0.01em; text-wrap: balance; }
+.amv-subtitle { margin: 26px 0 0; font: 36px var(--v-title-font); color: var(--accent); }
+.amv-intro { margin-top: 36px; font-size: 28px; color: var(--ink-2); }
+.amv-titleblock {
+  display: flex; margin-top: 56px; border: var(--bw) solid var(--line); border-radius: var(--radius);
+  background: var(--paper); text-align: left; overflow: hidden;
+}
+.amv-titleblock div { padding: 16px 30px; display: flex; flex-direction: column; gap: 6px; }
+.amv-titleblock div + div { border-left: 1px solid var(--line); }
+.amv-titleblock b { font: 600 16px var(--font-mono); color: var(--ink-3); letter-spacing: 0.08em; }
+.amv-titleblock span { font: 28px var(--font-sans); color: var(--ink); }
+
+/* \u2500\u2500 Captions \u2500\u2500 */
+.amv-caption {
+  position: absolute; left: 0; right: 0; bottom: 76px; display: flex; justify-content: center; pointer-events: none;
+}
+.amv-caption span {
+  max-width: 1500px; padding: 12px 28px; border-radius: var(--radius); text-align: center;
+  font: 500 38px/1.45 var(--font-sans); color: var(--v-cap-fg); background: var(--v-cap-bg);
+  border: var(--bw) solid var(--v-cap-border);
+}
+.amv-caption span:empty { display: none; }
+.amv-caption b { color: var(--accent); font-weight: 700; }
+
+/* \u2500\u2500 Highlight when narration names an element; edge labels stay grey until named \u2500\u2500 */
+html[data-video] .am-diagram .am-edge-label text { fill: var(--ink-2); }
+.amv-hl .am-node-shape, .amv-hl .am-actor {
+  stroke: var(--accent); stroke-width: 3; fill: var(--accent-bg); filter: var(--v-glow);
+}
+html[data-video] .am-diagram .amv-hl text, html[data-video] .am-diagram text.amv-hl { fill: var(--accent); font-weight: 600; }
+.amv-hl .am-edge { stroke: var(--accent); stroke-width: 2.4; }
+.amv-hl.am-tree-box, .amv-hl.am-tl-item, .amv-hl.am-lim, .amv-hl.am-kv-cell, li.amv-hl > .am-tree-label, tr.amv-hl td, .amv-hl.am-seg {
+  color: var(--accent); outline: 2.5px solid var(--accent); outline-offset: 4px; border-radius: 4px;
+}
+
+/* \u2500\u2500 Player controls (outside the picture) \u2500\u2500 */
+.amv-bigplay {
+  position: absolute; left: 50%; top: 50%; width: 132px; height: 132px; margin: -66px 0 0 -66px; border-radius: 50%;
+  border: 2px solid var(--v-ctl-white); background: rgba(0, 0, 0, 0.55); color: var(--v-ctl-white); font-size: 54px; cursor: pointer;
+  padding-left: 10px;
+}
+.amv-bigplay[hidden] { display: none; }
+.amv-controls {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 56px; display: flex; align-items: center; gap: 14px;
+  padding: 0 18px; background: var(--v-ctl-bg); border-top: 1px solid var(--v-ctl-line); color: var(--v-ctl-fg); font: 13px -apple-system, "Segoe UI", sans-serif;
+}
+.amv-btn { width: 36px; height: 32px; border: 1px solid var(--v-ctl-btn-line); border-radius: 6px; background: var(--v-ctl-btn); color: var(--v-ctl-white); cursor: pointer; }
+.amv-time { font-family: ui-monospace, Menlo, monospace; min-width: 96px; }
+.amv-track { position: relative; flex: 1; }
+.amv-seek { width: 100%; accent-color: var(--v-ctl-accent); }
+.amv-marks { position: absolute; left: 0; right: 0; top: -6px; height: 6px; pointer-events: none; }
+.amv-marks i { position: absolute; top: 0; width: 2px; height: 6px; background: var(--v-ctl-accent); pointer-events: auto; cursor: pointer; }
+/* The mark stays 2 px wide; the pseudo element widens what can be clicked. */
+.amv-marks i::before { content: ''; position: absolute; left: -5px; right: -5px; top: -6px; bottom: -4px; }
+.amv-rate { width: auto; min-width: 46px; padding: 0 8px; font: inherit; font-variant-numeric: tabular-nums; }
+.amv-export { width: auto; min-width: 46px; padding: 0 8px; font: inherit; font-variant-numeric: tabular-nums; }
+.amv-export:hover, .amv-export[aria-busy="true"] { border-color: var(--v-ctl-accent); color: var(--v-ctl-accent); }
+.amv-brand { color: var(--v-ctl-muted); font-size: 12px; white-space: nowrap; }
+
+/* \u2500\u2500 Export cover: the engine poses every frame behind it, so the picture is out of the way but the controls stay usable \u2500\u2500 */
+.amv-exporting {
+  position: fixed; inset: 0; display: grid; place-content: center; gap: 16px; text-align: center; cursor: pointer;
+  background: color-mix(in srgb, var(--v-ctl-bg) 92%, transparent); color: var(--v-ctl-fg);
+  font: 14px -apple-system, "Segoe UI", sans-serif;
+}
+.amv-exporting > span { width: 320px; height: 4px; border-radius: 2px; background: var(--v-ctl-btn); overflow: hidden; }
+.amv-exporting > span > i { display: block; width: 0; height: 100%; background: var(--v-ctl-accent); }
+.amv-exporting > b { font-weight: 600; font-variant-numeric: tabular-nums; }
+html[data-export] .amv-exporting { display: none; }
+
+/* \u2500\u2500 Chapter strip (one chip per scene; scrolls when the titles are long) \u2500\u2500 */
+.amv-chapters {
+  position: fixed; left: 0; right: 0; bottom: 56px; height: 40px; display: flex; align-items: center; gap: 8px;
+  padding: 0 18px; overflow-x: auto; overscroll-behavior-x: contain; background: var(--v-ctl-bg); border-top: 1px solid var(--v-ctl-line);
+  color: var(--v-ctl-fg); font: 13px -apple-system, "Segoe UI", sans-serif; scrollbar-width: thin;
+}
+.amv-chapters:empty { display: none; }
+.amv-chap {
+  display: flex; align-items: center; gap: 7px; flex: 0 0 auto; max-width: 320px; padding: 5px 12px; cursor: pointer;
+  border: 1px solid var(--v-ctl-btn-line); border-radius: 999px; background: var(--v-ctl-btn); color: var(--v-ctl-white);
+  font: inherit; text-align: left;
+}
+.amv-chap b { font-weight: 700; color: var(--v-ctl-accent); }
+.amv-chap span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.amv-chap:hover { border-color: var(--v-ctl-accent); }
+.amv-chap[aria-current="true"] {
+  border-color: var(--v-ctl-accent); color: var(--v-ctl-accent);
+  background: color-mix(in srgb, var(--v-ctl-accent) 18%, var(--v-ctl-btn));
+}
+
+/* Export mode: stage only, 1:1, no scaling */
+html[data-export] .amv-controls, html[data-export] .amv-bigplay, html[data-export] .amv-chapters { display: none; }
+html[data-export] .amv-viewport { inset: 0; }
+html[data-export] .amv-stage { left: 0; top: 0; transform: none !important; }
+`;
+var VIDEO_JS = "(() => {\n  const D = JSON.parse(document.getElementById('amv-data').textContent);\n  const W = 1920;\n  const H = 1080;\n  const T = 0.9;     // scene transition, matches TIMING.transition\n  const R = 0.6;     // one step appearing\n  const CAM = 0.8;   // camera move\n  const root = document.documentElement;\n  const stage = document.querySelector('.amv-stage');\n  const camera = document.querySelector('.amv-camera');\n  const overlay = document.querySelector('.amv-overlay');\n  const caption = document.querySelector('.amv-caption span');\n  const scenes = [...document.querySelectorAll('.amv-scene')];\n  const segs = D.segments;\n  // One chapter per scene (the title card is not a chapter). The strip needs its space before anything measures the viewport,\n  // so the attribute goes on before section 1.\n  const chapterList = segs.slice(1);\n  if (chapterList.length > 1) root.setAttribute('data-chapters', '');\n  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));\n  const ease = (x) => { const v = clamp(x); return v < 0.5 ? 4 * v * v * v : 1 - (-2 * v + 2) ** 3 / 2; };\n  const lerp = (a, b, p) => a + (b - a) * p;\n  const STEP_SEL = '.am-tl-item, .am-lim, .am-seg, tbody tr, .am-kv-cell, .am-md > ul > li, .am-md > ol > li, .am-md > p, .am-md > blockquote, .am-callout';\n\n  // \u2500\u2500 1. Fit each scene's content to the frame \u2500\u2500\n  for (const sc of scenes) {\n    const fit = sc.querySelector('.amv-fit');\n    if (!fit || !fit.children.length) continue;\n    const s = Math.min(1600 / fit.offsetWidth, 740 / fit.offsetHeight, 3.4);\n    fit.style.transform = `scale(${s})`;\n  }\n\n  // Scene titles sit outside the camera, so they stay put when it zooms.\n  const heads = scenes.map((sc) => {\n    const h = sc.querySelector('.amv-scene-head');\n    if (h) stage.insertBefore(h, camera.nextSibling);\n    return h;\n  });\n\n  // Measure elements in stage coordinates (the camera is the identity transform here).\n  const sr = stage.getBoundingClientRect();\n  const k = sr.width / W;\n  const rectOf = (el) => {\n    const r = el.getBoundingClientRect();\n    return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k };\n  };\n\n  // \u2500\u2500 2. Steps: group by data-step when a component sets it, else one step per row / item \u2500\u2500\n  const items = [];   // { el, at, paths: [{ el, len }] }\n  scenes.forEach((sc, i) => {\n    if (i === 0) return;\n    const groups = [];\n    for (const block of sc.querySelectorAll('.amv-fit > *')) {\n      const marked = [...block.querySelectorAll('[data-step]')];\n      if (marked.length) {\n        const by = new Map();\n        for (const el of marked) {\n          const n = Number(el.dataset.step);\n          if (!by.has(n)) by.set(n, []);\n          by.get(n).push(el);\n        }\n        [...by.keys()].sort((a, b) => a - b).forEach((n) => groups.push(by.get(n)));\n      } else {\n        const found = [...block.querySelectorAll(STEP_SEL)].filter((el) => !el.parentElement.closest(STEP_SEL));\n        if (found.length) found.forEach((el) => groups.push([el]));\n        else groups.push([block]);\n      }\n    }\n    const beats = segs[i].beats;\n    const S = groups.length;\n    const B = beats.length;\n    const perBeat = new Map();\n    groups.forEach((g, gi) => {\n      // With more beats than steps, the extra beats open the scene: steps align to the last beats.\n      const b = S <= B ? gi + (B - S) : Math.floor((gi * B) / S);\n      const rank = perBeat.get(b) ?? 0;\n      perBeat.set(b, rank + 1);\n      const beat = beats[b];\n      const count = S <= B ? 1 : Math.ceil(S / B) || 1;\n      const slot = Math.min(0.45, (beat.end - beat.start) / count);\n      for (const el of g) {\n        const paths = (el.matches('path.am-edge') ? [el] : [...el.querySelectorAll('path.am-edge')])\n          .filter((p) => !p.classList.contains('am-edge--dashed'))\n          .map((p) => ({ el: p, len: p.getTotalLength() }));\n        items.push({ el, scene: i, at: beat.start + rank * slot, paths });\n      }\n    });\n  });\n\n  // \u2500\u2500 3. Morphs: elements with the same data-key in consecutive scenes \u2500\u2500\n  const morphs = [];  // { scene, from, to, ghost, a, b }\n  const keyed = (sc) => {\n    const m = new Map();\n    for (const el of sc.querySelectorAll('[data-key]')) if (!m.has(el.dataset.key)) m.set(el.dataset.key, el);\n    return m;\n  };\n  for (let i = 2; i < scenes.length; i++) {\n    const prev = keyed(scenes[i - 1]);\n    for (const [key, to] of keyed(scenes[i])) {\n      const from = prev.get(key);\n      // Morph only like with like (SVG to SVG, HTML to HTML); otherwise the shapes do not match.\n      if (!from || (from instanceof SVGElement) !== (to instanceof SVGElement)) continue;\n      try {\n        const ghost = makeGhost(from);\n        overlay.append(ghost.node);\n        morphs.push({ scene: i, from, to, ghost: ghost.node, a: ghost.place(rectOf(from)), b: ghost.place(rectOf(to)) });\n      } catch {\n        // Morphs are a nicety: skip an element whose measurement fails; playback is unaffected.\n      }\n    }\n  }\n  const carried = new Set(morphs.map((m) => m.to));\n\n  function makeGhost(el) {\n    const wrap = document.createElement('div');\n    const host = el.closest('.am-diagram, .am-tree, .am-timeline, .am-kv, .am-limits');\n    wrap.className = `amv-ghost ${host ? host.className : ''}`;\n    if (el instanceof SVGGraphicsElement) {\n      const bb = el.getBBox();\n      const pad = 4;\n      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');\n      svg.setAttribute('viewBox', `${bb.x - pad} ${bb.y - pad} ${bb.width + pad * 2} ${bb.height + pad * 2}`);\n      svg.setAttribute('width', bb.width + pad * 2);\n      svg.setAttribute('height', bb.height + pad * 2);\n      const clone = el.cloneNode(true);\n      clone.removeAttribute('style');\n      svg.append(clone);\n      wrap.append(svg);\n      return {\n        node: wrap,\n        place: (r) => {\n          const s = r.w / (bb.width || 1);\n          return { x: r.x - pad * s, y: r.y - pad * s, s };\n        },\n      };\n    }\n    const clone = el.cloneNode(true);\n    clone.removeAttribute('style');\n    clone.querySelectorAll('[data-key], ul').forEach((n) => n.remove());\n    const box = document.createElement(el.tagName === 'LI' ? 'ul' : 'div');\n    box.className = el.tagName === 'LI' ? 'am-tree-list' : '';\n    box.style.margin = '0';\n    box.append(clone);\n    wrap.append(box);\n    wrap.style.width = `${el.offsetWidth}px`;\n    const w0 = el.offsetWidth || 1;\n    return { node: wrap, place: (r) => ({ x: r.x, y: r.y, s: r.w / w0 }) };\n  }\n\n  // \u2500\u2500 4. Camera: the element named by [name] in the narration \u2500\u2500\n  const findKey = (sc, key) => {\n    const all = [...sc.querySelectorAll('[data-key]')];\n    const norm = (s) => s.replace(/[`*]/g, '').trim().toLowerCase();\n    return all.find((el) => norm(el.dataset.key) === norm(key))\n      ?? all.find((el) => norm(el.dataset.key).includes(norm(key)))\n      ?? [...sc.querySelectorAll(`${STEP_SEL}, text`)].find((el) => norm(el.textContent).includes(norm(key)));\n  };\n  const IDENT = { s: 1, x: 0, y: 0 };\n  // Zoom without cropping: the whole diagram must stay in the safe area between title and captions.\n  const SAFE = { left: 60, right: W - 60, top: 150, bottom: H - 200 }; // leave room for captions at the bottom\n  function focusCam(r, sc) {\n    const fit = sc.querySelector('.amv-fit');\n    const c = fit ? rectOf(fit) : { x: 0, y: 0, w: W, h: H };\n    const room = Math.min((SAFE.right - SAFE.left) / c.w, (SAFE.bottom - SAFE.top) / c.h);\n    const s = clamp(Math.min(0.5 * W / r.w, 0.42 * H / r.h, room, 1.4), 1, 1.4);\n    const fitAxis = (want, lo, hi, a, b) => (s * (b - a) <= hi - lo ? clamp(want, lo - s * a, hi - s * b) : want);\n    return {\n      s,\n      x: fitAxis(W / 2 - s * (r.x + r.w / 2), SAFE.left, SAFE.right, c.x, c.x + c.w),\n      y: fitAxis(H * 0.5 - s * (r.y + r.h / 2), SAFE.top, SAFE.bottom, c.y, c.y + c.h),\n    };\n  }\n  const camEvents = [];   // { t, cam, hl }\n  segs.forEach((seg, i) => {\n    camEvents.push({ t: seg.start, cam: IDENT, hl: null });\n    seg.beats.forEach((b) => {\n      const el = b.focus ? findKey(scenes[i], b.focus) : null;\n      let cam = IDENT;\n      if (el) cam = focusCam(rectOf(el), scenes[i]);\n      camEvents.push({ t: b.start, cam, hl: el });\n    });\n  });\n  const hlTargets = new Set(camEvents.map((e) => e.hl).filter(Boolean));\n\n  // Scene and title fades. Titles never overlap: the old one fades out in the first half of the transition, the new one fades in in the second half.\n  const show = (el, op) => {\n    el.style.opacity = op;\n    el.style.visibility = op > 0 ? 'visible' : 'hidden';\n  };\n  function drawScenes(t) {\n    scenes.forEach((sc, i) => {\n      const seg = segs[i];\n      const next = segs[i + 1];\n      const before = t < seg.start;\n      const fadeIn = i === 0 ? ease(t / 0.8) : ease((t - seg.start) / T);\n      const fadeOut = next ? 1 - ease((t - next.start) / T) : 1;\n      show(sc, before ? 0 : Math.min(fadeIn, fadeOut));\n      if (!heads[i]) return;\n      const hin = ease((t - seg.start - T / 2) / (T / 2));\n      const hout = next ? 1 - ease((t - next.start) / (T / 2)) : 1;\n      show(heads[i], before ? 0 : Math.min(hin, hout));\n    });\n  }\n\n  // Steps appear: edges draw in one stroke, other elements fade in and rise slightly.\n  function drawSteps(t) {\n    for (const it of items) {\n      if (carried.has(it.el)) continue;\n      const p = ease((t - it.at) / R);\n      it.el.style.opacity = clamp((t - it.at) / 0.25);\n      if (!it.paths.length) {\n        it.el.style.transform = p < 1 ? `translateY(${(1 - p) * 14}px)` : '';\n        continue;\n      }\n      for (const { el, len } of it.paths) {\n        el.style.strokeDasharray = `${len}`;\n        el.style.strokeDashoffset = `${len * (1 - p)}`;\n        el.style.markerEnd = p < 0.97 ? 'none' : '';\n      }\n    }\n  }\n\n  // Morphs: during the transition a stand-in moves from the old to the new position while the real elements are hidden.\n  // An element can end one morph and start the next; collect the elements to hide first, then apply, so the two do not overwrite each other.\n  const morphed = [...new Set(morphs.flatMap((m) => [m.from, m.to]))];\n  function drawMorphs(t) {\n    const hidden = new Set();\n    for (const m of morphs) {\n      const s0 = segs[m.scene].start;\n      const during = t >= s0 && t < s0 + T;\n      m.ghost.style.display = during ? '' : 'none';\n      if (during) {\n        const p = ease((t - s0) / T);\n        m.ghost.style.transform = `translate(${lerp(m.a.x, m.b.x, p)}px, ${lerp(m.a.y, m.b.y, p)}px) scale(${lerp(m.a.s, m.b.s, p)})`;\n        hidden.add(m.from);\n      }\n      if (t < s0 + T) hidden.add(m.to);\n      m.to.style.opacity = 1;\n    }\n    for (const el of morphed) el.style.visibility = hidden.has(el) ? 'hidden' : '';\n  }\n\n  // Camera and highlight: interpolate between the previous camera position and the current target.\n  function drawCamera(t) {\n    const ev = camEvents.findLastIndex((e) => t >= e.t);\n    const e = ev >= 0 ? camEvents[ev] : null;\n    const prev = ev > 0 ? camEvents[ev - 1].cam : IDENT;\n    const p = e ? ease((t - e.t) / CAM) : 0;\n    const to = e ? e.cam : IDENT;\n    camera.style.transform = `translate(${lerp(prev.x, to.x, p)}px, ${lerp(prev.y, to.y, p)}px) scale(${lerp(prev.s, to.s, p)})`;\n    for (const el of hlTargets) el.classList.toggle('amv-hl', el === e?.hl);\n  }\n\n  function drawCaption(t) {\n    const cur = segs.findLastIndex((s) => t >= s.start);\n    const beats = cur >= 0 ? segs[cur].beats : [];\n    const b = beats.find((x) => t >= x.start && t < x.end + 0.3);\n    const html = b ? b.html : '';\n    if (caption.dataset.html !== html) {\n      caption.innerHTML = html;\n      caption.dataset.html = html;\n    }\n    caption.style.opacity = b ? clamp((t - b.start) / 0.2) : 0;\n  }\n\n  // \u2500\u2500 5. Deterministic rendering: the same time always draws the same frame \u2500\u2500\n  function render(time) {\n    const t = clamp(time, 0, D.duration);\n    drawScenes(t);\n    drawSteps(t);\n    drawMorphs(t);\n    drawCamera(t);\n    drawCaption(t);\n    updateUi(t);\n  }\n\n  // \u2500\u2500 6. Player \u2500\u2500\n  const audio = document.getElementById('amv-audio');\n  const seek = document.querySelector('.amv-seek');\n  const timeEl = document.querySelector('.amv-time');\n  const toggleBtn = document.querySelector('[data-amv=\"toggle\"]');\n  const bigPlay = document.querySelector('.amv-bigplay');\n  const marks = document.querySelector('.amv-marks');\n  const bar = document.querySelector('.amv-chapters');\n  const rateBtn = document.querySelector('[data-amv=\"rate\"]');\n  const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];\n  const fmt = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;\n  seek.max = D.duration;\n\n  // A tick on the track and a chip in the strip per scene; both jump to the start of the scene and keep playing.\n  const chips = chapterList.map((s, i) => {\n    const mark = document.createElement('i');\n    mark.style.left = `${(s.start / D.duration) * 100}%`;\n    mark.title = `${s.id} ${s.title} \xB7 ${fmt(s.start)}`;\n    mark.addEventListener('click', () => jump(s.start));\n    marks.append(mark);\n\n    const chip = document.createElement('button');\n    chip.type = 'button';\n    chip.className = 'amv-chap';\n    chip.title = `${s.title} \xB7 ${fmt(s.start)}`;\n    const letter = document.createElement('b');\n    letter.textContent = s.id || String.fromCharCode(65 + i);\n    const label = document.createElement('span');\n    label.textContent = s.title;\n    chip.append(letter, label);\n    chip.addEventListener('click', () => jump(s.start));\n    bar.append(chip);\n    return chip;\n  });\n\n  let playing = false;\n  let base = 0;\n  let t0 = 0;\n  let rate = 1;\n  // The clock: the audio element when there is one, otherwise wall-clock time scaled by the playback rate.\n  const now = () => (!playing ? base : audio ? audio.currentTime : base + ((performance.now() - t0) / 1000) * rate);\n\n  function jump(t) {\n    seekTo(t);\n    if (!playing) play();\n  }\n\n  // The chip of the scene the picture is in, kept in view while the strip scrolls.\n  let activeChip = -1;\n  function markChapter(t) {\n    const i = chapterList.findLastIndex((s) => t >= s.start);\n    if (i === activeChip) return;\n    activeChip = i;\n    chips.forEach((c, k) => (k === i ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current')));\n    const chip = chips[i];\n    if (chip && bar.scrollWidth > bar.clientWidth) {\n      // By where the chip is on screen, so the strip scrolls the same in either direction (a right-to-left strip scrolls with negative offsets).\n      const b = bar.getBoundingClientRect();\n      const c = chip.getBoundingClientRect();\n      bar.scrollBy({ left: c.left + c.width / 2 - (b.left + b.width / 2), behavior: 'smooth' });\n    }\n  }\n\n  // Changing the rate must not move the clock: anchor it again at the time it shows now.\n  function setRate(r) {\n    const at = now();\n    rate = r;\n    if (audio) audio.playbackRate = r;\n    rateBtn.textContent = `${r}\xD7`;\n    rateBtn.setAttribute('aria-label', `${rateBtn.dataset.speed ?? 'Speed'} ${r}\xD7`);\n    if (playing) {\n      base = at;\n      t0 = performance.now();\n    }\n  }\n\n  function updateUi(t) {\n    if (document.activeElement !== seek) seek.value = t;\n    timeEl.textContent = `${fmt(t)} / ${fmt(D.duration)}`;\n    markChapter(t);\n  }\n\n  function play() {\n    if (base >= D.duration - 0.05) base = 0;\n    playing = true;\n    bigPlay.hidden = true;\n    toggleBtn.textContent = '\u275A\u275A';\n    toggleBtn.setAttribute('aria-label', toggleBtn.dataset.pause);\n    if (audio) {\n      audio.currentTime = base;\n      audio.play().catch(() => {});\n    } else {\n      t0 = performance.now();\n    }\n    requestAnimationFrame(tick);\n  }\n\n  function pause() {\n    base = now();\n    playing = false;\n    audio?.pause();\n    toggleBtn.textContent = '\u25B6';\n    toggleBtn.setAttribute('aria-label', toggleBtn.dataset.play);\n  }\n\n  function seekTo(x) {\n    base = clamp(x, 0, D.duration);\n    if (audio) audio.currentTime = base;\n    t0 = performance.now();\n    render(base);\n  }\n\n  function tick() {\n    if (!playing) return;\n    const t = now();\n    if (t >= D.duration) {\n      pause();\n      base = D.duration;\n      render(D.duration);\n      return;\n    }\n    render(t);\n    requestAnimationFrame(tick);\n  }\n\n  const toggle = () => (playing ? pause() : play());\n  toggleBtn.addEventListener('click', toggle);\n  bigPlay.addEventListener('click', play);\n  stage.addEventListener('click', (e) => { if (e.target !== bigPlay) toggle(); });\n  seek.addEventListener('input', () => seekTo(Number(seek.value)));\n  rateBtn.addEventListener('click', () => setRate(RATES[(RATES.indexOf(rate) + 1) % RATES.length]));\n\n  // \u2500\u2500 Export: the page encodes itself (src/runtime/video-export.js) and offers the file as a download \u2500\u2500\n  // The engine needs no help from the page behind it: the stage is pinned into the frame while it copies styles, so\n  // the picture is 1920x1080 whatever the window shows. The overlay covers the scrubbing stage and the button keeps\n  // its place in the controls, so a second click stops the export.\n  const exportBtn = document.querySelector('[data-amv=\"export\"]');\n  const SLICE = 1_048_572;   // 1 MiB rounded to a multiple of 3, so every base64 slice stands on its own\n  let exporting = false;\n\n  const decode = (b64) => {\n    const bin = atob(b64);\n    const out = new Uint8Array(bin.length);\n    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);\n    return out;\n  };\n\n  async function runExport() {\n    if (exporting) { window.__amvEnc.cancel(); return; }\n    exporting = true;\n    const label = exportBtn.dataset.label || 'Export';\n    const overlay = document.createElement('div');\n    overlay.className = 'amv-exporting';\n    overlay.innerHTML = '<span><i></i></span><b></b>';\n    overlay.title = label;\n    overlay.addEventListener('click', () => window.__amvEnc.cancel());\n    // After the viewport and before the controls: the cover hides the picture, the controls stay clickable.\n    document.querySelector('.amv-viewport').after(overlay);\n    window.__amv.pauseForExport();\n    try {\n      const started = await window.__amvEnc.start({});\n      if (started.error) throw new Error(started.error);\n      for (;;) {\n        const p = window.__amvEnc.progress();\n        const pct = Math.round((p.done / Math.max(1, p.total)) * 100);\n        exportBtn.textContent = `${pct}%`;\n        overlay.querySelector('b').textContent = `${label} ${pct}%`;\n        overlay.querySelector('i').style.width = `${pct}%`;\n        if (p.error) throw new Error(p.error);\n        if (!p.running) break;\n        await new Promise((r) => setTimeout(r, 200));\n      }\n      const size = window.__amvEnc.size();\n      const parts = [];\n      for (let at = 0; at < size; at += SLICE) parts.push(decode(window.__amvEnc.bytes(at, Math.min(SLICE, size - at))));\n      const url = URL.createObjectURL(new Blob(parts, { type: 'video/webm' }));\n      const link = document.createElement('a');\n      link.href = url;\n      link.download = `${(document.title || 'video').replace(/[\\\\/:*?\"<>|]+/g, '-')}.webm`;\n      document.body.appendChild(link);\n      link.click();\n      link.remove();\n      setTimeout(() => URL.revokeObjectURL(url), 60_000);\n    } catch (e) {\n      exportBtn.textContent = '\u2715';\n      overlay.querySelector('b').textContent = String((e && e.message) || e);\n      await new Promise((r) => setTimeout(r, 2500));\n    } finally {\n      overlay.remove();\n      exportBtn.textContent = exportBtn.dataset.icon || '\u2913';\n      exporting = false;\n      window.__amv.resumeAfterExport();\n    }\n  }\n\n  if (window.__amvEnc && window.__amvEnc.supported()) exportBtn.addEventListener('click', runExport);\n  else exportBtn.remove();\n  document.addEventListener('keydown', (e) => {\n    if (e.key === ' ') { e.preventDefault(); toggle(); }\n    if (e.key === 'ArrowRight') seekTo(now() + 5);\n    if (e.key === 'ArrowLeft') seekTo(now() - 5);\n  });\n  audio?.addEventListener('ended', () => { pause(); base = D.duration; });\n\n  function fitStage() {\n    if (root.hasAttribute('data-export')) return;\n    const vp = stage.parentElement;\n    const s = Math.min(vp.clientWidth / W, vp.clientHeight / H);\n    stage.style.transform = `translate(-50%, -50%) scale(${s})`;\n  }\n  window.addEventListener('resize', fitStage);\n\n  // Export: place the stage 1:1 at the top left and call render(t) frame by frame. exportMode is for the CLI, which\n  // hides the controls and either screenshots the frames (ffmpeg) or drives the built-in encoder (see video-export.js).\n  window.render = render;\n  let resumeAt;   // undefined: no export ran; null: playback was paused already; a number: carry on there\n  window.__amv = {\n    duration: D.duration,\n    fps: D.fps,\n    exportMode() { root.setAttribute('data-export', ''); stage.style.transform = ''; },\n    // The encoder poses every frame itself, so playback stops for the length of an export and carries on afterwards.\n    // The button and the engine both call this; only the first call decides where playback resumes.\n    pauseForExport() { if (resumeAt === undefined) resumeAt = playing ? now() : null; pause(); return resumeAt; },\n    resumeAfterExport() {\n      if (resumeAt === undefined || resumeAt === null) { resumeAt = undefined; return; }\n      const at = resumeAt;\n      resumeAt = undefined;\n      seekTo(at);\n      if (at < D.duration - 0.05) play();\n    },\n  };\n  fitStage();\n  setRate(rate);   // the button carries the speed on load\n  // Poster: show the fully faded-in title card, but playback still starts at 0.\n  render(Math.min(1, segs[0].end));\n  updateUi(0);\n})();\n";
+var VIDEO_EXPORT_JS = "// The export engine for the path that has no ffmpeg: the player page drives its own render(t), rasterizes the stage\n// into a canvas, encodes the picture and the narration with WebCodecs and muxes the WebM container with the writer\n// from src/video/webm.js (injected ahead of this script as window.__amvWebm). Every video page carries it: the export\n// button in the controls drives it, and `am video --mp4` drives the same code through the DevTools protocol.\n//\n// The page hands out the finished file in slices (window.__amvEnc.bytes(at, len), base64) so no bytes travel twice.\n(() => {\n  const W = 1920;\n  const H = 1080;\n  const CODECS = ['vp09.00.31.08', 'vp09.00.10.08', 'vp8'];   // the first one the browser really encodes\n  const AUDIO_FRAME_SECONDS = 0.02;    // Opus encodes 20 ms frames\n  const KEY_SECONDS = 5;               // a key frame every 5 s, so seeking stays cheap\n  const BITRATE = 3_500_000;           // VP9 at 1080p30: flat slides stay clean at this rate\n  const QUEUE_LIMIT = 8;               // frames in flight; a software encoder runs slower than the page renders\n\n  const state = { running: false, done: 0, total: 0, error: null, bytes: null, codec: '', audio: false, cancel: false };\n\n  const yieldToPage = () => new Promise((r) => {\n    // A timer is clamped in a hidden tab; a message port keeps the export running at full speed in the background.\n    const ch = new MessageChannel();\n    ch.port1.onmessage = () => r();\n    ch.port2.postMessage(0);\n  });\n\n  const asBytes = (x) => (x instanceof ArrayBuffer ? new Uint8Array(x) : new Uint8Array(x.buffer, x.byteOffset, x.byteLength));\n\n  // \u2500\u2500 Rasterizing: the stage, with every node's computed style copied into the SVG \u2500\u2500\n  // The clone needs the styles inline: an <img> of an SVG that embeds the page's own stylesheets does not lay out the\n  // page the same way (the fixed-position chain and the html/body height rules break). Computed styles are exact and\n  // cost about 300 ms for the whole stage, so unchanged nodes keep their string from the previous frame: the player\n  // changes only a handful of nodes per frame (14 of 261 measured on a five-scene video).\n  const styles = new Map();\n  const canvas = document.createElement('canvas');\n  canvas.width = W;\n  canvas.height = H;\n  const ctx = canvas.getContext('2d', { alpha: false });\n  const image = new Image();\n  let stageEl = null;\n\n  // The picture is always 1920x1080: the stage is pinned at the top left of the SVG and the fit transform the player\n  // applies to the live stage (translate + scale) is dropped, so the frame does not depend on the window size.\n  const PIN = `;position:absolute;left:0;top:0;width:${W}px;height:${H}px;transform:none;`;\n\n  function styleOf(el) {\n    const cs = getComputedStyle(el);\n    let out = '';\n    for (let i = 0; i < cs.length; i++) out += `${cs[i]}:${cs.getPropertyValue(cs[i])};`;\n    return out;\n  }\n\n  function stageSvg(stage) {\n    const animated = new Set();\n    for (const anim of document.getAnimations()) {\n      const target = anim.effect && anim.effect.target;\n      if (target) animated.add(target);\n    }\n    const clone = stage.cloneNode(true);\n    const stamp = `${window.innerWidth}x${window.innerHeight}`;\n    let recomputed = 0;\n    const walk = (src, dst, parentSign) => {\n      const sign = `${parentSign}\\u0001${src.getAttribute('class') || ''}\\u0001${src.getAttribute('style') || ''}${animated.has(src) ? '\\u0001a' : ''}`;\n      let entry = styles.get(src);\n      if (!entry || entry.sign !== sign) {\n        entry = { sign, text: styleOf(src) + (src === stage ? PIN : '') };\n        styles.set(src, entry);\n        recomputed++;\n      }\n      dst.setAttribute('style', entry.text);\n      const a = src.children;\n      const b = dst.children;\n      for (let i = 0; i < a.length; i++) walk(a[i], b[i], sign);\n    };\n    walk(stage, clone, stamp);\n    const svg = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"${W}\" height=\"${H}\"><foreignObject x=\"0\" y=\"0\" width=\"${W}\" height=\"${H}\">${new XMLSerializer().serializeToString(clone)}</foreignObject></svg>`;\n    return { svg, recomputed };\n  }\n\n  async function paint(stage) {\n    const { svg } = stageSvg(stage);\n    // A data URL keeps the canvas origin clean; a blob URL taints it and the encoder then refuses the frame.\n    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;\n    await image.decode();\n    ctx.fillStyle = '#000';\n    ctx.fillRect(0, 0, W, H);\n    ctx.drawImage(image, 0, 0, W, H);\n  }\n\n  // \u2500\u2500 The narration the page already carries: encoded from the WAV the player holds as a data URL \u2500\u2500\n  function readWav() {\n    const el = document.getElementById('amv-audio');\n    const src = (el && el.getAttribute('src')) || '';\n    const comma = src.indexOf(',');\n    if (!src.startsWith('data:') || comma < 0) return null;\n    const bin = atob(src.slice(comma + 1));\n    const wav = new Uint8Array(bin.length);\n    for (let i = 0; i < bin.length; i++) wav[i] = bin.charCodeAt(i);\n    const view = new DataView(wav.buffer, wav.byteOffset, wav.byteLength);\n    const tag = (o) => String.fromCharCode(wav[o], wav[o + 1], wav[o + 2], wav[o + 3]);\n    if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error('the narration track is not a WAV file');\n    let format = null;\n    let pcm = null;\n    for (let o = 12; o + 8 <= wav.byteLength;) {\n      const id = tag(o);\n      const len = view.getUint32(o + 4, true);\n      if (id === 'fmt ') format = { channels: view.getUint16(o + 10, true), sampleRate: view.getUint32(o + 12, true), bits: view.getUint16(o + 22, true) };\n      else if (id === 'data') pcm = { at: o + 8, len };\n      o += 8 + len + (len % 2);\n    }\n    if (!format || !pcm || format.bits !== 16) throw new Error('the narration track must be 16-bit PCM WAV');\n    return { wav, pcm, ...format };\n  }\n\n  async function encodeAudio(writer) {\n    const sound = readWav();\n    if (!sound) return false;\n    const { wav, pcm, channels, sampleRate } = sound;\n    let head = null;\n    const audio = new AudioEncoder({\n      output(chunk, meta) {\n        if (!head && meta && meta.decoderConfig && meta.decoderConfig.description) head = asBytes(meta.decoderConfig.description).slice();\n        const data = new Uint8Array(chunk.byteLength);\n        chunk.copyTo(data);\n        writer.block({ track: 2, key: false, tsUs: chunk.timestamp, data });\n      },\n      error(e) { state.error = String((e && e.message) || e); },\n    });\n    audio.configure({ codec: 'opus', sampleRate, numberOfChannels: channels, bitrate: 64000 * channels });\n    const perBlock = Math.round(sampleRate * AUDIO_FRAME_SECONDS);\n    const total = Math.floor(pcm.len / (2 * channels));\n    for (let i = 0; i < total; i += perBlock) {\n      const samples = perBlock * channels;\n      const data = new Uint8Array(samples * 2);   // zero filled: a short last block becomes a full Opus frame\n      const from = pcm.at + i * channels * 2;\n      data.set(wav.subarray(from, from + Math.min(samples, (total - i) * channels) * 2));\n      const block = new AudioData({\n        format: 's16', sampleRate, numberOfFrames: perBlock, numberOfChannels: channels,\n        timestamp: Math.round((i / sampleRate) * 1e6), data,\n      });\n      audio.encode(block);\n      block.close();\n      while (audio.encodeQueueSize > 16 && !state.error) await yieldToPage();\n      if (state.cancel) break;\n    }\n    await audio.flush();\n    audio.close();\n    if (state.error) throw new Error(state.error);\n    // The encoder adds pre-skip samples of silence; CodecDelay makes the player drop them again.\n    const preSkip = head && head.length >= 19 ? new DataView(head.buffer, head.byteOffset, head.byteLength).getUint16(10, true) : 312;\n    if (!head || head.length < 19) {\n      head = new Uint8Array(19);\n      head.set(new TextEncoder().encode('OpusHead'), 0);\n      head[8] = 1;\n      head[9] = channels;\n      new DataView(head.buffer).setUint16(10, 312, true);\n      new DataView(head.buffer).setUint32(12, sampleRate, true);\n    }\n    writer.audio = { channels, codecPrivate: head, preSkipSamples: preSkip };\n    return true;\n  }\n\n  // \u2500\u2500 The whole export, run inside this page \u2500\u2500\n  // start() only validates and kicks the work off: the caller polls progress() and then asks for the bytes, so the\n  // DevTools protocol never has to wait minutes for one call to come back.\n  function start(options = {}) {\n    if (state.running) return { error: 'an export is already running' };\n    const api = window.__amv;\n    const Mux = window.__amvWebm && window.__amvWebm.WebmWriter;\n    if (!Mux) return { error: 'the WebM writer is missing from this page' };\n    if (typeof VideoEncoder !== 'function' || typeof AudioEncoder !== 'function') {\n      return { error: 'this browser cannot encode video (WebCodecs is missing)' };\n    }\n    Object.assign(state, { running: true, done: 0, total: Math.ceil(api.duration * api.fps), error: null, bytes: null, cancel: false });\n    run(Mux, options).catch((e) => { state.error = String((e && e.message) || e); }).finally(() => { state.running = false; styles.clear(); });\n    return { total: state.total, fps: api.fps, duration: api.duration };\n  }\n\n  async function run(Mux, options) {\n    const api = window.__amv;\n    const fps = api.fps;\n    const total = state.total;\n    const config = { width: W, height: H, bitrate: options.bitrate || BITRATE, framerate: fps, latencyMode: 'quality' };\n    let codec = null;\n    for (const candidate of CODECS) {\n      try {\n        if ((await VideoEncoder.isConfigSupported({ ...config, codec: candidate })).supported) { codec = candidate; break; }\n      } catch {\n        // an unknown codec string is not an error, try the next one\n      }\n    }\n    if (!codec) throw new Error('this browser encodes neither VP9 nor VP8');\n    state.codec = codec;\n\n    const writer = new Mux({ width: W, height: H, durationMs: api.duration * 1000, videoCodec: codec.startsWith('vp8') ? 'V_VP8' : 'V_VP9' });\n    state.audio = await encodeAudio(writer);\n    if (state.cancel) throw new Error('cancelled');\n\n    // The player keeps its own clock; the export poses every frame itself, so playback is paused first.\n    api.pauseForExport();\n    stageEl = stageEl || document.querySelector('.amv-stage');\n    const video = new VideoEncoder({\n      output(chunk) {\n        const data = new Uint8Array(chunk.byteLength);\n        chunk.copyTo(data);\n        writer.block({ track: 1, key: chunk.type === 'key', tsUs: chunk.timestamp, data });\n      },\n      error(e) { state.error = String((e && e.message) || e); },\n    });\n    video.configure({ ...config, codec });\n    const keyEvery = Math.max(1, Math.round(fps * KEY_SECONDS));\n    for (let i = 0; i < total; i++) {\n      if (state.cancel) { video.close(); throw new Error('cancelled'); }\n      if (state.error) throw new Error(state.error);\n      window.render(i / fps);\n      await paint(stageEl);\n      const frame = new VideoFrame(canvas, { timestamp: Math.round((i / fps) * 1e6), duration: Math.round(1e6 / fps) });\n      video.encode(frame, { keyFrame: i % keyEvery === 0 });\n      frame.close();\n      state.done = i + 1;\n      if (video.encodeQueueSize > QUEUE_LIMIT || i % 5 === 0) await yieldToPage();\n    }\n    await video.flush();\n    video.close();\n    if (state.error) throw new Error(state.error);\n    state.bytes = writer.build();\n  }\n\n  const base64 = (from, to) => {\n    let out = '';\n    for (let i = from; i < to; i += 0x8000) out += String.fromCharCode.apply(null, state.bytes.subarray(i, Math.min(to, i + 0x8000)));\n    return btoa(out);\n  };\n\n  window.__amvEnc = {\n    supported() {\n      return typeof VideoEncoder === 'function' && typeof AudioEncoder === 'function' && Boolean(window.__amvWebm && window.__amvWebm.WebmWriter);\n    },\n    start,\n    progress() {\n      return { running: state.running, done: state.done, total: state.total, error: state.error, audio: state.audio, codec: state.codec };\n    },\n    // The caller asks for the file in slices: one big string would travel badly over a debugger protocol.\n    size() { return state.bytes ? state.bytes.length : 0; },\n    bytes(from, len) { return state.bytes ? base64(from, Math.min(from + len, state.bytes.length)) : ''; },\n    cancel() { state.cancel = true; },\n  };\n})();\n";
+var VIDEO_MUX_JS = "// Minimal WebM (Matroska) writer for the export path that has no ffmpeg: the browser encodes the frames (WebCodecs,\n// see src/runtime/video.js) and this module writes the container. One VP8/VP9 video track and an optional Opus audio\n// track. The blocks are buffered, sorted by time and cut into clusters of about a second, so the sound and the\n// picture of a moment sit next to each other in the file. The Segment and the Clusters carry the unknown size, which\n// is how a stream is written: nothing needs to be measured first and nothing is patched afterwards.\n// Plain bytes only (no Buffer, no imports), so the same source runs in Node and inside a page (scripts/inline-assets.mjs\n// turns it into a script for the player page).\nconst APP = 'answer-me-with-html';   // MuxingApp / WritingApp\nconst CLUSTER_MS = 1000;              // how much time one cluster holds\nconst SEEK_PRE_ROLL_NS = 80_000_000;  // what the Opus specification asks for\n\nconst ID = {\n  EBML: [0x1a, 0x45, 0xdf, 0xa3],\n  EBMLVersion: [0x42, 0x86], EBMLReadVersion: [0x42, 0xf7], EBMLMaxIDLength: [0x42, 0xf2], EBMLMaxSizeLength: [0x42, 0xf3],\n  DocType: [0x42, 0x82], DocTypeVersion: [0x42, 0x87], DocTypeReadVersion: [0x42, 0x85],\n  Segment: [0x18, 0x53, 0x80, 0x67], Info: [0x15, 0x49, 0xa9, 0x66], TimecodeScale: [0x2a, 0xd7, 0xb1],\n  MuxingApp: [0x4d, 0x80], WritingApp: [0x57, 0x41], Duration: [0x44, 0x89],\n  Tracks: [0x16, 0x54, 0xae, 0x6b], TrackEntry: [0xae], TrackNumber: [0xd7], TrackUID: [0x73, 0xc5], FlagLacing: [0x9c],\n  CodecID: [0x86], TrackType: [0x83], Video: [0xe0], PixelWidth: [0xb0], PixelHeight: [0xba],\n  Audio: [0xe1], SamplingFrequency: [0xb5], Channels: [0x9f], CodecPrivate: [0x63, 0xa2],\n  CodecDelay: [0x56, 0xaa], SeekPreRoll: [0x56, 0xbb],\n  Cluster: [0x1f, 0x43, 0xb6, 0x75], Timecode: [0xe7], SimpleBlock: [0xa3],\n};\nconst UNKNOWN_SIZE = new Uint8Array([0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);\n\nconst concat = (parts) => {\n  let total = 0;\n  for (const p of parts) total += p.length;\n  const out = new Uint8Array(total);\n  let at = 0;\n  for (const p of parts) { out.set(p, at); at += p.length; }\n  return out;\n};\nconst bytes = (id) => new Uint8Array(id);\nconst text = (s) => new TextEncoder().encode(s);\n\n// Element size as a variable-size integer, in the shortest length that fits; the all-ones value is reserved.\nfunction size(n) {\n  for (let len = 1; len <= 8; len++) {\n    if (len === 8 || n < 2 ** (7 * len) - 1) {\n      const out = new Uint8Array(len);\n      let v = n;\n      for (let i = len - 1; i >= 0; i--) {\n        out[i] = v & 0xff;\n        v = Math.floor(v / 256);\n      }\n      out[0] |= 0x80 >> (len - 1);\n      return out;\n    }\n  }\n}\n\n// Unsigned integer, big endian, as short as it can be (a Matroska integer drops leading zero bytes).\nfunction uint(n) {\n  const out = [];\n  let v = Math.round(n);\n  do {\n    out.unshift(v & 0xff);\n    v = Math.floor(v / 256);\n  } while (v > 0);\n  return new Uint8Array(out);\n}\n\nfunction f64(x) {\n  const out = new Uint8Array(8);\n  new DataView(out.buffer).setFloat64(0, x);\n  return out;\n}\n\nconst elem = (id, payload) => concat([bytes(id), size(payload.length), payload]);\n\n// WebM writer. video: { width, height, codec } with codec 'V_VP9' or 'V_VP8'; audio: null or\n// { channels, codecPrivate, preSkipSamples }. Duration is written up front, so a player knows the length at once.\nclass WebmWriter {\n  constructor({ width, height, durationMs, videoCodec = 'V_VP9', audio = null }) {\n    this.width = width;\n    this.height = height;\n    this.durationMs = durationMs;\n    this.videoCodec = videoCodec;\n    this.audio = audio;\n    this.blocks = [];\n  }\n\n  // track 1 is the picture, track 2 the sound. key marks a key frame; tsUs is the time in microseconds.\n  block({ track, key, tsUs, data }) {\n    this.blocks.push({ track, key: Boolean(key), ms: Math.round(tsUs / 1000), data });\n  }\n\n  count(track) {\n    return this.blocks.reduce((n, b) => n + (b.track === track ? 1 : 0), 0);\n  }\n\n  build() {\n    const parts = [\n      elem(ID.EBML, concat([\n        elem(ID.EBMLVersion, uint(1)),\n        elem(ID.EBMLReadVersion, uint(1)),\n        elem(ID.EBMLMaxIDLength, uint(4)),\n        elem(ID.EBMLMaxSizeLength, uint(8)),\n        elem(ID.DocType, text('webm')),\n        elem(ID.DocTypeVersion, uint(4)),\n        elem(ID.DocTypeReadVersion, uint(2)),\n      ])),\n      concat([bytes(ID.Segment), UNKNOWN_SIZE]),\n      elem(ID.Info, concat([\n        elem(ID.TimecodeScale, uint(1_000_000)),\n        elem(ID.MuxingApp, text(APP)),\n        elem(ID.WritingApp, text(APP)),\n        elem(ID.Duration, f64(this.durationMs)),\n      ])),\n      elem(ID.Tracks, concat([this.#videoTrack(), ...(this.audio ? [this.#audioTrack()] : [])])),\n    ];\n    for (const cluster of this.#clusters()) parts.push(cluster);\n    return concat(parts);\n  }\n\n  #track(num, type, codecId, extra) {\n    return elem(ID.TrackEntry, concat([\n      elem(ID.TrackNumber, uint(num)),\n      elem(ID.TrackUID, uint(num)),\n      elem(ID.FlagLacing, uint(0)),\n      elem(ID.CodecID, text(codecId)),\n      elem(ID.TrackType, uint(type)),\n      ...extra,\n    ]));\n  }\n\n  #videoTrack() {\n    return this.#track(1, 1, this.videoCodec, [\n      elem(ID.Video, concat([elem(ID.PixelWidth, uint(this.width)), elem(ID.PixelHeight, uint(this.height))])),\n    ]);\n  }\n\n  #audioTrack() {\n    const { channels, codecPrivate, preSkipSamples } = this.audio;\n    const extra = [elem(ID.Audio, concat([elem(ID.SamplingFrequency, f64(48000)), elem(ID.Channels, uint(channels))]))];\n    if (codecPrivate) extra.unshift(elem(ID.CodecPrivate, codecPrivate));\n    // The encoder adds pre-skip samples of silence; CodecDelay tells the player to drop them again.\n    extra.push(elem(ID.CodecDelay, uint((preSkipSamples / 48000) * 1e9)), elem(ID.SeekPreRoll, uint(SEEK_PRE_ROLL_NS)));\n    return this.#track(2, 2, 'A_OPUS', extra);\n  }\n\n  #clusters() {\n    const blocks = [...this.blocks].sort((a, b) => a.ms - b.ms || a.track - b.track);\n    const out = [];\n    for (let i = 0; i < blocks.length; ) {\n      const start = blocks[i].ms;\n      const body = [elem(ID.Timecode, uint(start))];\n      while (i < blocks.length && blocks[i].ms - start <= CLUSTER_MS) {\n        body.push(this.#block(blocks[i], start));\n        i++;\n      }\n      out.push(concat([bytes(ID.Cluster), UNKNOWN_SIZE, ...body]));\n    }\n    return out;\n  }\n\n  #block(b, clusterStart) {\n    const head = new Uint8Array(4);\n    head[0] = 0x80 | b.track;                 // the track number as a variable-size integer\n    new DataView(head.buffer).setInt16(1, b.ms - clusterStart);\n    head[3] = b.key ? 0x80 : 0x00;\n    return elem(ID.SimpleBlock, concat([head, b.data]));\n  }\n}\n\nwindow.__amvWebm = { WebmWriter };\n";
 
 // src/cli.js
-import { join as join3, resolve as resolve2, dirname as dirname2 } from "node:path";
-import { spawn as spawn2 } from "node:child_process";
+import { join as join10, resolve as resolve5, dirname as dirname3, basename as basename5, sep as sep3 } from "node:path";
+import { spawn as spawn5 } from "node:child_process";
+
+// src/languages/zh.js
+var zh_default = {
+  id: "zh",
+  language: "zh",
+  script: "Hans",
+  voice: { say: "zh_CN", espeak: "cmn" },
+  ui: {
+    remark: {
+      button: "\u6807\u6CE8",
+      hint: "\u6279\u6CE8\uFF08\u53EF\u9009\uFF09",
+      save: "\u4FDD\u5B58",
+      remove: "\u5220\u9664",
+      section: "\u6807\u6CE8",
+      kinds: { suggestion: "\u5EFA\u8BAE", keep: "\u4FDD\u7559", question: "\u7591\u95EE", concern: "\u5173\u6CE8" }
+    },
+    theme: "\u4E3B\u9898",
+    modeLabel: "\u660E\u6697",
+    mode: { auto: "\u8DDF\u968F\u7CFB\u7EDF", light: "\u4EAE", dark: "\u6697" },
+    copy: "\u590D\u5236\u6E90\u7A3F",
+    done: "\u5DF2\u590D\u5236 \u2713",
+    copyCode: "\u590D\u5236",
+    reply: {
+      button: "\u56DE\u590D",
+      comment: "\u8BC4\u8BBA",
+      commentHint: "\u5BF9\u8FD9\u4E2A\u9762\u677F\u7684\u610F\u89C1",
+      title: "\u4F60\u7684\u56DE\u590D",
+      hint: "\u590D\u5236\u540E\u7C98\u8D34\u5230\u5BF9\u8BDD\u91CC\u3002",
+      copy: "\u590D\u5236\u56DE\u590D",
+      close: "\u5173\u95ED",
+      suggested: "\u5EFA\u8BAE",
+      empty: "\u5148\u9009\u62E9\u9009\u9879\uFF0C\u6216\u5728\u9762\u677F\u4E0A\u5199\u8BC4\u8BBA\u3002",
+      decisions: "\u51B3\u5B9A",
+      comments: "\u8BC4\u8BBA",
+      confirmed: "\u786E\u8BA4\u4E86\u5EFA\u8BAE",
+      untouched: "\u672A\u4F5C\u7B54\uFF0C\u4FDD\u7559\u5EFA\u8BAE",
+      was: "\u539F\u4E3A",
+      typed: '\u4EE5 ">" \u5F00\u5934\u7684\u884C\u662F\u8BFB\u8005\u8F93\u5165\u7684\u6587\u5B57\u3002'
+    },
+    toc: "\u76EE\u5F55",
+    flow: "\u6D41\u7A0B\u56FE",
+    sequence: "\u65F6\u5E8F\u56FE",
+    er: "\u5B9E\u4F53\u5173\u7CFB\u56FE",
+    colon: "\uFF1A",
+    sep: "\u3001",
+    expand: "\u5C55\u5F00\u67E5\u770B\u56FE\u8868",
+    close: "\u5173\u95ED",
+    diagram: "\u56FE\u8868\u67E5\u770B",
+    delta: { added: "\u65B0\u589E", removed: "\u5220\u9664", changed: "\u4FEE\u6539", view: "\u89C6\u56FE", before: "\u6539\u524D", changes: "\u53D8\u66F4", after: "\u6539\u540E" },
+    generated: "Generated by",
+    limits: { value: "{value} / max {limit}", limit: "max {limit}" }
+  },
+  videoUi: {
+    play: "\u64AD\u653E",
+    pause: "\u6682\u505C",
+    chapters: "\u7AE0\u8282",
+    speed: "\u901F\u5EA6",
+    export: "\u5BFC\u51FA",
+    drawn: "\u5236\u56FE",
+    date: "\u65E5\u671F",
+    scenes: "\u573A\u666F",
+    duration: "\u65F6\u957F",
+    sheet: "\u56FE {n} / {total}"
+  }
+};
+
+// src/languages/zh-Hant.js
+var zh_Hant_default = {
+  id: "zh-Hant",
+  language: "zh",
+  script: "Hant",
+  voice: { say: "zh_TW", espeak: "cmn" },
+  langs: ["zh-Hant", "zh-TW", "zh-HK", "zh-MO"],
+  fonts: {
+    sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Heiti TC", "Microsoft JhengHei", "Noto Sans CJK TC", "Noto Sans TC", "PingFang SC", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif',
+    serif: '"Songti TC", "PMingLiU", "MingLiU", "Noto Serif CJK TC", "Noto Serif TC", "Source Han Serif TC", "Songti SC"'
+  },
+  ui: {
+    remark: {
+      button: "\u6A19\u8A3B",
+      hint: "\u6279\u8A3B\uFF08\u53EF\u9078\uFF09",
+      save: "\u5132\u5B58",
+      remove: "\u522A\u9664",
+      section: "\u6A19\u8A3B",
+      kinds: { suggestion: "\u5EFA\u8B70", keep: "\u4FDD\u7559", question: "\u7591\u554F", concern: "\u95DC\u6CE8" }
+    },
+    theme: "\u4E3B\u984C",
+    modeLabel: "\u660E\u6697",
+    mode: { auto: "\u8DDF\u96A8\u7CFB\u7D71", light: "\u6DFA\u8272", dark: "\u6DF1\u8272" },
+    copy: "\u8907\u88FD\u6E90\u7A3F",
+    done: "\u5DF2\u8907\u88FD \u2713",
+    copyCode: "\u8907\u88FD",
+    reply: {
+      button: "\u56DE\u8986",
+      comment: "\u8A55\u8AD6",
+      commentHint: "\u5C0D\u9019\u500B\u9762\u677F\u7684\u610F\u898B",
+      title: "\u4F60\u7684\u56DE\u8986",
+      hint: "\u8907\u88FD\u5F8C\u8CBC\u5230\u5C0D\u8A71\u88E1\u3002",
+      copy: "\u8907\u88FD\u56DE\u8986",
+      close: "\u95DC\u9589",
+      suggested: "\u5EFA\u8B70",
+      empty: "\u5148\u9078\u64C7\u9078\u9805\uFF0C\u6216\u5728\u9762\u677F\u4E0A\u5BEB\u8A55\u8AD6\u3002",
+      decisions: "\u6C7A\u5B9A",
+      comments: "\u8A55\u8AD6",
+      confirmed: "\u78BA\u8A8D\u4E86\u5EFA\u8B70",
+      untouched: "\u672A\u4F5C\u7B54\uFF0C\u4FDD\u7559\u5EFA\u8B70",
+      was: "\u539F\u70BA",
+      typed: '\u4EE5 ">" \u958B\u982D\u7684\u884C\u662F\u8B80\u8005\u8F38\u5165\u7684\u6587\u5B57\u3002'
+    },
+    toc: "\u76EE\u9304",
+    flow: "\u6D41\u7A0B\u5716",
+    sequence: "\u6642\u5E8F\u5716",
+    er: "\u5BE6\u9AD4\u95DC\u806F\u5716",
+    colon: "\uFF1A",
+    sep: "\u3001",
+    expand: "\u5C55\u958B\u67E5\u770B\u5716\u8868",
+    close: "\u95DC\u9589",
+    diagram: "\u5716\u8868\u6AA2\u8996",
+    delta: { added: "\u65B0\u589E", removed: "\u522A\u9664", changed: "\u4FEE\u6539", view: "\u6AA2\u8996", before: "\u6539\u524D", changes: "\u8B8A\u66F4", after: "\u6539\u5F8C" },
+    generated: "Generated by",
+    limits: { value: "{value} / max {limit}", limit: "max {limit}" }
+  },
+  videoUi: {
+    play: "\u64AD\u653E",
+    pause: "\u66AB\u505C",
+    chapters: "\u7AE0\u7BC0",
+    speed: "\u901F\u5EA6",
+    export: "\u532F\u51FA",
+    drawn: "\u88FD\u5716",
+    date: "\u65E5\u671F",
+    scenes: "\u5834\u666F",
+    duration: "\u6642\u9577",
+    sheet: "\u5716 {n} / {total}"
+  }
+};
+
+// src/languages/en.js
+var en_default = {
+  id: "en",
+  language: "en",
+  voice: { say: "en_US", espeak: "en-us" },
+  ui: {
+    remark: {
+      button: "Remark",
+      hint: "Optional note",
+      save: "Save",
+      remove: "Remove",
+      section: "Remarks",
+      kinds: { suggestion: "suggestion", keep: "keep", question: "question", concern: "concern" }
+    },
+    theme: "Theme",
+    modeLabel: "Mode",
+    mode: { auto: "Auto", light: "Light", dark: "Dark" },
+    copy: "Copy source",
+    done: "Copied \u2713",
+    copyCode: "Copy",
+    reply: {
+      button: "Reply",
+      comment: "Comment",
+      commentHint: "Your comment on this panel",
+      title: "Your reply",
+      hint: "Copy it and paste it into the chat.",
+      copy: "Copy reply",
+      close: "Close",
+      suggested: "suggested",
+      empty: "Pick options, or comment on a panel first.",
+      decisions: "Decisions",
+      comments: "Comments",
+      confirmed: "suggestion confirmed",
+      untouched: "not answered; suggestion kept",
+      was: "was",
+      typed: 'Lines that start with ">" are text the reader typed.'
+    },
+    toc: "Contents",
+    flow: "Flowchart",
+    sequence: "Sequence diagram",
+    er: "Entity relationship diagram",
+    colon: ": ",
+    sep: ", ",
+    expand: "Expand diagram",
+    close: "Close",
+    diagram: "Diagram viewer",
+    delta: { added: "added", removed: "removed", changed: "changed", view: "View", before: "Before", changes: "Changes", after: "After" },
+    generated: "Generated by",
+    limits: { value: "{value} / max {limit}", limit: "max {limit}" }
+  },
+  // Player labels. drawn..duration are the title block cells; sheet is the scene header, with {n} and {total} the zero-padded numbers.
+  videoUi: {
+    play: "Play",
+    pause: "Pause",
+    chapters: "Chapters",
+    speed: "Speed",
+    export: "Export",
+    drawn: "DRAWN",
+    date: "DATE",
+    scenes: "SCENES",
+    duration: "DURATION",
+    sheet: "SHEET {n} / {total}"
+  }
+};
+
+// src/languages/ja.js
+var ja_default = {
+  id: "ja",
+  language: "ja",
+  voice: { say: "ja_JP", espeak: "ja" },
+  langs: ["ja"],
+  fonts: {
+    sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans CJK JP", "Noto Sans JP", "PingFang SC", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif',
+    serif: '"Hiragino Mincho ProN", "Yu Mincho", "Noto Serif CJK JP", "Noto Serif JP", "Songti SC"'
+  },
+  ui: {
+    remark: {
+      button: "\u6CE8\u8A18",
+      hint: "\u30E1\u30E2\uFF08\u4EFB\u610F\uFF09",
+      save: "\u4FDD\u5B58",
+      remove: "\u524A\u9664",
+      section: "\u6CE8\u8A18",
+      kinds: { suggestion: "\u63D0\u6848", keep: "\u7DAD\u6301", question: "\u8CEA\u554F", concern: "\u61F8\u5FF5" }
+    },
+    theme: "\u30C6\u30FC\u30DE",
+    modeLabel: "\u8868\u793A",
+    mode: { auto: "\u81EA\u52D5", light: "\u30E9\u30A4\u30C8", dark: "\u30C0\u30FC\u30AF" },
+    copy: "\u539F\u7A3F\u3092\u30B3\u30D4\u30FC",
+    done: "\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F \u2713",
+    copyCode: "\u30B3\u30D4\u30FC",
+    reply: {
+      button: "\u8FD4\u4FE1",
+      comment: "\u30B3\u30E1\u30F3\u30C8",
+      commentHint: "\u3053\u306E\u30D1\u30CD\u30EB\u3078\u306E\u30B3\u30E1\u30F3\u30C8",
+      title: "\u3042\u306A\u305F\u306E\u8FD4\u4FE1",
+      hint: "\u30B3\u30D4\u30FC\u3057\u3066\u30C1\u30E3\u30C3\u30C8\u306B\u8CBC\u308A\u4ED8\u3051\u3066\u304F\u3060\u3055\u3044\u3002",
+      copy: "\u8FD4\u4FE1\u3092\u30B3\u30D4\u30FC",
+      close: "\u9589\u3058\u308B",
+      suggested: "\u63A8\u5968",
+      empty: "\u9078\u629E\u80A2\u3092\u9078\u3076\u304B\u3001\u30D1\u30CD\u30EB\u306B\u30B3\u30E1\u30F3\u30C8\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+      decisions: "\u6C7A\u5B9A",
+      comments: "\u30B3\u30E1\u30F3\u30C8",
+      confirmed: "\u63A8\u5968\u3092\u78BA\u8A8D",
+      untouched: "\u672A\u56DE\u7B54\uFF08\u63A8\u5968\u306E\u307E\u307E\uFF09",
+      was: "\u5909\u66F4\u524D",
+      typed: "\u300C>\u300D\u3067\u59CB\u307E\u308B\u884C\u306F\u8AAD\u8005\u304C\u5165\u529B\u3057\u305F\u6587\u5B57\u3067\u3059\u3002"
+    },
+    toc: "\u76EE\u6B21",
+    flow: "\u30D5\u30ED\u30FC\u30C1\u30E3\u30FC\u30C8",
+    sequence: "\u30B7\u30FC\u30B1\u30F3\u30B9\u56F3",
+    er: "ER \u56F3",
+    colon: "\uFF1A",
+    sep: "\u3001",
+    expand: "\u62E1\u5927\u8868\u793A",
+    close: "\u9589\u3058\u308B",
+    diagram: "\u30C0\u30A4\u30A2\u30B0\u30E9\u30E0",
+    delta: { added: "\u8FFD\u52A0", removed: "\u524A\u9664", changed: "\u5909\u66F4", view: "\u8868\u793A", before: "\u5909\u66F4\u524D", changes: "\u5DEE\u5206", after: "\u5909\u66F4\u5F8C" },
+    generated: "Generated by",
+    limits: { value: "{value} / max {limit}", limit: "max {limit}" }
+  },
+  videoUi: {
+    play: "\u518D\u751F",
+    pause: "\u4E00\u6642\u505C\u6B62",
+    chapters: "\u7AE0",
+    speed: "\u901F\u5EA6",
+    export: "\u66F8\u304D\u51FA\u3057",
+    drawn: "\u4F5C\u56F3",
+    date: "\u65E5\u4ED8",
+    scenes: "\u30B7\u30FC\u30F3",
+    duration: "\u518D\u751F\u6642\u9593",
+    sheet: "\u30B7\u30FC\u30C8 {n} / {total}"
+  }
+};
+
+// src/languages/he.js
+var he_default = {
+  id: "he",
+  language: "he",
+  langs: ["he"],
+  fonts: {
+    sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Hebrew", "Arial Hebrew", Arial, Roboto, "Helvetica Neue", sans-serif',
+    serif: '"Noto Serif Hebrew", "Frank Ruehl CLM", David, "Times New Roman"'
+  },
+  ui: {
+    remark: {
+      button: "\u05E1\u05D9\u05DE\u05D5\u05DF",
+      hint: "\u05D4\u05E2\u05E8\u05D4 (\u05D0\u05D5\u05E4\u05E6\u05D9\u05D5\u05E0\u05DC\u05D9)",
+      save: "\u05E9\u05DE\u05D9\u05E8\u05D4",
+      remove: "\u05D4\u05E1\u05E8\u05D4",
+      section: "\u05E1\u05D9\u05DE\u05D5\u05E0\u05D9\u05DD",
+      kinds: { suggestion: "\u05D4\u05E6\u05E2\u05D4", keep: "\u05DC\u05D4\u05E9\u05D0\u05D9\u05E8", question: "\u05E9\u05D0\u05DC\u05D4", concern: "\u05D7\u05E9\u05E9" }
+    },
+    theme: "\u05E2\u05E8\u05DB\u05EA \u05E2\u05D9\u05E6\u05D5\u05D1",
+    modeLabel: "\u05DE\u05E6\u05D1",
+    mode: { auto: "\u05D0\u05D5\u05D8\u05D5\u05DE\u05D8\u05D9", light: "\u05D1\u05D4\u05D9\u05E8", dark: "\u05DB\u05D4\u05D4" },
+    copy: "\u05D4\u05E2\u05EA\u05E7\u05EA \u05D4\u05DE\u05E7\u05D5\u05E8",
+    done: "\u05D4\u05D5\u05E2\u05EA\u05E7 \u2713",
+    copyCode: "\u05D4\u05E2\u05EA\u05E7\u05D4",
+    reply: {
+      button: "\u05EA\u05D2\u05D5\u05D1\u05D4",
+      comment: "\u05D4\u05E2\u05E8\u05D4",
+      commentHint: "\u05D4\u05D4\u05E2\u05E8\u05D4 \u05E9\u05DC\u05DA \u05E2\u05DC \u05D4\u05D7\u05DC\u05E7 \u05D4\u05D6\u05D4",
+      title: "\u05D4\u05EA\u05D2\u05D5\u05D1\u05D4 \u05E9\u05DC\u05DA",
+      hint: "\u05D4\u05E2\u05EA\u05D9\u05E7\u05D5 \u05D5\u05D4\u05D3\u05D1\u05D9\u05E7\u05D5 \u05D0\u05D5\u05EA\u05D4 \u05D1\u05E6\u05F3\u05D0\u05D8.",
+      copy: "\u05D4\u05E2\u05EA\u05E7\u05EA \u05D4\u05EA\u05D2\u05D5\u05D1\u05D4",
+      close: "\u05E1\u05D2\u05D9\u05E8\u05D4",
+      suggested: "\u05DE\u05D5\u05DE\u05DC\u05E5",
+      empty: "\u05E7\u05D5\u05D3\u05DD \u05D1\u05D7\u05E8\u05D5 \u05D0\u05E4\u05E9\u05E8\u05D5\u05EA \u05D0\u05D5 \u05DB\u05EA\u05D1\u05D5 \u05D4\u05E2\u05E8\u05D4 \u05E2\u05DC \u05D0\u05D7\u05D3 \u05D4\u05D7\u05DC\u05E7\u05D9\u05DD.",
+      decisions: "\u05D4\u05D7\u05DC\u05D8\u05D5\u05EA",
+      comments: "\u05D4\u05E2\u05E8\u05D5\u05EA",
+      confirmed: "\u05D4\u05D4\u05DE\u05DC\u05E6\u05D4 \u05D0\u05D5\u05E9\u05E8\u05D4",
+      untouched: "\u05DC\u05D0 \u05E0\u05E2\u05E0\u05D4; \u05D4\u05D4\u05DE\u05DC\u05E6\u05D4 \u05E0\u05E9\u05D0\u05E8\u05D4",
+      was: "\u05D4\u05D9\u05D4",
+      typed: '\u05E9\u05D5\u05E8\u05D5\u05EA \u05E9\u05DE\u05EA\u05D7\u05D9\u05DC\u05D5\u05EA \u05D1-">" \u05D4\u05DF \u05D8\u05E7\u05E1\u05D8 \u05E9\u05D4\u05E7\u05D5\u05E8\u05D0 \u05D4\u05E7\u05DC\u05D9\u05D3.'
+    },
+    toc: "\u05EA\u05D5\u05DB\u05DF \u05D4\u05E2\u05E0\u05D9\u05D9\u05E0\u05D9\u05DD",
+    flow: "\u05EA\u05E8\u05E9\u05D9\u05DD \u05D6\u05E8\u05D9\u05DE\u05D4",
+    sequence: "\u05EA\u05E8\u05E9\u05D9\u05DD \u05E8\u05E6\u05E3",
+    er: "\u05EA\u05E8\u05E9\u05D9\u05DD \u05D9\u05E9\u05D5\u05D9\u05D5\u05EA \u05D5\u05E7\u05E9\u05E8\u05D9\u05DD",
+    colon: ": ",
+    sep: ", ",
+    expand: "\u05D4\u05D2\u05D3\u05DC\u05EA \u05D4\u05EA\u05E8\u05E9\u05D9\u05DD",
+    close: "\u05E1\u05D2\u05D9\u05E8\u05D4",
+    diagram: "\u05DE\u05E6\u05D9\u05D2 \u05D4\u05EA\u05E8\u05E9\u05D9\u05DD",
+    delta: { added: "\u05E0\u05D5\u05E1\u05E3", removed: "\u05D4\u05D5\u05E1\u05E8", changed: "\u05E9\u05D5\u05E0\u05D4", view: "\u05EA\u05E6\u05D5\u05D2\u05D4", before: "\u05DC\u05E4\u05E0\u05D9", changes: "\u05E9\u05D9\u05E0\u05D5\u05D9\u05D9\u05DD", after: "\u05D0\u05D7\u05E8\u05D9" },
+    generated: "\u05E0\u05D5\u05E6\u05E8 \u05D1\u05D0\u05DE\u05E6\u05E2\u05D5\u05EA",
+    limits: { value: "{value} \u05DE\u05EA\u05D5\u05DA {limit}", limit: "\u05E2\u05D3 {limit}" }
+  },
+  // Names for the frontmatter keys an agent writes most (`author: …`), shown under the title. Other keys show as written.
+  metaKeys: {
+    author: "\u05DE\u05D0\u05EA",
+    by: "\u05DE\u05D0\u05EA",
+    date: "\u05EA\u05D0\u05E8\u05D9\u05DA",
+    updated: "\u05E2\u05D5\u05D3\u05DB\u05DF",
+    time: "\u05E9\u05E2\u05D4",
+    source: "\u05DE\u05E7\u05D5\u05E8",
+    sources: "\u05DE\u05E7\u05D5\u05E8\u05D5\u05EA",
+    version: "\u05D2\u05E8\u05E1\u05D4",
+    status: "\u05E1\u05D8\u05D8\u05D5\u05E1",
+    owner: "\u05D0\u05D7\u05E8\u05D0\u05D9",
+    team: "\u05E6\u05D5\u05D5\u05EA",
+    project: "\u05E4\u05E8\u05D5\u05D9\u05E7\u05D8",
+    audience: "\u05E7\u05D4\u05DC \u05D9\u05E2\u05D3",
+    reviewer: "\u05D1\u05D5\u05D3\u05E7",
+    reviewers: "\u05D1\u05D5\u05D3\u05E7\u05D9\u05DD",
+    license: "\u05E8\u05D9\u05E9\u05D9\u05D5\u05DF",
+    licence: "\u05E8\u05D9\u05E9\u05D9\u05D5\u05DF",
+    model: "\u05DE\u05D5\u05D3\u05DC",
+    repo: "\u05E8\u05D9\u05E4\u05D5",
+    branch: "\u05E2\u05E0\u05E3",
+    tags: "\u05EA\u05D2\u05D9\u05D5\u05EA",
+    for: "\u05E2\u05D1\u05D5\u05E8",
+    ref: "\u05D4\u05E4\u05E0\u05D9\u05D4"
+  },
+  // The word after a change count above one ("+4 נוספו"); the ui.delta words are the singular, for one item and for a node badge.
+  deltaCounts: { added: "\u05E0\u05D5\u05E1\u05E4\u05D5", removed: "\u05D4\u05D5\u05E1\u05E8\u05D5", changed: "\u05E9\u05D5\u05E0\u05D5" },
+  // The render time under the page reads day.month.year, the Israeli way.
+  dateOrder: "dmy",
+  videoUi: {
+    play: "\u05D4\u05E4\u05E2\u05DC\u05D4",
+    pause: "\u05D4\u05E9\u05D4\u05D9\u05D4",
+    chapters: "\u05E4\u05E8\u05E7\u05D9\u05DD",
+    speed: "\u05DE\u05D4\u05D9\u05E8\u05D5\u05EA",
+    export: "\u05D9\u05D9\u05E6\u05D5\u05D0",
+    drawn: "\u05E9\u05D5\u05E8\u05D8\u05D8",
+    date: "\u05EA\u05D0\u05E8\u05D9\u05DA",
+    scenes: "\u05E1\u05E6\u05E0\u05D5\u05EA",
+    duration: "\u05DE\u05E9\u05DA",
+    sheet: "\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF {n} \u05DE\u05EA\u05D5\u05DA {total}"
+  }
+};
+
+// src/languages/registry.js
+var LANGUAGES = Object.freeze([zh_default, zh_Hant_default, en_default, ja_default, he_default]);
+var FALLBACK = en_default;
+var languageIds = () => LANGUAGES.map((l3) => l3.id);
+function findLanguage(language, script) {
+  return LANGUAGES.find((l3) => l3.language === language && (!l3.script || l3.script === script));
+}
+
+// src/themes/fonts.js
+var SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif';
+var MONO = 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace';
+var fontLanguages = () => LANGUAGES.filter((l3) => l3.fonts);
+var langSelector = (language, base, rest) => language.langs.map((tag) => `${base}:lang(${tag})${rest}`).join(", ");
+var serifByLanguage = (variable, head) => fontLanguages().map((l3) => `${langSelector(l3, "&", "[data-mode]")} { ${variable}: ${head}, ${l3.fonts.serif}, serif; }`).join("\n");
+
+// src/themes/blueprint.js
+var blueprint_default = {
+  name: "blueprint",
+  summary: "Blueprint drawing",
+  label: { zh: "\u56FE\u7EB8", "zh-Hant": "\u5716\u7D19", en: "Blueprint", ja: "\u56F3\u9762", he: "\u05E9\u05E8\u05D8\u05D5\u05D8" },
+  // lang-ok: viewer-facing theme labels
+  scope: ["page", "video"],
+  tokens: {
+    common: { "--font-sans": SANS, "--font-mono": MONO, "--radius": "0px", "--shadow": "none", "--bw": "1.5px", "--head-font": "var(--font-sans)" },
+    light: {
+      "--bg": "#f6f6f3",
+      "--paper": "#ffffff",
+      "--ink": "#16181d",
+      "--ink-2": "#4b5260",
+      "--ink-3": "#8b929e",
+      "--line": "#1d2026",
+      "--line-2": "#d6dae1",
+      "--fill": "#f3f5f8",
+      "--accent": "#1d5fbf",
+      "--accent-bg": "#e4ecf8",
+      "--ok": "#1d5fbf",
+      "--ok-bg": "#e4ecf8",
+      "--err": "#c62828",
+      "--err-bg": "#fbeaea",
+      "--warn": "#a8620a",
+      "--warn-bg": "#fdf3e2",
+      "--head-bg": "#16181d",
+      "--head-fg": "#ffffff"
+    },
+    dark: {
+      "--bg": "#081322",
+      "--paper": "#0d1c31",
+      "--ink": "#e6edf7",
+      "--ink-2": "#a9b8cc",
+      "--ink-3": "#6b7f99",
+      "--line": "#c9d6e8",
+      "--line-2": "#23385a",
+      "--fill": "#12253f",
+      "--accent": "#6ea8ff",
+      "--accent-bg": "#16305a",
+      "--ok": "#6ea8ff",
+      "--ok-bg": "#16305a",
+      "--err": "#ff7070",
+      "--err-bg": "#3b1620",
+      "--warn": "#f0b14a",
+      "--warn-bg": "#3a2a10",
+      "--head-bg": "#e6edf7",
+      "--head-fg": "#081322"
+    }
+  },
+  css: `& .am-frame { border: 1px solid var(--line); padding: 30px; }
+& .am-frame::before {
+  content: ""; position: absolute; inset: 18px; border: 1px solid var(--line); pointer-events: none;
+}
+& .am-ruler {
+  display: flex; position: absolute; font: 10px/1 var(--font-mono); color: var(--ink-3);
+}
+@media (max-width: 760px) {
+  & .am-frame { padding: 0; border: 0; }
+  & .am-frame::before, & .am-ruler { display: none; }
+}`,
+  video: {
+    // Drawing-sheet ground with a fine grid.
+    tokens: {
+      light: {
+        "--v-stage": `linear-gradient(var(--line-2) 1px, transparent 1px) 0 0 / 40px 40px,
+             linear-gradient(90deg, var(--line-2) 1px, transparent 1px) 0 0 / 40px 40px, var(--paper)`
+      },
+      dark: {
+        "--v-stage": `linear-gradient(rgba(201, 214, 232, 0.07) 1px, transparent 1px) 0 0 / 40px 40px,
+             linear-gradient(90deg, rgba(201, 214, 232, 0.07) 1px, transparent 1px) 0 0 / 40px 40px, var(--bg)`
+      }
+    },
+    css: `& .amv-sheet {
+  display: block; position: absolute; inset: 24px; border: 1.5px solid var(--line); pointer-events: none;
+}
+& .amv-sheet::before {
+  content: ""; position: absolute; inset: 24px; border: 1.5px solid var(--line);
+}`
+  }
+};
+
+// src/themes/shadcn.js
+var shadcn_default = {
+  name: "shadcn",
+  summary: "shadcn cards",
+  label: { zh: "\u5361\u7247", "zh-Hant": "\u5361\u7247", en: "Cards", ja: "\u30AB\u30FC\u30C9", he: "\u05DB\u05E8\u05D8\u05D9\u05E1\u05D9\u05DD" },
+  // lang-ok: viewer-facing theme labels
+  scope: ["page", "video"],
+  tokens: {
+    common: { "--font-sans": SANS, "--font-mono": MONO, "--radius": "8px", "--shadow": "0 1px 2px 0 rgba(0,0,0,0.05)", "--bw": "1px", "--head-font": "var(--font-sans)" },
+    light: {
+      "--bg": "#fafafa",
+      "--paper": "#ffffff",
+      "--ink": "#09090b",
+      "--ink-2": "#71717a",
+      "--ink-3": "#a1a1aa",
+      "--line": "#e4e4e7",
+      "--line-2": "#f0f0f2",
+      "--fill": "#f4f4f5",
+      "--accent": "#2563eb",
+      "--accent-bg": "#eff6ff",
+      "--ok": "#16a34a",
+      "--ok-bg": "#f0fdf4",
+      "--err": "#dc2626",
+      "--err-bg": "#fef2f2",
+      "--warn": "#d97706",
+      "--warn-bg": "#fffbeb",
+      "--head-bg": "#18181b",
+      "--head-fg": "#fafafa"
+    },
+    dark: {
+      "--bg": "#09090b",
+      "--paper": "#121215",
+      "--ink": "#fafafa",
+      "--ink-2": "#a1a1aa",
+      "--ink-3": "#71717a",
+      "--line": "#27272a",
+      "--line-2": "#1c1c1f",
+      "--fill": "#18181b",
+      "--accent": "#60a5fa",
+      "--accent-bg": "#172554",
+      "--ok": "#4ade80",
+      "--ok-bg": "#052e16",
+      "--err": "#f87171",
+      "--err-bg": "#450a0a",
+      "--warn": "#fbbf24",
+      "--warn-bg": "#451a03",
+      "--head-bg": "#fafafa",
+      "--head-fg": "#18181b"
+    }
+  },
+  css: `& .am-panel-id { border-radius: 6px; min-width: 24px; height: 24px; margin: 9px 0 9px 14px; font-size: 12px; }
+& .am-panel-head { border-bottom-width: 1px; }
+& .am-kv { border-color: var(--line); border-radius: var(--radius); overflow: hidden; }`,
+  video: {
+    css: `& .amv-scene-n { margin: 12px 0 12px 14px; min-width: 40px; border-radius: 8px; font-size: 22px; }
+& .amv-scene-head { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); }`,
+    rtlCss: "& .amv-scene-n { margin: 12px 14px 12px 0; }"
+  }
+};
+
+// src/themes/paper.js
+var SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", serif';
+var LANGUAGE_SERIF_HEAD = '"Iowan Old Style", Palatino, Georgia';
+var paper_default = {
+  name: "paper",
+  summary: "Paper, for long reading",
+  label: { zh: "\u7EB8\u5F20", "zh-Hant": "\u7D19\u5F35", en: "Paper", ja: "\u7D19", he: "\u05E0\u05D9\u05D9\u05E8" },
+  // lang-ok: viewer-facing theme labels
+  scope: ["page"],
+  tokens: {
+    common: { "--font-sans": SANS, "--font-mono": MONO, "--font-serif": SERIF, "--radius": "2px", "--shadow": "none", "--bw": "1px", "--head-font": "var(--font-serif)" },
+    light: {
+      "--bg": "#f5f2ea",
+      "--paper": "#fdfbf6",
+      "--ink": "#1f1c17",
+      "--ink-2": "#57514a",
+      "--ink-3": "#8c867b",
+      "--line": "#cbc3b4",
+      "--line-2": "#e5dfd3",
+      "--fill": "#f3eee4",
+      "--accent": "#8c2f1e",
+      "--accent-bg": "#f5e5df",
+      "--ok": "#2e6a3b",
+      "--ok-bg": "#e4efe5",
+      "--err": "#a3251b",
+      "--err-bg": "#f7e3e0",
+      "--warn": "#7f5300",
+      "--warn-bg": "#f6ecd6",
+      "--head-bg": "#1f1c17",
+      "--head-fg": "#fdfbf6"
+    },
+    dark: {
+      "--bg": "#15130f",
+      "--paper": "#1c1a15",
+      "--ink": "#ebe5d8",
+      "--ink-2": "#b5ad9e",
+      "--ink-3": "#7b7467",
+      "--line": "#4a443a",
+      "--line-2": "#2d2a24",
+      "--fill": "#242119",
+      "--accent": "#e59a7d",
+      "--accent-bg": "#3a2219",
+      "--ok": "#8cc79a",
+      "--ok-bg": "#1c3122",
+      "--err": "#f0928a",
+      "--err-bg": "#3a1d1a",
+      "--warn": "#e3b866",
+      "--warn-bg": "#352a13",
+      "--head-bg": "#ebe5d8",
+      "--head-fg": "#15130f"
+    }
+  },
+  css: `${serifByLanguage("--font-serif", LANGUAGE_SERIF_HEAD)}
+& .am-head h1, & .am-panel-head h2, & .am-md, & .am-intro, & .am-callout { font-family: var(--font-serif); }
+& .am-head h1 { font-weight: 600; letter-spacing: 0; }
+& .am-md p, & .am-md li, & .am-md blockquote, & .am-intro { font-size: 15.5px; line-height: 1.75; }
+& .am-md p { margin-bottom: 12px; }
+& .am-md table { font-family: var(--font-sans); }`
+};
+
+// src/themes/3b1b.js
+var TITLE_HEAD = '"CMU Serif", "Latin Modern Roman", "Iowan Old Style", "Palatino"';
+var b1b_default = {
+  name: "3b1b",
+  summary: "3Blue1Brown dark",
+  scope: ["video"],
+  mode: "dark",
+  video: {
+    tokens: {
+      common: {
+        "--bg": "#0e1015",
+        "--paper": "#141922",
+        "--ink": "#eceff4",
+        "--ink-2": "#a9b4c4",
+        "--ink-3": "#6c7789",
+        "--line": "#58c4dd",
+        "--line-2": "#2a3444",
+        "--fill": "#171d27",
+        "--accent": "#f7d96f",
+        "--accent-bg": "rgba(247, 217, 111, 0.12)",
+        "--ok": "#83c167",
+        "--ok-bg": "rgba(131, 193, 103, 0.14)",
+        "--err": "#fc6255",
+        "--err-bg": "rgba(252, 98, 85, 0.14)",
+        "--warn": "#f7d96f",
+        "--warn-bg": "rgba(247, 217, 111, 0.12)",
+        "--head-bg": "#eceff4",
+        "--head-fg": "#0e1015",
+        "--radius": "6px",
+        "--bw": "1.6px",
+        "--shadow": "none",
+        "--font-sans": '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, sans-serif',
+        "--font-mono": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+        "--head-font": "var(--font-sans)",
+        "--v-stage": "radial-gradient(ellipse at 50% 40%, #151a23 0%, #0e1015 70%)",
+        "--v-cap-fg": "#fff",
+        "--v-cap-bg": "rgba(8, 10, 14, 0.55)",
+        "--v-cap-border": "transparent",
+        "--v-title-font": '"CMU Serif", "Latin Modern Roman", "Iowan Old Style", "Palatino", "Songti SC", "STSong", "Noto Serif CJK SC", serif',
+        "--v-glow": "drop-shadow(0 0 6px rgba(247, 217, 111, 0.55))"
+      }
+    },
+    css: `${serifByLanguage("--v-title-font", TITLE_HEAD)}
+& .amv-scene-head { left: 96px; top: 56px; border: 0; background: none; align-items: baseline; gap: 22px; }
+& .amv-scene-n { background: none; color: var(--line); padding: 0; min-width: 0; font: 500 30px var(--font-mono); }
+& .amv-scene-title { padding: 0; font-weight: 400; font-size: 46px; }
+& .amv-scene-meta { display: none; }
+& .amv-title { font-weight: 400; font-size: 104px; letter-spacing: 0.005em; }
+& .amv-subtitle { color: var(--line); }
+& .amv-titleblock { display: none; }
+& .amv-caption { bottom: 56px; }
+& .amv-caption span { text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); font-size: 40px; }`,
+    // Right-to-left: the floating title keeps its 96 px inset on the side it starts from.
+    rtlCss: "& .amv-scene-head { left: 72px; right: 96px; }"
+  }
+};
+
+// src/themes/user.js
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
+
+// src/themes/color.js
+var HEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+var FN = /^(rgba?|hsla?)\(\s*([^)]*)\)$/i;
+function parseColor(value) {
+  const v = String(value).trim();
+  const hex = v.match(HEX);
+  if (hex) {
+    let h3 = hex[1];
+    if (h3.length <= 4) h3 = [...h3].map((c) => c + c).join("");
+    const n = [0, 2, 4, 6].map((i) => parseInt(h3.slice(i, i + 2) || "ff", 16));
+    return [n[0], n[1], n[2], n[3] / 255];
+  }
+  const fn3 = v.match(FN);
+  if (!fn3) return null;
+  const parts = fn3[2].split(/[\s,/]+/).filter(Boolean);
+  if (parts.length < 3 || parts.length > 4) return null;
+  const num = (s2, scale) => s2.endsWith("%") ? parseFloat(s2) / 100 * scale : parseFloat(s2);
+  const alpha = parts[3] === void 0 ? 1 : num(parts[3], 1);
+  if (fn3[1].toLowerCase().startsWith("rgb")) {
+    const rgb = parts.slice(0, 3).map((s2) => num(s2, 255));
+    return [...rgb, alpha].some(Number.isNaN) ? null : [...rgb, alpha];
+  }
+  const [h2, s, l3] = [parseFloat(parts[0]), num(parts[1], 1), num(parts[2], 1)];
+  if ([h2, s, l3, alpha].some(Number.isNaN)) return null;
+  const k2 = (n) => (n + h2 / 30) % 12;
+  const f2 = (n) => l3 - s * Math.min(l3, 1 - l3) * Math.max(-1, Math.min(k2(n) - 3, 9 - k2(n), 1));
+  return [f2(0) * 255, f2(8) * 255, f2(4) * 255, alpha];
+}
+var over = ([r, g, b, a], [br2, bg, bb]) => [r * a + br2 * (1 - a), g * a + bg * (1 - a), b * a + bb * (1 - a), 1];
+var luminance = ([r, g, b]) => {
+  const c = [r, g, b].map((x2) => x2 / 255).map((x2) => x2 <= 0.03928 ? x2 / 12.92 : ((x2 + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+function contrast(fg, bg, base = [255, 255, 255, 1]) {
+  const back = over(bg, base);
+  const [x2, y2] = [luminance(over(fg, back)), luminance(back)];
+  return (Math.max(x2, y2) + 0.05) / (Math.min(x2, y2) + 0.05);
+}
+
+// src/themes/check.js
+var NAME = /^[a-z0-9][a-z0-9-]*$/;
+var COLOR_TOKENS = Object.freeze([
+  "--bg",
+  "--paper",
+  "--ink",
+  "--ink-2",
+  "--ink-3",
+  "--line",
+  "--line-2",
+  "--fill",
+  "--accent",
+  "--accent-bg",
+  "--ok",
+  "--ok-bg",
+  "--err",
+  "--err-bg",
+  "--warn",
+  "--warn-bg",
+  "--head-bg",
+  "--head-fg"
+]);
+var LANGS = languageIds();
+var UNSAFE_VALUE = /[;{}<]/;
+function normalizeTheme(name, data, builtinNames = []) {
+  const errors = [];
+  if (!NAME.test(name)) errors.push(`the name "${name}" must use lowercase letters, digits and -`);
+  if (builtinNames.includes(name)) errors.push(`"${name}" is a built-in theme; rename the file`);
+  if (!data || typeof data !== "object" || Array.isArray(data)) return { theme: null, errors: [...errors, "the file must hold a JSON object"] };
+  const tokens = data.tokens ?? {};
+  const group = (where, g) => {
+    if (g === void 0) return {};
+    if (!g || typeof g !== "object" || Array.isArray(g)) {
+      errors.push(`${where} must be an object of CSS variables`);
+      return {};
+    }
+    for (const [k2, v] of Object.entries(g)) {
+      if (!k2.startsWith("--")) errors.push(`${where}: "${k2}" must start with --`);
+      else if (typeof v !== "string" || UNSAFE_VALUE.test(v)) errors.push(`${where}: ${k2} must be a string without ; { } <`);
+    }
+    return g;
+  };
+  const common = group("tokens.common", tokens.common);
+  const light = group("tokens.light", tokens.light);
+  const dark = group("tokens.dark", tokens.dark);
+  for (const [mode, set] of [["light", { ...common, ...light }], ["dark", { ...common, ...dark }]]) {
+    const missing = COLOR_TOKENS.filter((k2) => set[k2] === void 0);
+    if (missing.length) errors.push(`${mode} mode is missing ${missing.join(" ")}`);
+  }
+  const css = cssField("css", data.css, errors);
+  let video;
+  if (data.video !== void 0) {
+    const v = data.video && typeof data.video === "object" ? data.video : {};
+    const vt2 = v.tokens ?? {};
+    video = {
+      tokens: { common: group("video.tokens.common", vt2.common), light: group("video.tokens.light", vt2.light), dark: group("video.tokens.dark", vt2.dark) },
+      css: cssField("video.css", v.css, errors)
+    };
+  }
+  const label = labelField(data.label, name, errors);
+  const fonts = {};
+  if (common["--font-sans"]) fonts["--font-sans"] = `${common["--font-sans"]}, ${SANS}`;
+  if (common["--font-mono"]) fonts["--font-mono"] = `${common["--font-mono"]}, ${MONO}`;
+  const theme = {
+    name,
+    summary: label.en,
+    label,
+    scope: ["page", "video"],
+    user: true,
+    ownFont: Boolean(common["--font-sans"]),
+    tokens: { common: { ...blueprint_default.tokens.common, ...common, ...fonts }, light, dark },
+    css,
+    video
+  };
+  return { theme, errors };
+}
+function labelField(label, name, errors) {
+  if (label === void 0) return Object.fromEntries(LANGS.map((l3) => [l3, name]));
+  if (typeof label === "string") return Object.fromEntries(LANGS.map((l3) => [l3, label]));
+  if (!label || typeof label !== "object" || Object.values(label).some((v) => typeof v !== "string")) {
+    errors.push(`label must be a string or an object of ${LANGS.join(" / ")} strings`);
+    return Object.fromEntries(LANGS.map((l3) => [l3, name]));
+  }
+  const fallback = label.en ?? Object.values(label)[0] ?? name;
+  return Object.fromEntries(LANGS.map((l3) => [l3, label[l3] ?? fallback]));
+}
+function cssField(where, css, errors) {
+  if (css === void 0) return void 0;
+  if (typeof css !== "string") {
+    errors.push(`${where} must be a string`);
+    return void 0;
+  }
+  if (/<\/style/i.test(css)) errors.push(`${where} must not contain </style>`);
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const m of text.matchAll(/(?:^|[{};])\s*([^{};]+?)\s*\{/g)) {
+    const prelude = m[1];
+    if (prelude.startsWith("@")) continue;
+    const bad = prelude.split(",").map((s) => s.trim()).find((s) => !s.startsWith("&"));
+    if (bad !== void 0) errors.push(`${where}: selector "${bad}" must start with & (the theme's root)`);
+  }
+  return css;
+}
+var TEXT_PAIRS = [["--ink", "--paper"], ["--ink", "--bg"], ["--ink-2", "--paper"], ["--ink-2", "--bg"], ["--head-fg", "--head-bg"], ["--accent", "--paper"]];
+var BADGE_PAIRS = [["--accent", "--accent-bg"], ["--ok", "--ok-bg"], ["--err", "--err-bg"], ["--warn", "--warn-bg"]];
+function checkColors(theme) {
+  const errors = [];
+  const warnings = [];
+  const { common = {}, light = {}, dark = {} } = theme.tokens ?? {};
+  for (const [mode, set] of [["light", { ...common, ...light }], ["dark", { ...common, ...light, ...dark }]]) {
+    const colors = {};
+    for (const k2 of COLOR_TOKENS) {
+      if (set[k2] === void 0) continue;
+      const c = parseColor(set[k2]);
+      if (c) colors[k2] = c;
+      else errors.push(`${mode}: ${k2} "${set[k2]}" is not a color this check reads (use hex, rgb() or hsl())`);
+    }
+    const ratio = (fg, bg) => colors[fg] && colors[bg] ? contrast(colors[fg], colors[bg], colors["--paper"]) : null;
+    const say = (fg, bg, r, need) => `${mode}: ${fg} on ${bg} has contrast ${r.toFixed(2)}:1, needs ${need}:1`;
+    for (const [fg, bg] of TEXT_PAIRS) {
+      const r = ratio(fg, bg);
+      if (r !== null && r < 4.5) errors.push(say(fg, bg, r, 4.5));
+    }
+    for (const [fg, bg] of BADGE_PAIRS) {
+      const r = ratio(fg, bg);
+      if (r !== null && r < 3) errors.push(say(fg, bg, r, 3));
+      else if (r !== null && r < 4.5) warnings.push(say(fg, bg, r, 4.5));
+    }
+  }
+  return { errors, warnings };
+}
+
+// src/themes/user.js
+function readThemeFile(file, builtinNames) {
+  const name = basename(file).replace(/\.json$/i, "");
+  let data;
+  try {
+    data = JSON.parse(readFileSync(file, "utf8"));
+  } catch (e) {
+    return { name, theme: null, errors: [`cannot read it as JSON (${e.message})`] };
+  }
+  return { name, ...normalizeTheme(name, data, builtinNames) };
+}
+function readUserThemes(home, builtinNames) {
+  const dir = join(home, "themes");
+  const themes2 = [];
+  const broken = /* @__PURE__ */ new Map();
+  if (!existsSync(dir)) return { themes: themes2, broken };
+  for (const f2 of readdirSync(dir).filter((x2) => x2.toLowerCase().endsWith(".json")).sort()) {
+    const { name, theme, errors } = readThemeFile(join(dir, f2), builtinNames);
+    if (errors.length) broken.set(name, { file: `themes/${f2}`, reason: errors.join("; ") });
+    else themes2.push(theme);
+  }
+  return { themes: themes2, broken };
+}
+
+// src/themes/registry.js
+var ALL = Object.freeze([blueprint_default, shadcn_default, paper_default, b1b_default]);
+var BUILTIN_NAMES = ALL.map((t) => t.name);
+var themes = (scope) => ALL.filter((t) => t.scope.includes(scope));
+var themeNames = (scope) => themes(scope).map((t) => t.name);
+var getTheme = (name) => ALL.find((t) => t.name === name);
+var AUTO = "auto";
+function pickTheme({ scope, template, visuals }) {
+  if (scope === "video") return "blueprint";
+  return template === "doc" || !visuals ? "paper" : "blueprint";
+}
+function themeSet(user = [], broken = /* @__PURE__ */ new Map()) {
+  const all = [...ALL, ...user];
+  const list = (scope) => all.filter((t) => t.scope.includes(scope));
+  const names = (scope) => list(scope).map((t) => t.name);
+  const unusable = [...broken].filter(([name]) => !BUILTIN_NAMES.includes(name));
+  return Object.freeze({
+    list,
+    names,
+    get: (name) => all.find((t) => t.name === name),
+    // Names a draft or flag may give: usable themes plus broken ones, so the error can say what is wrong with the file.
+    choices: (scope) => [AUTO, ...names(scope), ...unusable.map(([name]) => name)],
+    // Why a name cannot be used, or null.
+    problem(name, scope) {
+      if (name === AUTO) return null;
+      if (names(scope).includes(name)) return null;
+      const bad = unusable.find(([n]) => n === name);
+      if (bad) return `Theme "${name}" cannot be used: ${bad[1].reason} (${bad[1].file})`;
+      return `Theme "${name}" is not installed. Choose one of: ${names(scope).join(" | ")}`;
+    },
+    // The themes a page carries: the built-in ones for its scope, plus its own theme when that is a user theme.
+    embedFor: (name, scope) => [...themes(scope), ...user.filter((t) => t.name === name && t.scope.includes(scope))],
+    warnings: [...broken.values()].map(({ file, reason }) => `${file} skipped: ${reason}`)
+  });
+}
+var BUILTIN = themeSet();
+function loadThemes(home, { extra } = {}) {
+  const { themes: user, broken } = home ? readUserThemes(home, BUILTIN_NAMES) : { themes: [], broken: /* @__PURE__ */ new Map() };
+  if (!extra) return themeSet(user, broken);
+  const one = readThemeFile(extra, BUILTIN_NAMES);
+  const rest = user.filter((t) => t.name !== one.name);
+  if (one.errors.length) return themeSet(rest, new Map([...broken, [one.name, { file: extra, reason: one.errors.join("; ") }]]));
+  return themeSet([...rest, one.theme], broken);
+}
 
 // src/parse.js
 var ParseError = class extends Error {
@@ -24,14 +1840,24 @@ var ParseError = class extends Error {
   }
 };
 var CHOICES = Object.freeze({
-  template: ["sheet", "doc", "research"],
-  theme: ["blueprint", "shadcn"],
+  template: ["sheet", "doc", "research", "video"],
+  theme: [AUTO, ...themeNames("page")],
   style: ["off", "80", "strict"],
   mode: ["auto", "light", "dark"]
 });
+function applyOverrides(meta, overrides, choices = CHOICES) {
+  const set = Object.entries(overrides).filter(([, v]) => v !== void 0);
+  for (const [key, value] of set) {
+    if (choices[key] && !choices[key].includes(String(value))) {
+      throw new ParseError(`Invalid ${key} value "${value}". Choose one of: ${choices[key].join(" | ")}`, 0);
+    }
+  }
+  return { ...meta, ...Object.fromEntries(set) };
+}
+var VOICES = Object.freeze(["auto", "elevenlabs", "local", "system", "off"]);
 var DEFAULT_META = Object.freeze({
   template: "sheet",
-  theme: "blueprint",
+  theme: AUTO,
   style: "80",
   mode: "auto",
   cols: 3,
@@ -43,32 +1869,32 @@ var PANEL_HEADING = /^##\s+(.+?)\s*$/;
 var ATTR_BLOCK = /\s*\{([^{}]*)\}\s*$/;
 var PANEL_ID = /^([A-Z][0-9]?)\s+(.+)$/;
 var ATTR_TOKEN = /([\w-]+)(?:=("[^"]*"|'[^']*'|\S+))?/g;
-function parseDoc(source, { defaults: defaults2 = {} } = {}) {
+function parseDoc(source, { defaults: defaults2 = {}, choices = {} } = {}) {
   const lines = String(source).replace(/\r\n?/g, "\n").split("\n");
-  const { meta, bodyStart } = parseFrontmatter(lines, { ...DEFAULT_META, ...defaults2 });
+  const { meta, bodyStart } = parseFrontmatter(lines, { ...DEFAULT_META, ...defaults2 }, { ...CHOICES, ...choices });
   const sections = splitSections(lines, bodyStart);
   const intro = extractTitle(sections.intro, meta);
   const panels = assignIds(sections.panels);
   return { meta, intro, panels };
 }
-function parseFrontmatter(lines, base) {
+function parseFrontmatter(lines, base, allowed) {
   if (lines[0]?.trim() !== "---") return { meta: { ...base }, bodyStart: 0 };
   const end = lines.findIndex((l3, i) => i > 0 && l3.trim() === "---");
-  if (end === -1) throw new ParseError("frontmatter \u672A\u95ED\u5408\uFF1A\u7F3A\u5C11\u7ED3\u675F\u884C ---", 1);
+  if (end === -1) throw new ParseError("frontmatter is not closed: missing the closing --- line", 1);
   const entries = {};
   for (let i = 1; i < end; i++) {
-    const raw = lines[i].replace(/\s+#.*$/, "").trim();
+    const raw = stripLineComment(lines[i]).trim();
     if (!raw || raw.startsWith("#")) continue;
-    const m = raw.match(/^([\w-]+)\s*:\s*(.*)$/);
-    if (!m) throw new ParseError(`frontmatter \u65E0\u6CD5\u89E3\u6790\uFF1A"${lines[i]}"\uFF0C\u5E94\u4E3A key: value`, i + 1);
+    const m = raw.match(/^([\p{L}\p{M}\p{N}_-]+(?: [\p{L}\p{M}\p{N}_-]+)*)\s*:\s*(.*)$/u);
+    if (!m) throw new ParseError(`Cannot parse frontmatter line "${lines[i]}"; expected key: value`, i + 1);
     entries[m[1]] = { value: coerce(m[1], unquote(m[2])), line: i + 1 };
   }
   const meta = { ...base };
   for (const [key, { value, line }] of Object.entries(entries)) {
-    if (CHOICES[key] && !CHOICES[key].includes(String(value))) {
-      throw new ParseError(`${key} \u7684\u503C "${value}" \u65E0\u6548\uFF0C\u53EF\u9009\uFF1A${CHOICES[key].join(" | ")}`, line);
+    if (allowed[key] && !allowed[key].includes(String(value))) {
+      throw new ParseError(`Invalid ${key} value "${value}". Choose one of: ${allowed[key].join(" | ")}`, line);
     }
-    meta[key] = CHOICES[key] ? String(value) : value;
+    meta[key] = allowed[key] ? String(value) : value;
   }
   return { meta, bodyStart: end + 1 };
 }
@@ -89,11 +1915,12 @@ function splitSections(lines, start) {
     if (fence) {
       flushMd();
       const close = findFenceClose(lines, i, fence[1]);
-      if (close === -1) throw new ParseError(`\u56F4\u680F\u5757 ${fence[1]}${fence[2]} \u672A\u95ED\u5408`, i + 1);
+      if (close === -1) throw new ParseError(`fenced block ${fence[1]}${fence[2]} is not closed`, i + 1);
+      const bare = fence[2].includes("=");
       current.blocks.push({
         type: "fence",
-        lang: fence[2].toLowerCase(),
-        args: fence[3].trim(),
+        lang: bare ? "" : fence[2].toLowerCase(),
+        args: (bare ? `${fence[2]} ${fence[3]}` : fence[3]).trim(),
         text: lines.slice(i + 1, close).join("\n"),
         line: i + 1
       });
@@ -165,6 +1992,22 @@ function assignIds(panels) {
 function unquote(v) {
   const s = v.trim();
   return /^(["']).*\1$/.test(s) ? s.slice(1, -1) : s;
+}
+function stripLineComment(line) {
+  let quote = "";
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (quote) {
+      if (c === quote) quote = "";
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      quote = c;
+      continue;
+    }
+    if (c === "#" && (i === 0 || /\s/.test(line[i - 1]))) return line.slice(0, i);
+  }
+  return line;
 }
 function coerce(key, value) {
   if (NUMERIC_KEYS.has(key) && /^\d+$/.test(value)) return Number(value);
@@ -1494,64 +3337,21 @@ var xn = k.parseInline;
 var Rn = T.parse;
 var Tn = R.lex;
 
-// src/markdown.js
-var marked = new F({ gfm: true });
-var STATUS = {
-  ok: { cls: "ok", icon: "\u2713" },
-  no: { cls: "no", icon: "\u2717" },
-  warn: { cls: "warn", icon: "!" }
-};
-var STATUS_ALIAS = { "\u2713": "ok", "\u2714": "ok", "\u2717": "no", "\u2718": "no", "\u26A0": "warn" };
-function statusHtml(word, label = "") {
-  const kind = STATUS[STATUS_ALIAS[word] ?? word];
-  if (!kind) return null;
-  const text = label.trim();
-  return `<span class="am-status am-status--${kind.cls}"><span class="am-status-icon" aria-hidden="true">${kind.icon}</span>${text}</span>`;
-}
-var CELL_STATUS = /<td([^>]*)>\s*(ok|no|warn|✓|✔|✗|✘|⚠)(?:\s+([^<]*?))?\s*<\/td>/g;
-function decorate(html) {
-  return html.replace(/<table>/g, '<div class="am-table-wrap"><table>').replace(/<\/table>/g, "</table></div>").replace(CELL_STATUS, (_2, attrs, word, label = "") => `<td${attrs}>${statusHtml(word, label)}</td>`);
-}
-var TERM = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
-var terms = null;
-function termSlug(term) {
-  return `g-${String(term).trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "")}`;
-}
-function withTerms(glossary2, fn3) {
-  const prev = terms;
-  terms = { map: glossary2, missing: /* @__PURE__ */ new Set() };
-  try {
-    const value = fn3();
-    return { value, missing: [...terms.missing] };
-  } finally {
-    terms = prev;
-  }
-}
-var escAttr = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-function linkTerms(text) {
-  if (!terms) return text;
-  return String(text ?? "").split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/).map((part, i) => i % 2 ? part : part.replace(TERM, (_2, a, b) => {
-    const shown = a.trim();
-    const key = (b ?? a).trim();
-    const entry = terms.map.get(key.toLowerCase());
-    if (!entry) {
-      terms.missing.add(key);
-      return shown;
-    }
-    return `<a class="am-term" href="#${escAttr(entry.slug)}" data-tip="${escAttr(entry.tip)}">${escAttr(shown)}</a>`;
-  })).join("");
-}
-function md(text) {
-  return decorate(marked.parse(linkTerms(String(text ?? ""))));
-}
-function mdInline(text) {
-  return marked.parseInline(linkTerms(String(text ?? "")));
-}
-
 // src/svg/text.js
 var CJK_RE = /[⺀-鿿가-힯豈-﫿︰-﹏＀-￯　-〿]/;
 var NARROW = /* @__PURE__ */ new Set([..."iljtfrI.,:;|!'`()[]{}"]);
 var WIDE = /* @__PURE__ */ new Set([..."mwMWOQGD@%&"]);
+var HIRAGANA_RE = /[\u3040-\u309f]/;
+var HIRAGANA_SHARE = 0.05;
+function isJapanese(text) {
+  let hira = 0;
+  let cjk = 0;
+  for (const ch of String(text)) {
+    if (HIRAGANA_RE.test(ch)) hira++;
+    if (CJK_RE.test(ch)) cjk++;
+  }
+  return hira > 0 && hira / cjk >= HIRAGANA_SHARE;
+}
 function isCJK(ch) {
   return CJK_RE.test(ch);
 }
@@ -1564,18 +3364,74 @@ function charWidth(ch, mono) {
   if (ch >= "A" && ch <= "Z") return 0.68;
   return 0.56;
 }
-function measure(str, size = 13, { mono = false } = {}) {
+var BOLD = 1.06;
+function measure(str, size = 13, { mono = false, bold = false } = {}) {
   let units = 0;
   for (const ch of String(str ?? "")) units += charWidth(ch, mono);
-  return Math.round(units * size * 100) / 100;
+  return Math.round(units * size * (bold ? BOLD : 1) * 100) / 100;
 }
-function tokenize(str) {
-  return String(str).match(/[⺀-鿿가-힯豈-﫿︰-﹏＀-￯　-〿]|[^\s⺀-鿿가-힯豈-﫿︰-﹏＀-￯　-〿]+|\s+/g) ?? [];
+var HANGUL_SYLLABLE = /[가-힯]/;
+var HAN_KANA = new RegExp(CJK_RE.source.replace(HANGUL_SYLLABLE.source.slice(1, -1), ""));
+var UNSPACED = [
+  ["th", new RegExp("\\p{Script=Thai}", "u")],
+  ["lo", new RegExp("\\p{Script=Lao}", "u")],
+  ["km", new RegExp("\\p{Script=Khmer}", "u")],
+  ["my", new RegExp("\\p{Script=Myanmar}", "u")]
+];
+var SEGMENTERS = /* @__PURE__ */ new Map();
+function segmenter(locale, granularity) {
+  const key = `${locale}:${granularity}`;
+  if (!SEGMENTERS.has(key)) SEGMENTERS.set(key, new Intl.Segmenter(locale, { granularity }));
+  return SEGMENTERS.get(key);
+}
+var graphemes = (text, locale) => [...segmenter(locale, "grapheme").segment(text)].map((g) => g.segment);
+function countWords(text) {
+  const unspaced = UNSPACED.find(([, re3]) => re3.test(text));
+  return unspaced ? [...segmenter(unspaced[0], "word").segment(text)].filter((s) => s.isWordLike).length : text.match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}'’-]*/gu)?.length ?? 0;
+}
+function words(text, locale) {
+  const out = [];
+  for (const s of segmenter(locale, "word").segment(text)) {
+    if (out.length && !s.isWordLike) out[out.length - 1] += s.segment;
+    else out.push(s.segment);
+  }
+  return out;
+}
+function runUnits(run2, maxWidth, size, opts) {
+  const unspaced = UNSPACED.find(([, re3]) => re3.test(run2));
+  if (unspaced) {
+    const [locale] = unspaced;
+    return words(run2, locale).flatMap((w) => measure(w, size, opts) > maxWidth ? graphemes(w, locale) : [w]);
+  }
+  return HANGUL_SYLLABLE.test(run2) && measure(run2, size, opts) > maxWidth ? graphemes(run2, "ko") : [run2];
+}
+function tokenize(str, maxWidth, size, opts) {
+  const chars = [...String(str)];
+  const out = [];
+  let i = 0;
+  while (i < chars.length) {
+    const ch = chars[i];
+    if (HAN_KANA.test(ch)) {
+      out.push(ch);
+      i++;
+    } else if (/\s/u.test(ch)) {
+      let j2 = i;
+      while (j2 < chars.length && /\s/u.test(chars[j2])) j2++;
+      out.push(chars.slice(i, j2).join(""));
+      i = j2;
+    } else {
+      let j2 = i;
+      while (j2 < chars.length && !/\s/u.test(chars[j2]) && !HAN_KANA.test(chars[j2])) j2++;
+      out.push(...runUnits(chars.slice(i, j2).join(""), maxWidth, size, opts));
+      i = j2;
+    }
+  }
+  return out;
 }
 function wrap(str, maxWidth, size = 13, opts = {}) {
   const lines = [];
   let line = "";
-  for (const tok of tokenize(str)) {
+  for (const tok of tokenize(str, maxWidth, size, opts)) {
     if (/^\s+$/.test(tok)) {
       if (line) line += " ";
       continue;
@@ -1596,6 +3452,263 @@ function esc(str) {
   return String(str ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
 }
 
+// src/raw-html.js
+var words2 = (list) => new Set(list.split(" "));
+var NEVER = words2("title textarea style xmp iframe noembed noframes script plaintext link meta base object embed frame frameset template html head body noscript svg math");
+var PHRASING = words2("a abbr b bdi bdo br cite code data del dfn em i img ins kbd mark q rp rt ruby s samp small span strong sub sup time u var wbr");
+var BLOCK = words2("address area article aside audio blockquote button canvas caption col colgroup datalist dd details dialog div dl dt fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr input label legend li main map menu meter nav ol optgroup option output p picture pre progress search section select slot source summary table tbody td tfoot th thead tr track ul video acronym big center font strike tt");
+var VOID = words2("br wbr img");
+var REASON = {
+  never: (t) => `${t} is shown as text; raw markup belongs in an html fence`,
+  unknown: (t) => `${t} is not an HTML element, shown as text; put code in backticks`,
+  block: (t) => `${t} is a block element and cannot sit inside a sentence, shown as text; put it on its own line`,
+  unclosed: (t) => `${t} has no closing tag in the same text, shown as text; put code in backticks`,
+  stray: (t) => `${t} has no opening tag in the same text, shown as text`,
+  open: (t) => `${t} is never closed with >, shown as text`,
+  comment: (t) => `${t} is never closed with -->, shown as text`,
+  bogus: (t) => `${t} is not a tag a page can hold, shown as text; put code in backticks`
+};
+function kind(name, inline2) {
+  if (NEVER.has(name)) return "never";
+  if (!PHRASING.has(name) && !BLOCK.has(name)) return "unknown";
+  return inline2 && !PHRASING.has(name) ? "block" : null;
+}
+var shown = (tag) => tag.label ?? `<${tag.close ? "/" : ""}${tag.name}>`;
+function hide(tag, reason, note2) {
+  note2(tag.text, REASON[reason](shown(tag)));
+  return esc(tag.text);
+}
+var SCAN = /<!--[\s\S]*?-->|<(!--|[?!]\[?\w*)|<(\/?)([A-Za-z][^\s/>]*)/g;
+var OPENING = /^ {0,3}<(\/?)([A-Za-z][^\s/>]*)/;
+var CHUNK = /"[^"]*"|'[^']*'|[^"'>]+/y;
+function tagEnd(text, from) {
+  let i = from;
+  while (i < text.length && text[i] !== ">") {
+    CHUNK.lastIndex = i;
+    if (!CHUNK.exec(text)) return -1;
+    i = CHUNK.lastIndex;
+  }
+  return i < text.length ? i + 1 : -1;
+}
+function readMatch(text, m) {
+  if (m[1]) {
+    const end2 = m[1] === "!--" ? -1 : text.indexOf(">", m.index);
+    return { reason: m[1] === "!--" ? "comment" : "bogus", tag: { text: end2 === -1 ? m[0] : text.slice(m.index, end2 + 1), label: m[0] } };
+  }
+  const end = tagEnd(text, m.index + m[0].length);
+  return { reason: end === -1 ? "open" : null, tag: { text: end === -1 ? m[0] : text.slice(m.index, end), close: m[2] === "/", name: m[3].toLowerCase() } };
+}
+function mapTags(text, decide, note2) {
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(SCAN)) {
+    if (m.index < last || !m[1] && !m[3]) continue;
+    const { reason, tag } = readMatch(text, m);
+    out += text.slice(last, m.index) + (reason ? hide(tag, reason, note2) : decide(tag));
+    last = m.index + tag.text.length;
+  }
+  return out + text.slice(last);
+}
+var readTag = (text) => {
+  const m = /^<(\/?)([A-Za-z][^\s/>]*)/.exec(text);
+  if (m) return { text, close: m[1] === "/", name: m[2].toLowerCase() };
+  const bogus = /^<[?!](?!--)\[?\w*/.exec(text);
+  return bogus && { text, label: bogus[0] };
+};
+var ATTR = /\s*([^\s"'<>/=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]*))?/g;
+var URL_ATTRS = words2("href src action xlink:href poster cite background");
+var ENTITY = /&#x([0-9a-f]+);?|&#(\d+);?|&(tab|newline|colon);?/gi;
+var NAMED = { tab: "	", newline: "\n", colon: ":" };
+function decode(text) {
+  return text.replace(ENTITY, (_2, hex, dec, name) => {
+    if (name) return NAMED[name.toLowerCase()];
+    const code = hex ? parseInt(hex, 16) : Number(dec);
+    return code > 1114111 ? "" : String.fromCodePoint(code);
+  });
+}
+function unsafeUrl(element, attr, value) {
+  const url = decode(value.replace(/^["']|["']$/g, "")).replace(/[\x00-\x20\x7f]/g, "").toLowerCase();
+  if (/^(javascript|vbscript):/.test(url)) return true;
+  return url.startsWith("data:") && !(element === "img" && attr === "src" && url.startsWith("data:image/"));
+}
+function unsafe(element, attr, value) {
+  if (/^on|^(srcdoc|formaction)$/.test(attr)) return true;
+  return URL_ATTRS.has(attr) && unsafeUrl(element, attr, value);
+}
+function cleanTag(tag, note2) {
+  if (tag.close) return tag.text;
+  const head = 1 + tag.name.length;
+  const removed = [];
+  const attrs = tag.text.slice(head).replace(ATTR, (attr, name, value = "") => {
+    if (!unsafe(tag.name, name.toLowerCase(), value)) return attr;
+    removed.push(name);
+    return "";
+  });
+  if (removed.length) note2(tag.text, `removed ${removed.join(", ")} from <${tag.name}>${removed.some((n) => URL_ATTRS.has(n.toLowerCase())) ? " (unsafe URL)" : ""}`);
+  return tag.text.slice(0, head) + attrs;
+}
+function htmlTokens(tokens, out = []) {
+  for (const t of tokens ?? []) {
+    if (t.type === "html") out.push(t);
+    else htmlTokens(t.tokens, out);
+  }
+  return out;
+}
+function unpaired(found) {
+  const hidden = /* @__PURE__ */ new Map();
+  const open2 = [];
+  for (const item of found) {
+    const { tag } = item;
+    const reason = tag.label ? "bogus" : kind(tag.name, true);
+    if (reason) hidden.set(item, reason);
+    else if (VOID.has(tag.name)) continue;
+    else if (!tag.close) open2.push(item);
+    else {
+      const i = open2.findLastIndex((o) => o.tag.name === tag.name);
+      if (i === -1) hidden.set(item, "stray");
+      else open2.splice(i).slice(1).forEach((o) => hidden.set(o, "unclosed"));
+    }
+  }
+  open2.forEach((o) => hidden.set(o, "unclosed"));
+  return hidden;
+}
+function filterRun(tokens, note2) {
+  const found = htmlTokens(tokens).map((token) => ({ token, tag: readTag(token.text) })).filter((item) => item.tag);
+  const hidden = unpaired(found);
+  for (const item of found) {
+    const reason = hidden.get(item);
+    item.token.text = reason ? hide(item.tag, reason, note2) : cleanTag(item.tag, note2);
+  }
+}
+function filterInline(tokens, note2) {
+  filterRun(tokens, note2);
+  return tokens;
+}
+function relexReason(raw) {
+  const special = /^ {0,3}(<[?!](?!--)\[?\w*|<!--)/.exec(raw);
+  if (special) {
+    const comment = special[1] === "<!--";
+    return comment && raw.includes("-->") ? null : { reason: comment ? "comment" : "bogus", at: special[1], label: special[1] };
+  }
+  const m = OPENING.exec(raw);
+  if (!m) return null;
+  const tag = { close: m[1] === "/", name: m[2].toLowerCase() };
+  const reason = kind(tag.name, false) ?? (tag.name === "pre" && !tag.close && !/<\/pre>/i.test(raw) ? "unclosed" : null);
+  return reason && { reason, at: m[0].trim(), label: shown(tag) };
+}
+function relex(token, { reason, at: at3, label }, { lex, note: note2 }) {
+  note2(at3, REASON[reason](label));
+  return filterBlocks(lex(token.raw.replace("<", "&lt;")), { lex, note: note2 });
+}
+var filterHtmlBlock = (text, note2) => mapTags(text, (tag) => {
+  const reason = kind(tag.name, false);
+  return reason ? hide(tag, reason, note2) : cleanTag(tag, note2);
+}, note2);
+var tight = (block2) => block2.type === "paragraph" ? { ...block2, type: "text" } : block2;
+function filterBlocks(tokens, ctx) {
+  for (let k2 = 0; k2 < tokens.length; k2++) {
+    const t = tokens[k2];
+    const plan = t.type === "html" ? relexReason(t.raw) : null;
+    if (plan) {
+      const again = relex(t, plan, ctx);
+      tokens.splice(k2, 1, ...again);
+      k2 += again.length - 1;
+    } else if (t.type === "html") {
+      t.text = filterHtmlBlock(t.text, ctx.note);
+    } else if (t.type === "table") {
+      [...t.header, ...t.rows.flat()].forEach((cell) => filterRun(cell.tokens, ctx.note));
+    } else if (t.type === "list") {
+      t.items.forEach((item) => {
+        filterBlocks(item.tokens, ctx);
+        if (!t.loose) item.tokens = item.tokens.map(tight);
+      });
+    } else if (t.type === "blockquote") {
+      filterBlocks(t.tokens, ctx);
+    } else if (t.type === "paragraph" || t.type === "heading" || t.type === "text") {
+      filterRun(t.tokens, ctx.note);
+    }
+  }
+  return tokens;
+}
+
+// src/markdown.js
+var sink = null;
+var note = (at3, message) => sink?.push({ at: at3, message });
+function collectHtmlNotes(render) {
+  const outer = sink;
+  const notes = [];
+  sink = notes;
+  try {
+    return { result: render(), notes };
+  } finally {
+    sink = outer;
+  }
+}
+var marked = new F({ gfm: true });
+var inline = new F({ gfm: true });
+marked.use({ hooks: { processAllTokens: (tokens) => filterBlocks(tokens, { lex: (source) => marked.lexer(source), note }) } });
+inline.use({ hooks: { processAllTokens: (tokens) => filterInline(tokens, note) } });
+var STATUS = {
+  ok: { cls: "ok", icon: "\u2713" },
+  no: { cls: "no", icon: "\u2717" },
+  warn: { cls: "warn", icon: "!" }
+};
+var STATUS_ALIAS = { "\u2713": "ok", "\u2714": "ok", "\u2717": "no", "\u2718": "no", "\u26A0": "warn" };
+function statusHtml(word, label = "") {
+  const kind2 = STATUS[STATUS_ALIAS[word] ?? word];
+  if (!kind2) return null;
+  const text = label.trim();
+  return `<span class="am-status am-status--${kind2.cls}"><span class="am-status-icon" aria-hidden="true">${kind2.icon}</span>${text}</span>`;
+}
+var IMAGE_ONLY = /<p>\s*(<img\b[^>]*>)\s*<\/p>/g;
+var CELL_STATUS = /<td([^>]*)>\s*(ok|no|warn|✓|✔|✗|✘|⚠)(?:\s+((?:(?!<\/?td\b)[\s\S])*?))?\s*<\/td>/g;
+function figure(img) {
+  const alt = img.match(/\salt="([^"]*)"/)?.[1];
+  return `<figure class="am-figure">${img}${alt ? `<figcaption>${alt}</figcaption>` : ""}</figure>`;
+}
+function decorate(html) {
+  return html.replace(/<table>/g, '<div class="am-table-wrap"><table>').replace(/<\/table>/g, "</table></div>").replace(IMAGE_ONLY, (_2, img) => figure(img)).replace(CELL_STATUS, (_2, attrs, word, label = "") => `<td${attrs}>${statusHtml(word, label)}</td>`);
+}
+var SPACED_IMAGE = /(`[^`\n]*`)|(!\[[^\]\n]*\]\()\s*((?:[^()<>"\n]|\([^()<>"\n]*\))*?)(\s+"[^"\n]*")?\s*\)/g;
+function wrapSpacedImages(text) {
+  return text.replace(SPACED_IMAGE, (whole, code, head, dest, title = "") => code || !/\s/.test(dest) ? whole : `${head}<${dest}>${title})`);
+}
+var TERM = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
+var terms = null;
+function termSlug(term) {
+  return `g-${String(term).trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "")}`;
+}
+function withTerms(glossary2, fn3) {
+  const prev = terms;
+  terms = { map: glossary2, missing: /* @__PURE__ */ new Set() };
+  try {
+    const value = fn3();
+    return { value, missing: [...terms.missing] };
+  } finally {
+    terms = prev;
+  }
+}
+var escAttr = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function linkTerms(text) {
+  if (!terms) return text;
+  return text.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/).map((part, i) => i % 2 ? part : part.replace(TERM, (_2, a, b) => {
+    const shown2 = a.trim();
+    const key = (b ?? a).trim();
+    const entry = terms.map.get(key.toLowerCase());
+    if (!entry) {
+      terms.missing.add(key);
+      return shown2;
+    }
+    return `<a class="am-term" href="#${escAttr(entry.slug)}" data-tip="${escAttr(entry.tip)}">${escAttr(shown2)}</a>`;
+  })).join("");
+}
+function md(text) {
+  return decorate(marked.parse(linkTerms(wrapSpacedImages(String(text ?? "")))));
+}
+function mdInline(text) {
+  return inline.parseInline(linkTerms(wrapSpacedImages(String(text ?? ""))));
+}
+
 // src/components/error.js
 var ComponentError = class extends Error {
   constructor(message, line = 0) {
@@ -1613,34 +3726,42 @@ function fields(text) {
 
 // src/components/callout.js
 var KINDS = /* @__PURE__ */ new Set(["info", "ok", "warn", "err"]);
+var ALIASES = { warning: "warn", error: "err", note: "info" };
 var callout_default = {
   name: "callout",
-  summary: "\u7ED3\u8BBA / \u63D0\u793A / \u8B66\u544A\u6761",
-  syntax: `\`\`\`callout <info|ok|warn|err> [\u6807\u9898]
-\u6B63\u6587\uFF08Markdown\uFF09
+  summary: "Conclusion / tip / warning bar",
+  syntax: `\`\`\`callout <info|ok|warn|err> [title]
+Body (Markdown)
 \`\`\`
-- \u9996\u4E2A\u53C2\u6570\u4E0D\u662F\u7C7B\u578B\u65F6\uFF0C\u6574\u4E2A\u53C2\u6570\u4E32\u4F5C\u4E3A\u6807\u9898\uFF0C\u7C7B\u578B\u4E3A info\u3002`,
-  example: "```callout warn \u6CE8\u610F\n\u5148\u5173\u95ED\u9600\u95E8\uFF0C\u518D\u62C6\u5378\u6CF5\u3002\n```",
+- If the first argument is not a type, the whole argument string is the title and the type is info.`,
+  example: "```callout warn Caution\nClose the valve before you remove the pump.\n```",
   render(text, { args }) {
     const [first = "", ...rest] = args.split(/\s+/).filter(Boolean);
-    const kind = KINDS.has(first) ? first : "info";
+    const kind2 = KINDS.has(first) ? first : "info";
     const title = (KINDS.has(first) ? rest.join(" ") : args).trim();
-    if (!title && !text.trim()) throw new ComponentError("callout \u9700\u8981\u6807\u9898\u6216\u6B63\u6587", 1);
+    if (!title && !text.trim()) throw new ComponentError("callout needs a title or a body", 1);
+    const firstLine = contentLines(text)[0];
+    const typeLine = firstLine && firstLine.text.match(/^type\s*[:：]\s*([a-z][\w-]*)\s*(?:#.*)?$/i);
+    if (typeLine) {
+      const word = typeLine[1].toLowerCase();
+      const wrongKind = KINDS.has(word) ? word : ALIASES[word] ?? "<info|ok|warn|err>";
+      throw new ComponentError(`callout: put the type on the fence line, not in the body: \`\`\`callout ${wrongKind} [title]. The line "${firstLine.text}" would show as body text`, firstLine.line);
+    }
     const head = title ? `<div class="am-callout-title">${esc(title)}</div>` : "";
     const body = text.trim() ? `<div class="am-callout-body am-md">${md(text)}</div>` : "";
-    return `<div class="am-callout am-callout--${kind}" role="note">${head}${body}</div>`;
+    return `<div class="am-callout am-callout--${kind2}" role="note">${head}${body}</div>`;
   }
 };
 
 // src/components/kv.js
 var kv_default = {
   name: "kv",
-  summary: "\u952E\u503C\u683C / \u6807\u9898\u680F\uFF08\u5143\u4FE1\u606F\uFF09",
+  summary: "Key-value grid / title block (metadata)",
   syntax: `\`\`\`kv [cols=2]
-\u952E: \u503C
-* \u5BBD\u683C\u952E: \u503C        \u2190 * \u5F00\u5934\uFF1A\u5360\u6EE1\u6574\u884C\uFF0C\u5B57\u53F7\u66F4\u5927
+key: value
+* wide key: value   \u2190 starts with *: spans the full row, larger text
 \`\`\`
-- \u6309\u7B2C\u4E00\u4E2A\u5192\u53F7\uFF08: \u6216 \uFF1A\uFF09\u5207\u5206\uFF0C\u503C\u91CC\u53EF\u4EE5\u518D\u51FA\u73B0\u5192\u53F7\u3002`,
+- Splits at the first colon (: or the fullwidth colon); the value may contain more colons.`,
   example: "```kv cols=2\n* Title: Simplified Technical English\nSpecification: ASD-STE100\nOwner: ASD\n```",
   render(text, { args }) {
     const cols = Math.max(1, Math.min(Number(parseAttrs(args).cols) || 2, 6));
@@ -1648,10 +3769,10 @@ var kv_default = {
       const wide = t.startsWith("*");
       const body = wide ? t.slice(1).trim() : t;
       const m = body.match(/^([^:：]+)[:：]\s*(.*)$/);
-      if (!m) throw new ComponentError(`kv \u884C\u7F3A\u5C11\u5192\u53F7\uFF1A"${t}"\uFF0C\u5E94\u4E3A \u952E: \u503C`, line);
+      if (!m) throw new ComponentError(`kv line has no colon: "${t}"; expected key: value`, line);
       return `<div class="am-kv-cell${wide ? " am-kv-cell--wide" : ""}"><dt>${esc(m[1].trim())}</dt><dd>${mdInline(m[2])}</dd></div>`;
     });
-    if (!cells.length) throw new ComponentError("kv \u81F3\u5C11\u9700\u8981\u4E00\u884C \u952E: \u503C", 1);
+    if (!cells.length) throw new ComponentError("kv needs at least one key: value line", 1);
     return `<dl class="am-kv" style="--kv-cols: ${cols}">${cells.join("")}</dl>`;
   }
 };
@@ -1659,24 +3780,24 @@ var kv_default = {
 // src/components/timeline.js
 var timeline_default = {
   name: "timeline",
-  summary: "\u65F6\u95F4\u7EBF / \u9636\u6BB5\u6F14\u8FDB",
+  summary: "Timeline / phases",
   syntax: `\`\`\`timeline [h|v]
-\u65F6\u95F4 | \u6807\u9898 | \u8BF4\u660E\uFF08\u53EF\u9009\uFF09
-*\u65F6\u95F4 | \u6807\u9898          \u2190 * \u5F00\u5934\uFF1A\u9AD8\u4EAE\u8BE5\u8282\u70B9
+time | title | note (optional)
+*time | title        \u2190 starts with *: highlights the item
 \`\`\`
-- \u9ED8\u8BA4 \u22646 \u9879\u6A2A\u5411\u3001>6 \u9879\u7EB5\u5411\uFF1B\u53C2\u6570 h / v \u5F3A\u5236\u65B9\u5411\u3002`,
-  example: "```timeline\n1979 | AECMA \u542F\u52A8\u7814\u7A76\n1986 | \u9996\u7248\u6307\u5357\u53D1\u5E03\n*Now | \u514D\u8D39\u4E0B\u8F7D | \u7531 ASD STEMG \u7EF4\u62A4\n```",
+- By default \u22646 items are horizontal and >6 are vertical; the h / v argument forces a direction.`,
+  example: "```timeline\n1979 | AECMA starts the study\n1986 | First guide published\n*Now | Free download | Maintained by ASD STEMG\n```",
   render(text, { args }) {
     const items = contentLines(text).map(({ text: t, line }) => {
       const parts = fields(t);
-      if (parts.length < 2 || !parts[1]) throw new ComponentError(`timeline \u884C\u683C\u5F0F\u5E94\u4E3A \u65F6\u95F4 | \u6807\u9898 | \u8BF4\u660E\uFF1A"${t}"`, line);
+      if (parts.length < 2 || !parts[1]) throw new ComponentError(`timeline line must be time | title | note: "${t}"`, line);
       const hi = parts[0].startsWith("*");
       return { when: hi ? parts[0].slice(1).trim() : parts[0], title: parts[1], detail: parts[2] ?? "", hi };
     });
-    if (!items.length) throw new ComponentError("timeline \u81F3\u5C11\u9700\u8981\u4E00\u9879", 1);
+    if (!items.length) throw new ComponentError("timeline needs at least one item", 1);
     const vertical = /\bv(ertical)?\b/.test(args) || !/\bh(orizontal)?\b/.test(args) && items.length > 6;
     const lis = items.map((it3) => `<li class="am-tl-item${it3.hi ? " am-tl-item--hi" : ""}"><span class="am-tl-when">${esc(it3.when)}</span><span class="am-tl-dot"></span><span class="am-tl-title">${mdInline(it3.title)}</span>${it3.detail ? `<span class="am-tl-text">${mdInline(it3.detail)}</span>` : ""}</li>`);
-    return vertical ? `<ol class="am-timeline am-timeline--v">${lis.join("")}</ol>` : `<ol class="am-timeline am-timeline--h" style="--n: ${items.length}">${lis.join("")}</ol>`;
+    return vertical ? `<ol class="am-timeline am-timeline--v">${lis.join("")}</ol>` : `<div class="am-tl-wrap"><ol class="am-timeline am-timeline--h" style="--n: ${items.length}">${lis.join("")}</ol></div>`;
   }
 };
 
@@ -1687,15 +3808,15 @@ var NOTE_SIZE = 11;
 var NOTE_GAP = 10;
 var annot_default = {
   name: "annot",
-  summary: "\u53E5\u5B50\u9010\u6BB5\u6807\u6CE8\uFF08\u4E0B\u5212\u62EC\u53F7 + \u6CE8\u91CA\uFF09",
+  summary: "Sentence annotation by segment (underline bracket + note)",
   syntax: `\`\`\`annot
-# \u5C0F\u6807\u9898 | \u53F3\u4FA7\u8BF4\u660E\uFF08\u53EF\u9009\uFF09
-\u53E5\u5B50\u6587\u672C\uFF0C[\u88AB\u6807\u6CE8\u7247\u6BB5]{\u6CE8\u91CA}\uFF0C[\u9519\u8BEF\u7247\u6BB5]{!\u7EA2\u8272\u6CE8\u91CA}\u3002
-> \u5E95\u90E8\u8BF4\u660E\uFF08\u53EF\u9009\uFF09
+# Heading | right-side note (optional)
+Sentence text, [annotated span]{note}, [wrong span]{!red note}.
+> Caption below (optional)
 \`\`\`
-- \u4E00\u4E2A # \u5F00\u542F\u4E00\u7EC4\uFF1B\u540C\u7EC4\u53EF\u6709\u591A\u53E5\u3002\u6CE8\u91CA\u91CD\u53E0\u65F6\u81EA\u52A8\u9519\u884C\u3002`,
-  example: '```annot\n# 1 \u7A0B\u5E8F\u6027\u53E5\u5B50 | 13 words, limit 20\nMake sure that [the hydraulic reservoir]{Technical name} is [full]{!Not "replenished"}.\n> \u4E00\u53E5\u53EA\u5199\u4E00\u6761\u6307\u4EE4\n```',
-  render(text) {
+- Each # starts a group; a group can hold several sentences. Overlapping notes move to separate rows automatically.`,
+  example: '```annot\n# 1 Procedural sentence | 13 words, limit 20\nMake sure that [the hydraulic reservoir]{Technical name} is [full]{!Not "replenished"}.\n> Write one instruction per sentence\n```',
+  render(text, { dir = "ltr" } = {}) {
     const groups = [];
     let group = null;
     const ensure = () => group ?? (group = pushGroup(groups, {}));
@@ -1706,10 +3827,10 @@ var annot_default = {
       } else if (t.startsWith(">")) {
         ensure().captions.push(t.replace(/^>\s*/, ""));
       } else {
-        ensure().lines.push(sentenceHtml(t, line));
+        ensure().lines.push(sentenceHtml(t, line, dir === "rtl"));
       }
     }
-    if (!groups.length) throw new ComponentError("annot \u81F3\u5C11\u9700\u8981\u4E00\u4E2A\u53E5\u5B50", 1);
+    if (!groups.length) throw new ComponentError("annot needs at least one sentence", 1);
     return groups.map(groupHtml).join("");
   }
 };
@@ -1724,10 +3845,10 @@ function groupHtml(g) {
   const caps = g.captions.map((c) => `<div class="am-annot-caption">${esc(c)}</div>`).join("");
   return `<div class="am-annot">${head}${lines}${caps}</div>`;
 }
-function sentenceHtml(sentence, line) {
+function sentenceHtml(sentence, line, rtl) {
   const stripped = sentence.replace(SEG, "");
   if (/\[[^\]]*\]\{|\]\{[^}]*$/.test(stripped)) {
-    throw new ComponentError(`annot \u6807\u6CE8\u672A\u95ED\u5408\uFF0C\u5E94\u4E3A [\u7247\u6BB5]{\u6CE8\u91CA}\uFF1A"${sentence}"`, line);
+    throw new ComponentError(`annot has an unclosed annotation; expected [span]{note}: "${sentence}"`, line);
   }
   const rows = [];
   let out = "";
@@ -1737,10 +3858,10 @@ function sentenceHtml(sentence, line) {
     const before = sentence.slice(last, m.index);
     out += esc(before);
     plain += before;
-    const [, seg, bang, note] = m;
-    const x2 = measure(plain, TEXT_SIZE, { mono: true });
-    const noteHtml = note.trim() ? `<span class="am-seg-n" style="--row: ${placeNote(rows, x2, x2 + measure(note, NOTE_SIZE) + NOTE_GAP)}">${esc(note.trim())}</span>` : "";
-    out += `<span class="am-seg${bang ? " am-seg--err" : ""}"><span class="am-seg-t">${esc(seg)}</span>${noteHtml}</span>`;
+    const [, seg, bang, note2] = m;
+    const x2 = measure(plain, TEXT_SIZE, { mono: !rtl });
+    const noteHtml2 = note2.trim() ? `<span class="am-seg-n" style="--row: ${placeNote(rows, x2, x2 + measure(note2, NOTE_SIZE) + NOTE_GAP)}">${esc(note2.trim())}</span>` : "";
+    out += `<span class="am-seg${bang ? " am-seg--err" : ""}"><span class="am-seg-t">${esc(seg)}</span>${noteHtml2}</span>`;
     plain += seg;
     last = m.index + m[0].length;
   }
@@ -1758,79 +3879,153 @@ function placeNote(rows, start, end) {
   return rows.length - 1;
 }
 
+// src/components/delta.js
+var STATE_OF = { "+": "added", "-": "removed", "~": "changed" };
+var SIGN = { added: "+", removed: "\u2212", changed: "~" };
+var STATES = Object.keys(SIGN);
+var EN_DELTA = { added: "added", removed: "removed", changed: "changed", view: "View", before: "Before", changes: "Changes", after: "After" };
+var labelsOf = (ui) => ({ ...EN_DELTA, ...ui?.delta });
+function splitMarker(text) {
+  const m = text.match(/^([+\-~]) +(\S.*)$/);
+  return m ? { mark: m[1], text: m[2] } : { mark: null, text };
+}
+var markState = (mark) => STATE_OF[mark] ?? null;
+var deltaAttr = (state) => state ? ` data-delta="${state}"` : "";
+function deltaBadge(state, ui) {
+  if (!state) return "";
+  return `<span class="am-delta-badge am-delta-badge--${state}" role="img" aria-label="${esc(labelsOf(ui)[state])}">${SIGN[state]}</span>`;
+}
+function withDelta(html, states, { ui, video = false } = {}) {
+  const used = STATES.map((s) => [s, states.filter((x2) => x2 === s).length]).filter(([, n]) => n > 0);
+  if (!used.length) return html;
+  const t = labelsOf(ui);
+  const word = (s, n) => n === 1 ? t[s] : t.counts?.[s] ?? t[s];
+  const counts = used.map(([s, n]) => `<span class="am-delta-count am-delta-count--${s}">${SIGN[s]}${n} ${esc(word(s, n))}</span>`).join(" ");
+  const views = ["before", "changes", "after"].map((v) => `<button type="button" data-view="${v}" aria-pressed="${v === "changes"}">${esc(t[v])}</button>`).join("");
+  const switcher = video ? "" : `<span class="am-delta-switch" role="group" aria-label="${esc(t.view)}" hidden>${views}</span>`;
+  const open2 = html.indexOf(">");
+  const close = html.lastIndexOf("</");
+  return `${html.slice(0, open2 - 1)} am-view-changes"${html.slice(open2, close)}<div class="am-delta-bar">${counts}${switcher}</div>${html.slice(close)}`;
+}
+
 // src/components/tree.js
 var tree_default = {
   name: "tree",
-  summary: "\u5C42\u7EA7\u7ED3\u6784\u6811\uFF08\u7EC4\u7EC7\u56FE / \u7F29\u8FDB\u5217\u8868\uFF09",
+  summary: "Hierarchy tree (org chart / indented list)",
   syntax: `\`\`\`tree [list]
-\u6839\u8282\u70B9 | \u526F\u6807\u9898
-  \u5B50\u8282\u70B9
-    \u5B59\u8282\u70B9 | \u4E00\u884C\u8BF4\u660E
-  *\u9AD8\u4EAE\u5B50\u8282\u70B9
+Root | subtitle
+  Child
+    Grandchild | one-line note
+  *Highlighted child
 \`\`\`
-- \u7528\u7F29\u8FDB\uFF08\u7A7A\u683C\u6216 Tab\uFF09\u8868\u8FBE\u5C42\u7EA7\uFF1B"\u6807\u7B7E | \u8BF4\u660E" \u7ED9\u51FA\u7070\u8272\u8BF4\u660E\u3002
-- \u5355\u6839\u4E14 2~4 \u4E2A\u5B50\u8282\u70B9 \u2192 \u7EC4\u7EC7\u56FE\uFF1B\u5B50\u8282\u70B9\u66F4\u591A\u6216\u53C2\u6570 list \u2192 \u7F29\u8FDB\u5217\u8868\uFF1B\u591A\u4E2A\u6839 \u2192 \u5E76\u6392\u3002
-- \u6807\u7B7E\u652F\u6301\u884C\u5185 Markdown\uFF0C\u5982 \`Section 1\` Words\u3002`,
-  example: "```tree\nASD-STE100 | Simplified Technical English\n  Part 1: Writing rules\n    `Section 1` Words\n  Part 2: Dictionary\n    Approved words | \u4E00\u8BCD\u4E00\u4E49\n```",
-  render(text, { args }) {
+- Indentation (spaces or tabs) sets the level; "label | note" adds a gray note.
+- One root with 2 to 4 children \u2192 org chart; more children or the list argument \u2192 indented list; several roots \u2192 side by side.
+- Labels support inline Markdown, such as \`Section 1\` Words.
+- Change markers show what a plan adds, removes and changes. A line can start with + (added), - (removed) or ~ (changed), followed by a space, after the indentation:
+\`\`\`tree list
+src/
+  components/
+    + delta.js | parses change markers
+    ~ flow.js
+    ~ tree.js
+  - legacy/
+    old-flow.js
+\`\`\`
+  - Indentation still sets the level. The children of a + or - node inherit it; a child that carries a different marker is an error. ~ marks one node and is not inherited.
+  - The Changes view draws added in the theme's ok color, removed faded with a struck-through label, changed with a warn outline, and each marked node with a +, \u2212 or ~ badge. A count row and a Before / Changes / After switch sit under the tree: Before and After show the tree as it was and as it will be, plain and without the items that are not in that view.
+  - A line that starts with a marker and a space is always read as a marker. To keep a label that starts with "- ", write \\- item.`,
+  example: "```tree\nASD-STE100 | Simplified Technical English\n  Part 1: Writing rules\n    `Section 1` Words\n  Part 2: Dictionary\n    Approved words | one word, one meaning\n```",
+  render(text, { args, ui, video }) {
     const roots = buildTree(text);
-    if (!roots.length) throw new ComponentError("tree \u81F3\u5C11\u9700\u8981\u4E00\u4E2A\u8282\u70B9", 1);
-    const listMode = /\blist\b/.test(args);
-    if (roots.length === 1) {
-      const [root] = roots;
-      const n = root.children.length;
-      if (!listMode && n >= 2 && n <= 4) return orgHtml(root);
-      return `<div class="am-tree">${rootBox(root, true)}${listHtml(root.children)}</div>`;
-    }
-    if (!listMode && roots.length <= 4) {
-      return `<div class="am-tree"><div class="am-tree-cols am-tree-cols--free" style="--n: ${roots.length}">${roots.map(colHtml).join("")}</div></div>`;
-    }
-    return `<div class="am-tree">${listHtml(roots)}</div>`;
+    if (!roots.length) throw new ComponentError("tree needs at least one node", 1);
+    return withDelta(treeHtml(roots, /\blist\b/.test(args), ui), statesOf(roots), { ui, video });
   }
 };
+function treeHtml(roots, listMode, ui) {
+  if (roots.length === 1) {
+    const [root] = roots;
+    const n = root.children.length;
+    if (!listMode && n >= 2 && n <= 4) return orgHtml(root, ui);
+    return `<div class="am-tree">${rootBox(root, ui, true)}${listHtml(root.children, ui)}</div>`;
+  }
+  if (!listMode && roots.length <= 4) {
+    return `<div class="am-tree"><div class="am-tree-cols am-tree-cols--free" style="--n: ${roots.length}">${colsHtml(roots, ui)}</div></div>`;
+  }
+  return `<div class="am-tree">${listHtml(roots, ui)}</div>`;
+}
+var statesOf = (nodes) => nodes.flatMap((n) => [n.state, ...statesOf(n.children)]);
 function buildTree(text) {
   const roots = [];
   const stack = [];
-  for (const raw of String(text).split("\n")) {
-    if (!raw.trim()) continue;
+  let step = 0;
+  String(text).split("\n").forEach((raw, i) => {
+    if (!raw.trim()) return;
     const indent = raw.replace(/\t/g, "  ").match(/^ */)[0].length;
-    const node = { ...parseLabel(raw.trim()), indent, children: [] };
+    const node = { ...parseLabel(raw.trim()), indent, step: step++, line: i + 1, children: [] };
     while (stack.length && stack.at(-1).indent >= indent) stack.pop();
     (stack.length ? stack.at(-1).children : roots).push(node);
     stack.push(node);
+  });
+  return roots.map((root) => settle(root, null));
+}
+function settle(node, inherited) {
+  const own = markState(node.mark);
+  if (inherited && own && own !== inherited) {
+    throw new ComponentError(`tree: "${node.mark}" under a ${inherited} node contradicts it. The children of a ${inherited} node are ${inherited} too; remove the marker or move the node`, node.line);
   }
-  return roots;
+  const state = inherited ?? own;
+  const below = state === "added" || state === "removed" ? state : null;
+  return { ...node, state, children: node.children.map((child) => settle(child, below)) };
 }
 function parseLabel(t) {
-  const hi = t.startsWith("*");
-  const [label, sub = ""] = fields(hi ? t.slice(1) : t);
-  return { label, sub, hi };
+  const escaped = /^\\[+\-~] /.test(t);
+  const { mark, text } = escaped ? { mark: null, text: t.slice(1) } : splitMarker(t);
+  const hi = text.startsWith("*");
+  const [label, sub = ""] = fields(hi ? text.slice(1) : text);
+  return { label, sub, hi, mark };
 }
 var labelHtml = (label) => mdInline(label).replace(/^<code>([^<]*)<\/code>(?=\s*\S)/, '<span class="am-tree-tag">$1</span>');
-var boxInner = (n) => `${labelHtml(n.label)}${n.sub ? `<small>${mdInline(n.sub)}</small>` : ""}`;
-function rootBox(root, solo = false) {
-  return `<div class="am-tree-root${solo ? " am-tree-root--solo" : ""}"><div class="am-tree-box am-tree-box--root">${boxInner(root)}</div></div>`;
+var vattrs = (n) => ` data-key="${esc(n.label)}" data-step="${n.step}"${deltaAttr(n.state)}`;
+var HIDDEN_IN = { before: "added", after: "removed" };
+function lineAttrs(siblings, i, cols) {
+  const n = siblings.length;
+  return Object.entries(HIDDEN_IN).map(([view, hidden]) => {
+    const shown2 = siblings.map((x2) => x2.state !== hidden);
+    const first = shown2.indexOf(true);
+    const last = shown2.lastIndexOf(true);
+    const natural = cols ? n === 1 ? "none" : i === 0 ? "start" : i === n - 1 ? "end" : "full" : i < n - 1 ? "full" : "short";
+    const kind2 = cols ? first === last || i < first || i > last ? "none" : i === first ? "start" : i === last ? "end" : "full" : i < last ? "full" : i === last ? "short" : "none";
+    return kind2 === natural ? "" : ` data-line-${view}="${kind2}"`;
+  }).join("");
 }
-function colHtml(node) {
-  const children = node.children.length ? listHtml(node.children) : "";
-  return `<div class="am-tree-col"><div class="am-tree-box${node.hi ? " am-tree-box--hi" : ""}">${boxInner(node)}</div>${children}</div>`;
+var dropAttrs = (children) => Object.entries(HIDDEN_IN).map(([view, hidden]) => children.every((c) => c.state === hidden) ? ` data-line-${view}="none"` : "").join("");
+var boxInner = (n, ui) => `${deltaBadge(n.state, ui)}${labelHtml(n.label)}${n.sub ? `<small>${mdInline(n.sub)}</small>` : ""}`;
+function rootBox(root, ui, solo = false) {
+  const drop = solo ? "" : dropAttrs(root.children);
+  return `<div class="am-tree-root${solo ? " am-tree-root--solo" : ""}"${deltaAttr(root.state)}${drop}><div class="am-tree-box am-tree-box--root"${vattrs(root)}>${boxInner(root, ui)}</div></div>`;
 }
-function orgHtml(root) {
-  return `<div class="am-tree">${rootBox(root)}<div class="am-tree-cols" style="--n: ${root.children.length}">${root.children.map(colHtml).join("")}</div></div>`;
+function colHtml(node, ui, siblings, i) {
+  const children = node.children.length ? listHtml(node.children, ui) : "";
+  return `<div class="am-tree-col"${deltaAttr(node.state)}${lineAttrs(siblings, i, true)}><div class="am-tree-box${node.hi ? " am-tree-box--hi" : ""}"${vattrs(node)}>${boxInner(node, ui)}</div>${children}</div>`;
 }
-function listHtml(nodes) {
-  return `<ul class="am-tree-list">${nodes.map(liHtml).join("")}</ul>`;
+var colsHtml = (nodes, ui) => nodes.map((n, i) => colHtml(n, ui, nodes, i)).join("");
+function orgHtml(root, ui) {
+  return `<div class="am-tree">${rootBox(root, ui)}<div class="am-tree-cols" style="--n: ${root.children.length}">${colsHtml(root.children, ui)}</div></div>`;
 }
-function liHtml(n) {
+function listHtml(nodes, ui) {
+  return `<ul class="am-tree-list">${nodes.map((n, i) => liHtml(n, ui, nodes, i)).join("")}</ul>`;
+}
+function liHtml(n, ui, siblings, i) {
   const sub = n.sub ? `<span class="am-tree-sub">${mdInline(n.sub)}</span>` : "";
-  const kids = n.children.length ? `<ul>${n.children.map(liHtml).join("")}</ul>` : "";
-  return `<li${n.hi ? ' class="am-tree-hi"' : ""}><span class="am-tree-label">${labelHtml(n.label)}</span>${sub}${kids}</li>`;
+  const kids = n.children.length ? `<ul>${n.children.map((c, k2) => liHtml(c, ui, n.children, k2)).join("")}</ul>` : "";
+  return `<li${n.hi ? ' class="am-tree-hi"' : ""}${vattrs(n)}${lineAttrs(siblings, i, false)}><span class="am-tree-label">${deltaBadge(n.state, ui)}${labelHtml(n.label)}</span>${sub}${kids}</li>`;
 }
 
 // src/components/limits.js
 var NICE_MAX = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
 var NICE_STEP = [1, 2, 2.5, 5, 10];
 function niceScale(peak) {
+  if (!Number.isFinite(peak) || peak <= 0) return { max: 1, step: 1 };
   const target = peak * 1.4;
   const pow = 10 ** Math.floor(Math.log10(target));
   const integral = Number.isInteger(peak);
@@ -1845,41 +4040,135 @@ var pct = (v, max) => `${Math.round(v / max * 1e4) / 100}%`;
 var NUM = /^(?:max\s+)?(-?\d+(?:\.\d+)?)$/i;
 var limits_default = {
   name: "limits",
-  summary: "\u6570\u503C vs \u4E0A\u9650 \u6761\u5F62\u5BF9\u7167",
+  summary: "Value vs limit bars",
   syntax: `\`\`\`limits
-\u6807\u7B7E | \u5F53\u524D\u503C / \u4E0A\u9650 | \u5355\u4F4D\uFF08\u53EF\u9009\uFF09 | \u5907\u6CE8\uFF08\u53EF\u9009\uFF09
-\u6807\u7B7E | \u4E0A\u9650 | \u5355\u4F4D          \u2190 \u53EA\u7ED9\u4E0A\u9650\uFF1A\u6761\u586B\u5145\u5230\u4E0A\u9650
+label | value / limit | unit (optional) | note (optional)
+label | limit | unit         \u2190 limit only: the bar fills to the limit
 \`\`\`
-- \u5F53\u524D\u503C\u8D85\u8FC7\u4E0A\u9650\u65F6\u6574\u884C\u6807\u7EA2\u3002\u4E0A\u9650\u53EF\u5199\u6210 "max 20"\u3002`,
-  example: "```limits\n\u7A0B\u5E8F\u6027\u53E5\u5B50 | 13 / 20 | words\n\u63CF\u8FF0\u6027\u53E5\u5B50 | max 25 | words\n\u540D\u8BCD\u7C07 | 4 / 3 | words | \u8D85\u9650\n```",
-  render(text) {
+- A row turns red when the value is over the limit. The limit may be written as "max 20".`,
+  example: "```limits\nProcedural sentence | 13 / 20 | words\nDescriptive sentence | max 25 | words\nNoun cluster | 4 / 3 | words | over\n```",
+  render(text, { dir = "ltr", ui } = {}) {
     const rows = contentLines(text).map(({ text: t, line }) => parseRow(t, line));
-    if (!rows.length) throw new ComponentError("limits \u81F3\u5C11\u9700\u8981\u4E00\u884C", 1);
-    return `<div class="am-limits">${rows.map(rowHtml).join("")}</div>`;
+    if (!rows.length) throw new ComponentError("limits needs at least one line", 1);
+    const words3 = { ...EN_WORDS, ...ui?.limits };
+    return `<div class="am-limits">${rows.map((row) => rowHtml(row, dir === "rtl" ? "right" : "left", words3)).join("")}</div>`;
   }
 };
 function parseRow(t, line) {
-  const [label, spec = "", unit = "", note = ""] = fields(t);
+  const [label, spec = "", unit = "", note2 = ""] = fields(t);
   const [a, b] = spec.split("/").map((s) => s.trim());
   const nums = (b === void 0 ? [a] : [a, b]).map((s) => s?.match(NUM)?.[1]);
   if (!spec || nums.some((n) => n === void 0)) {
-    throw new ComponentError(`limits \u884C\u683C\u5F0F\u5E94\u4E3A \u6807\u7B7E | \u5F53\u524D\u503C / \u4E0A\u9650 | \u5355\u4F4D\uFF1A"${t}"`, line);
+    throw new ComponentError(`limits line must be label | value / limit | unit: "${t}"`, line);
   }
   const [value, limit] = b === void 0 ? [null, Number(nums[0])] : nums.map(Number);
-  return { label, value, limit, unit, note };
+  return { label, value, limit, unit, note: note2 };
 }
-function rowHtml({ label, value, limit, unit, note }) {
+var EN_WORDS = { value: "{value} / max {limit}", limit: "max {limit}" };
+var fill = (template, value, limit) => template.replace("{value}", value).replace("{limit}", limit);
+function rowHtml({ label, value, limit, unit, note: note2 }, side = "left", words3 = EN_WORDS) {
   const { max, step } = niceScale(Math.max(limit, value ?? 0));
-  const shown = value ?? limit;
-  const over = value !== null && value > limit;
-  const valText = `${value !== null ? `${value} / ` : ""}max ${limit}${unit ? ` ${unit}` : ""}`;
+  const shown2 = value ?? limit;
+  const over2 = value !== null && value > limit;
+  const valText = `${value !== null ? fill(words3.value, value, limit) : fill(words3.limit, value, limit)}${unit ? ` ${unit}` : ""}`;
   const ticks = [];
-  for (let v = 0; v <= max + 1e-9; v += step) ticks.push(`<span style="left: ${pct(round(v), max)}">${round(v)}</span>`);
-  return `<div class="am-lim${over ? " is-over" : ""}">
-<div class="am-lim-head"><span>${esc(label)}${note ? `<span class="am-lim-note">${esc(note)}</span>` : ""}</span><span class="am-lim-val">${esc(valText)}</span></div>
-<div class="am-lim-track"><div class="am-lim-fill" style="width: ${pct(shown, max)}"></div><div class="am-lim-mark" style="left: ${pct(limit, max)}"></div></div>
+  if (step > 0 && max > 0) {
+    for (let v = 0; v <= max + 1e-9; v += step) ticks.push(`<span style="${side}: ${pct(round(v), max)}">${round(v)}</span>`);
+  }
+  return `<div class="am-lim${over2 ? " is-over" : ""}">
+<div class="am-lim-head"><span>${esc(label)}${note2 ? `<span class="am-lim-note">${esc(note2)}</span>` : ""}</span><span class="am-lim-val">${esc(valText)}</span></div>
+<div class="am-lim-track"><div class="am-lim-fill" style="width: ${pct(shown2, max)}"></div><div class="am-lim-mark" style="${side}: ${pct(limit, max)}"></div></div>
 <div class="am-lim-ticks" aria-hidden="true">${ticks.join("")}</div>
 </div>`;
+}
+
+// src/runtime/rtl-letter.js
+var RTL_LETTER = /[\p{Script=Hebrew}\p{Script=Arabic}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}\p{Script=Samaritan}\p{Script=Mandaic}]/u;
+
+// src/bidi.js
+var LETTER = new RegExp("\\p{L}", "u");
+function isLtrOnly(text) {
+  const s = decode2(text);
+  return !RTL_LETTER.test(s) && [...s].some((ch) => LETTER.test(ch));
+}
+var hasRtl = (text) => RTL_LETTER.test(decode2(text));
+var decode2 = (text) => String(text ?? "").replace(/&(amp|lt|gt|quot|#39);/g, (_2, e) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" })[e]).replace(/&[#\w]+;/g, " ");
+var NEUTRAL = /[\p{P}\p{S}]/u;
+var WJ = String.fromCharCode(8288);
+var PREFIX = new RegExp("((?:^|[\\s(])\\p{Script=Hebrew}{1,3}-)(?=[^\\s-])", "gu");
+var SIGNED = /(^|[\s(])([+\-−±~]\d[\d.,]*%?)/g;
+var WORD = /\S+/g;
+var WORD_LEAD = new RegExp(`^(?:\\p{Script=Hebrew}{1,3}[-\\u05BE]|[([{\xAB\u201C\u2018"']|&quot;|&#39;)+`, "u");
+var WORD_TRAIL = /(?:[.,:!?)\]}»”’…"'،؛؟]|(?<!&[#\w]+);|&quot;|&#39;)+$/u;
+var EDGE_NEUTRAL = /^[\p{P}\p{S}]|[\p{P}\p{S}]$/u;
+function isolateWord(word) {
+  const lead = word.match(WORD_LEAD)?.[0] ?? "";
+  const rest = word.slice(lead.length);
+  const trail = rest.match(WORD_TRAIL)?.[0] ?? "";
+  const core = rest.slice(0, rest.length - trail.length);
+  return isLtrOnly(core) && EDGE_NEUTRAL.test(decode2(core)) ? `${lead}<bdi dir="ltr">${core}</bdi>${trail}` : word;
+}
+var LRI = String.fromCharCode(8294);
+var PDI = String.fromCharCode(8297);
+function svgLine(line, dir) {
+  if (dir !== "rtl") return line;
+  return isLtrOnly(line) ? `${LRI}${line}${PDI}` : line;
+}
+var INLINE = /* @__PURE__ */ new Set(["a", "abbr", "b", "cite", "code", "del", "dfn", "em", "i", "ins", "kbd", "mark", "q", "s", "samp", "strong", "sub", "sup", "u", "var"]);
+var SKIP = /* @__PURE__ */ new Set(["svg", "pre", "script", "style", "textarea", "select", "option", "title"]);
+var TOKEN = /<!--[\s\S]*?-->|<\/?([a-zA-Z][\w-]*)\b(?:[^>"']|"[^"]*"|'[^']*')*>|[^<]+|</g;
+function isolateLtrRuns(html) {
+  const out = [];
+  let run2 = [];
+  let skip = null;
+  let depth = 0;
+  const flush = () => {
+    if (!run2.length) return;
+    const text = run2.filter((t) => !t.startsWith("<")).join("");
+    const tags = run2.filter((t) => t.startsWith("<") && !t.startsWith("<!--"));
+    const balanced = tags.filter((t) => !t.startsWith("</")).length === tags.filter((t) => t.startsWith("</")).length;
+    const first = run2.findIndex((t) => t.trim());
+    const last = run2.length - 1 - [...run2].reverse().findIndex((t) => t.trim());
+    if (balanced && isLtrOnly(text) && NEUTRAL.test(decode2(text).trim())) {
+      out.push(...run2.slice(0, first), '<bdi dir="ltr">', ...run2.slice(first, last + 1), "</bdi>", ...run2.slice(last + 1));
+    } else {
+      let code = 0;
+      const fixed = run2.map((t) => {
+        if (/^<code(?=[ >])/i.test(t)) code++;
+        else if (/^<\/code>/i.test(t)) code--;
+        return t.startsWith("<") || code > 0 ? t : t.replace(WORD, isolateWord).replace(SIGNED, '$1<bdi dir="ltr">$2</bdi>').replace(PREFIX, `$1${WJ}`);
+      });
+      out.push(...fixed);
+    }
+    run2 = [];
+  };
+  for (const m of String(html).matchAll(TOKEN)) {
+    const tok = m[0];
+    const name = m[1]?.toLowerCase();
+    if (skip) {
+      out.push(tok);
+      if (name === skip) depth += tok.startsWith("</") ? -1 : tok.endsWith("/>") ? 0 : 1;
+      if (depth === 0) skip = null;
+      continue;
+    }
+    if (name && SKIP.has(name) && !tok.startsWith("</")) {
+      flush();
+      out.push(tok);
+      if (!tok.endsWith("/>")) {
+        skip = name;
+        depth = 1;
+      }
+      continue;
+    }
+    if (!name || INLINE.has(name)) {
+      run2.push(tok);
+      continue;
+    }
+    flush();
+    out.push(tok);
+  }
+  flush();
+  return out.join("");
 }
 
 // src/svg/shapes.js
@@ -1899,17 +4188,37 @@ function smoothPath(points) {
   parts.push(`L${f(last.x)},${f(last.y)}`);
   return parts.join(" ");
 }
-function arrowDefs(uid) {
-  return `<defs><marker id="${uid}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>`;
+function arrowDefs(uid, variants = []) {
+  const marker = (name, cls) => `<marker id="${uid}-arrow${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow${cls}" d="M0,0 L10,5 L0,10 z"/></marker>`;
+  return `<defs>${[marker("", ""), ...variants.map((v) => marker(`-${v}`, ` am-arrow--${v}`))].join("")}</defs>`;
 }
-function textLines(lines, cx, cy, lineHeight, attrs = "") {
-  const top = cy - (lines.length - 1) * lineHeight / 2;
-  return lines.map((line, i) => `<text x="${f(cx)}" y="${f(top + i * lineHeight)}" text-anchor="middle" dominant-baseline="central"${attrs}>${esc(line)}</text>`).join("");
+function textLines(lines, cx, cy, lineHeight, attrs = "", dir = "ltr") {
+  const top2 = cy - (lines.length - 1) * lineHeight / 2;
+  return lines.map((line, i) => `<text x="${f(cx)}" y="${f(top2 + i * lineHeight)}" text-anchor="middle" dominant-baseline="central"${attrs}>${esc(svgLine(line, dir))}</text>`).join("");
 }
-function svgOpen(width, height, label) {
+var EN_LABELS = { flow: "Flowchart", sequence: "Sequence diagram", er: "Entity relationship diagram", colon: ": ", sep: ", " };
+function diagramLabel(ui, kind2, names) {
+  const u = { ...EN_LABELS, ...ui };
+  return `${u[kind2]}${u.colon}${names.join(u.sep)}`;
+}
+function svgOpen(width, height, label, dir = "ltr") {
   const w = Math.ceil(width);
   const h2 = Math.ceil(height);
-  return `<svg viewBox="0 0 ${w} ${h2}" width="${w}" height="${h2}" role="img" aria-label="${esc(label)}" xmlns="http://www.w3.org/2000/svg">`;
+  const direction = dir === "rtl" ? ' direction="rtl"' : "";
+  return `<svg viewBox="0 0 ${w} ${h2}" width="${w}" height="${h2}" role="img" aria-label="${esc(label)}"${direction} xmlns="http://www.w3.org/2000/svg">`;
+}
+var mirror = (width, rtl) => rtl ? (x2) => width - x2 : (x2) => x2;
+function mirrorLayout(g) {
+  const flip = mirror(g.graph().width, true);
+  for (const v of g.nodes()) {
+    const node = g.node(v);
+    node.x = flip(node.x);
+  }
+  for (const e of g.edges()) {
+    const edge = g.edge(e);
+    edge.points = edge.points.map((p) => ({ ...p, x: flip(p.x) }));
+    if (edge.x !== void 0) edge.x = flip(edge.x);
+  }
 }
 
 // src/components/sequence.js
@@ -1936,9 +4245,9 @@ function parseSequence(text) {
     if (m = t.match(RE.participants)) {
       m[1].split(/[,，]/).map((s) => s.trim()).filter(Boolean).forEach(add);
     } else if (m = t.match(RE.note)) {
-      const over = m[1].split(/[,，]/).map((s) => s.trim()).filter(Boolean);
-      over.forEach(add);
-      steps.push({ kind: "note", over, text: m[2].trim(), line });
+      const over2 = m[1].split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+      over2.forEach(add);
+      steps.push({ kind: "note", over: over2, text: m[2].trim(), line });
     } else if (m = t.match(RE.divider)) {
       steps.push({ kind: "divider", text: m[1], line });
     } else if (m = t.match(RE.msg)) {
@@ -1946,32 +4255,32 @@ function parseSequence(text) {
       add(m[3]);
       steps.push({ kind: "msg", from: m[1], to: m[3], dashed: m[2] === "-->", label: (m[4] ?? "").trim(), line });
     } else {
-      throw new ComponentError(`sequence \u65E0\u6CD5\u89E3\u6790\uFF1A"${t}"\u3002\u6D88\u606F\u5199\u4F5C A -> B: \u6807\u7B7E\uFF08--> \u4E3A\u865A\u7EBF\u8FD4\u56DE\uFF09\uFF0C\u6CE8\u91CA\u5199\u4F5C note A: \u6587\u672C`, line);
+      throw new ComponentError(`sequence cannot parse "${t}". Write a message as A -> B: label (--> is a dashed return) and a note as note A: text`, line);
     }
   }
-  if (!participants.length) throw new ComponentError("sequence \u81F3\u5C11\u9700\u8981\u4E00\u6761\u6D88\u606F", 1);
+  if (!participants.length) throw new ComponentError("sequence needs at least one message", 1);
   return { participants, steps };
 }
 var sequence_default = {
   name: "sequence",
-  summary: "\u65F6\u5E8F\u56FE\uFF08\u53C2\u4E0E\u8005\u4E4B\u95F4\u7684\u6D88\u606F\u5F80\u6765\uFF09",
+  summary: "Sequence diagram (messages between participants)",
   syntax: `\`\`\`sequence [num]
-participants: A, B, C        \u2190 \u53EF\u9009\uFF0C\u56FA\u5B9A\u53C2\u4E0E\u8005\u987A\u5E8F
-A -> B: \u8BF7\u6C42                  \u2190 \u5B9E\u7EBF
-B --> A: \u54CD\u5E94                 \u2190 \u865A\u7EBF\uFF08\u8FD4\u56DE\uFF09
-B -> B: \u81EA\u8C03\u7528
-note A: \u5355\u4E2A\u53C2\u4E0E\u8005\u4E0A\u7684\u6CE8\u91CA
-note A, C: \u6A2A\u8DE8\u591A\u4E2A\u53C2\u4E0E\u8005\u7684\u6CE8\u91CA
-== \u9636\u6BB5\u5206\u9694 ==
+participants: A, B, C        \u2190 optional, fixes the participant order
+A -> B: request              \u2190 solid line
+B --> A: response            \u2190 dashed line (return)
+B -> B: self call
+note A: note on one participant
+note A, C: note across several participants
+== Phase divider ==
 \`\`\`
-- \u53C2\u6570 num\uFF1A\u7ED9\u6D88\u606F\u52A0\u5E8F\u53F7\u3002`,
+- Argument num: number the messages.`,
   example: "```sequence\nClient -> Server: SYN\nServer --> Client: SYN-ACK\nClient -> Server: ACK\nnote Client, Server: ESTABLISHED\n```",
-  render(text, { args, uid }) {
+  render(text, { args, uid, ui, dir = "ltr" }) {
     const model = parseSequence(text);
-    return `<figure class="am-diagram am-seq">${layout(model, { num: /\bnum\b/.test(args), id: uid() })}</figure>`;
+    return `<figure class="am-diagram am-seq">${layout(model, { num: /\bnum\b/.test(args), id: uid(), ui, dir })}</figure>`;
   }
 };
-function layout({ participants: ps, steps }, { num, id }) {
+function layout({ participants: ps, steps }, { num, id, ui, dir = "ltr" }) {
   const idx = new Map(ps.map((p, i) => [p, i]));
   const actorW = ps.map((p) => Math.max(measure(p, FS) + 28, 84));
   const gaps = ps.slice(1).map((_2, i) => (actorW[i] + actorW[i + 1]) / 2 + 28);
@@ -2005,53 +4314,58 @@ function layout({ participants: ps, steps }, { num, id }) {
   const xs = [MARGIN + extraLeft + actorW[0] / 2];
   gaps.forEach((g) => xs.push(xs.at(-1) + g));
   const width = xs.at(-1) + actorW.at(-1) / 2 + MARGIN + extraRight;
+  const rtl = dir === "rtl";
+  const X3 = mirror(width, rtl);
+  const dx = rtl ? -1 : 1;
   const body = [];
   let y2 = TOP + ACTOR_H + 22;
   let n = 0;
-  for (const s of prepared) {
+  for (const [k2, s] of prepared.entries()) {
+    const start = body.length;
     if (s.kind === "msg") {
       n++;
       const cls = `am-edge${s.dashed ? " am-edge--dashed" : ""}`;
       const marker = ` marker-end="url(#${id}-arrow)"`;
-      const step = num ? `<text class="am-step" x="${f(xs[s.a] + (s.b >= s.a ? 6 : -6))}" y="${f(y2 + s.lines.length * LH - 6)}" text-anchor="${s.b >= s.a ? "start" : "end"}">${n}</text>` : "";
+      const step = num ? `<text class="am-step" x="${f(X3(xs[s.a]) + dx * (s.b >= s.a ? 6 : -6))}" y="${f(y2 + s.lines.length * LH - 6)}" text-anchor="${s.b >= s.a ? "start" : "end"}">${n}</text>` : "";
       if (s.a === s.b) {
-        const x2 = xs[s.a];
-        const labelX = x2 + 40;
-        body.push(s.lines.map((l3, k2) => `<text x="${f(labelX)}" y="${f(y2 + k2 * LH + 4)}" dominant-baseline="central">${esc(l3)}</text>`).join(""));
-        body.push(`<path class="${cls}" d="M${f(x2)},${f(y2)} H${f(x2 + 30)} V${f(y2 + 20)} H${f(x2 + 2)}"${marker}/>`, step);
+        const x2 = X3(xs[s.a]);
+        const labelX = x2 + dx * 40;
+        body.push(s.lines.map((l3, k3) => `<text x="${f(labelX)}" y="${f(y2 + k3 * LH + 4)}" dominant-baseline="central">${esc(svgLine(l3, dir))}</text>`).join(""));
+        body.push(`<path class="${cls}" d="M${f(x2)},${f(y2)} H${f(x2 + dx * 30)} V${f(y2 + 20)} H${f(x2 + dx * 2)}"${marker}/>`, step);
         y2 += Math.max(s.lines.length * LH, 20) + 28;
       } else {
         y2 += s.lines.length * LH;
-        const [x1, x2] = [xs[s.a], xs[s.b]];
+        const [x1, x2] = [X3(xs[s.a]), X3(xs[s.b])];
         const mx = (x1 + x2) / 2;
-        body.push(s.lines.map((l3, k2) => `<text x="${f(mx)}" y="${f(y2 - 10 - (s.lines.length - 1 - k2) * LH)}" text-anchor="middle">${esc(l3)}</text>`).join(""));
+        body.push(s.lines.map((l3, k3) => `<text x="${f(mx)}" y="${f(y2 - 10 - (s.lines.length - 1 - k3) * LH)}" text-anchor="middle">${esc(svgLine(l3, dir))}</text>`).join(""));
         body.push(`<path class="${cls}" d="M${f(x1)},${f(y2)} L${f(x2 + (x2 > x1 ? -2 : 2))},${f(y2)}"${marker}/>`, step);
         y2 += 24;
       }
     } else if (s.kind === "note") {
-      const xsOver = s.over.map((p) => xs[idx.get(p)]);
+      const xsOver = s.over.map((p) => X3(xs[idx.get(p)]));
       const lo = Math.min(...xsOver);
       const hi = Math.max(...xsOver);
       const w = Math.max(s.w, hi - lo + 40);
       const h2 = s.lines.length * LH + 12;
       const cx = (lo + hi) / 2;
       body.push(`<rect class="am-note" x="${f(cx - w / 2)}" y="${f(y2)}" width="${f(w)}" height="${f(h2)}" rx="2"/>`);
-      body.push(textLines(s.lines, cx, y2 + h2 / 2, LH, ' font-size="12"'));
+      body.push(textLines(s.lines, cx, y2 + h2 / 2, LH, ' font-size="12"', dir));
       y2 += h2 + 16;
     } else {
       const w = Math.max(...s.lines.map((l3) => measure(l3, 12))) + 20;
       body.push(`<line class="am-lifeline" x1="${MARGIN}" y1="${f(y2 + 10)}" x2="${f(width - MARGIN)}" y2="${f(y2 + 10)}"/>`);
       body.push(`<rect class="am-actor" x="${f(width / 2 - w / 2)}" y="${f(y2)}" width="${f(w)}" height="20" rx="2"/>`);
-      body.push(textLines(s.lines.slice(0, 1), width / 2, y2 + 10, LH, ' font-size="12"'));
+      body.push(textLines(s.lines.slice(0, 1), width / 2, y2 + 10, LH, ' font-size="12"', dir));
       y2 += 34;
     }
+    body.splice(start, body.length - start, `<g data-step="${k2}">${body.slice(start).join("")}</g>`);
   }
   const height = y2 + 6;
   const actors = ps.map((p, i) => {
-    const x2 = xs[i];
-    return `<line class="am-lifeline" x1="${f(x2)}" y1="${TOP + ACTOR_H}" x2="${f(x2)}" y2="${f(height - 4)}"/><rect class="am-actor" x="${f(x2 - actorW[i] / 2)}" y="${TOP}" width="${f(actorW[i])}" height="${ACTOR_H}" rx="2"/>` + textLines([p], x2, TOP + ACTOR_H / 2, LH, ' font-weight="600"');
+    const x2 = X3(xs[i]);
+    return `<line class="am-lifeline" x1="${f(x2)}" y1="${TOP + ACTOR_H}" x2="${f(x2)}" y2="${f(height - 4)}"/><g data-key="${esc(p)}"><rect class="am-actor" x="${f(x2 - actorW[i] / 2)}" y="${TOP}" width="${f(actorW[i])}" height="${ACTOR_H}" rx="2"/>${textLines([p], x2, TOP + ACTOR_H / 2, LH, ' font-weight="600"', dir)}</g>`;
   });
-  return `${svgOpen(width, height, `\u65F6\u5E8F\u56FE\uFF1A${ps.join("\u3001")}`)}${arrowDefs(id)}${actors.join("")}${body.join("")}</svg>`;
+  return `${svgOpen(width, height, diagramLabel(ui, "sequence", ps), dir)}${arrowDefs(id)}${actors.join("")}${body.join("")}</svg>`;
 }
 
 // node_modules/@dagrejs/dagre/dist/dagre.esm.js
@@ -3956,6 +6270,8 @@ var FS2 = 13;
 var LH2 = 17;
 var TEXT_MAX = 150;
 var EDGE_FS = 11.5;
+var CLUSTER_FS = 11;
+var CLUSTER_LABEL_H = 15;
 var DIRS = /* @__PURE__ */ new Set(["TB", "LR", "BT", "RL"]);
 var BRACKETS = [
   { open: "[(", close: ")]", shape: "db" },
@@ -3966,57 +6282,103 @@ var BRACKETS = [
 var ARROW = /^\s*(-->|->)\s*/;
 var flow_default = {
   name: "flow",
-  summary: "\u6D41\u7A0B\u56FE / \u67B6\u6784\u56FE\uFF08\u81EA\u52A8\u5E03\u5C40\uFF09",
+  summary: "Flowchart / architecture diagram (automatic layout)",
   syntax: `\`\`\`flow [TB|LR|BT|RL]
-A -> B: \u6807\u7B7E                  \u2190 \u5B9E\u7EBF\uFF0C\u5192\u53F7\u540E\u4E3A\u8FB9\u6807\u7B7E
-A --> C                       \u2190 \u865A\u7EBF
-A -> B -> C                   \u2190 \u94FE\u5F0F
-A -> B & C                    \u2190 \u6247\u51FA
-(\u5F00\u59CB)  {\u5224\u65AD?}  [(\u6570\u636E\u5E93)]  [\u542B: \u5192\u53F7\u7684\u6587\u672C]   \u2190 \u5706\u89D2 / \u83F1\u5F62 / \u5706\u67F1 / \u77E9\u5F62
-*\u91CD\u70B9\u8282\u70B9                      \u2190 * \u524D\u7F00\u9AD8\u4EAE
-group \u5206\u7EC4\u540D: B, C            \u2190 \u628A\u8282\u70B9\u6846\u8FDB\u4E00\u4E2A\u5206\u7EC4
+A -> B: label                 \u2190 solid line; text after the colon is the edge label
+A --> C                       \u2190 dashed line
+A -> B -> C                   \u2190 chain
+A -> B & C                    \u2190 fan-out
+(Start)  {Valid?}  [(Database)]  [text with: a colon]   \u2190 rounded / diamond / cylinder / rectangle
+*Key node                     \u2190 * prefix highlights
+group Group name: B, C        \u2190 draw a group box around nodes
 \`\`\`
-- \u8282\u70B9\u4EE5\u62EC\u53F7\u5185\u7684\u6587\u5B57\u4F5C\u4E3A\u8EAB\u4EFD\uFF0C\u4E4B\u540E\u53EF\u76F4\u63A5\u5199\u6587\u5B57\u5F15\u7528\u3002\u9ED8\u8BA4\u65B9\u5411 TB\uFF08\u81EA\u4E0A\u800C\u4E0B\uFF09\u3002`,
-  example: "```flow LR\n(\u7528\u6237) -> \u7F51\u5173: HTTPS\n\u7F51\u5173 -> \u9274\u6743 & *\u4E1A\u52A1\u670D\u52A1\n\u4E1A\u52A1\u670D\u52A1 -> [(\u6570\u636E\u5E93)]\ngroup \u540E\u7AEF: \u9274\u6743, \u4E1A\u52A1\u670D\u52A1\n```",
-  render(text, { args, uid }) {
+- The text inside the brackets is the node's identity; later lines can refer to the node by that text alone. The default direction is TB (top to bottom).
+- Change markers show what a plan adds, removes and changes. A line can start with + (added), - (removed) or ~ (changed), followed by a space:
+\`\`\`flow LR
+Client -> Gateway
++ Gateway -> [(Cache)]: lookup
++ Cache -> Service: miss
+- Gateway -> Service
+~ *Service
+\`\`\`
+  - A marker applies to every link on its line. A node is removed when it appears only on - lines, added when it appears only on + lines, and unchanged when it also appears on an unmarked line, even if its links changed. ~ Node on a line without an arrow marks that node as changed.
+  - ~ on a line with an arrow is an error: remove the old link with - and add the new one with +. That is also how a link's label changes. The same link both unmarked and marked is an error too.
+  - + group Name: A, B and - group Name: A, B mark a group box. A group that is not removed and holds only removed nodes is a warning. Markers combine with * and every shape bracket.
+  - The Changes view draws added in the theme's ok color, removed faded with a struck-through label, changed with a warn outline, and each marked node with a +, \u2212 or ~ badge. A count row and a Before / Changes / After switch sit under the diagram: Before and After show the diagram as it was and as it will be, plain and without the items that are not in that view.
+  - A line that starts with a marker and a space is always read as a marker. To keep a node name that starts with "- ", write it in brackets: [- Gateway].`,
+  example: "```flow LR\n(User) -> Gateway: HTTPS\nGateway -> Auth & *Service\nService -> [(Database)]\ngroup Backend: Auth, Service\n```",
+  render(text, { args, uid, ui, warn, video, dir: pageDir = "ltr" }) {
     const model = parseFlow(text);
-    const dir = (args.match(/\b(TB|LR|BT|RL)\b/i)?.[1] ?? "TB").toUpperCase();
-    return `<figure class="am-diagram am-flow">${layout2(model, DIRS.has(dir) ? dir : "TB", uid())}</figure>`;
+    model.warnings.forEach((w) => warn?.(w));
+    const flowDir = (args.match(/\b(TB|LR|BT|RL)\b/i)?.[1] ?? "TB").toUpperCase();
+    const html = `<figure class="am-diagram am-flow">${layout2(model, DIRS.has(flowDir) ? flowDir : "TB", uid(), ui, pageDir)}</figure>`;
+    return withDelta(html, [...model.nodes.values(), ...model.edges, ...model.groups].map((x2) => x2.state ?? null), { ui, video });
   }
 };
 function parseFlow(text) {
   const nodes = /* @__PURE__ */ new Map();
   const edges = [];
   const groups = [];
-  const upsert = (spec, line) => {
+  const upsert = (spec, line, mark) => {
     const prev = nodes.get(spec.id);
-    if (!prev) nodes.set(spec.id, { ...spec, line });
-    else nodes.set(spec.id, { ...prev, shape: spec.explicit ? spec.shape : prev.shape, hi: prev.hi || spec.hi });
+    const seen = { before: mark !== "+", after: mark !== "-", tilde: mark === "~" };
+    if (!prev) nodes.set(spec.id, { ...spec, ...seen, line });
+    else {
+      const merged = { before: prev.before || seen.before, after: prev.after || seen.after, tilde: prev.tilde || seen.tilde };
+      nodes.set(spec.id, { ...prev, ...merged, shape: spec.explicit ? spec.shape : prev.shape, hi: prev.hi || spec.hi });
+    }
     return spec.id;
   };
-  for (const { text: t, line } of contentLines(text)) {
+  for (const { text: raw, line } of contentLines(text)) {
+    const { mark, text: t } = splitMarker(raw);
     const g = t.match(/^group\s+(.+?)\s*[:：]\s*(.+)$/i);
     if (g) {
-      groups.push({ name: g[1], members: g[2].split(/[,，]/).map((s) => s.trim()).filter(Boolean), line });
+      if (mark === "~") throw new ComponentError("flow: ~ marks a node, not a group. Use + group or - group to add or remove a group box", line);
+      const state = markState(mark);
+      groups.push({ name: g[1], members: g[2].split(/[,，]/).map((s) => s.trim()).filter(Boolean), line, ...state && { state } });
       continue;
     }
     const { chain, label } = parseChain(t, line);
-    const ids = chain.map((step) => ({ ...step, ids: step.nodes.map((n) => upsert(n, line)) }));
+    if (mark === "~" && chain.length > 1) {
+      throw new ComponentError('flow: ~ marks a node, not a link. To change a link, remove the old one and add the new one: "- A -> B" then "+ A -> C"', line);
+    }
+    const ids = chain.map((step) => ({ ...step, ids: step.nodes.map((n) => upsert(n, line, mark)) }));
     for (let k2 = 1; k2 < ids.length; k2++) {
       const isLast = k2 === ids.length - 1;
       for (const from of ids[k2 - 1].ids) {
         for (const to of ids[k2].ids) {
-          edges.push({ from, to, dashed: ids[k2].arrow === "-->", label: isLast ? label : "", line });
+          const state = markState(mark);
+          edges.push({ from, to, dashed: ids[k2].arrow === "-->", label: isLast ? label : "", line, ...state && { state } });
         }
       }
     }
   }
-  if (!nodes.size) throw new ComponentError("flow \u81F3\u5C11\u9700\u8981\u4E00\u4E2A\u8282\u70B9", 1);
+  if (!nodes.size) throw new ComponentError("flow needs at least one node", 1);
   for (const grp of groups) {
     const missing = grp.members.filter((m) => !nodes.has(m));
-    if (missing.length) throw new ComponentError(`group ${grp.name} \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u8282\u70B9\uFF1A${missing.join("\u3001")}`, grp.line);
+    if (missing.length) throw new ComponentError(`group ${grp.name} refers to nodes that do not exist: ${missing.join(", ")}`, grp.line);
   }
-  return { nodes, edges, groups };
+  checkLinks(edges);
+  const settled = new Map([...nodes].map(([id, n]) => {
+    const state = nodeState(n);
+    return [id, state ? { ...n, state } : n];
+  }));
+  return { nodes: settled, edges, groups, warnings: groupWarnings(groups, settled) };
+}
+function nodeState({ before, after, tilde }) {
+  if (before && !after) return "removed";
+  if (after && !before) return "added";
+  return tilde ? "changed" : null;
+}
+function checkLinks(edges) {
+  const key = (e) => `${e.from}\0${e.to}`;
+  for (const e of edges.filter((x2) => x2.state)) {
+    const plain = edges.find((x2) => !x2.state && key(x2) === key(e));
+    if (plain) throw new ComponentError(`flow: the link ${e.from} -> ${e.to} is written unmarked on line ${plain.line} and as ${e.state === "added" ? "+" : "-"} here. Mark every line of that link, or none`, e.line);
+  }
+}
+function groupWarnings(groups, nodes) {
+  return groups.filter((g) => g.state !== "removed" && g.members.every((m) => nodes.get(m).state === "removed")).map((g) => ({ line: g.line, message: `group ${g.name} holds only removed nodes and would be an empty box after the change. Mark it with "- group ${g.name}: ${g.members.join(", ")}"` }));
 }
 function parseChain(t, line) {
   const chain = [];
@@ -4040,7 +6402,7 @@ function parseChain(t, line) {
   }
   const rest = t.slice(pos).trim();
   if (rest && !/^[:：]/.test(rest)) {
-    throw new ComponentError(`flow \u65E0\u6CD5\u89E3\u6790\uFF1A"${t}"\u3002\u5173\u7CFB\u5199\u4F5C A -> B: \u6807\u7B7E`, line);
+    throw new ComponentError(`flow cannot parse "${t}". Write a link as A -> B: label`, line);
   }
   return { chain, label: rest.replace(/^[:：]\s*/, "") };
 }
@@ -4053,7 +6415,7 @@ function parseNode(t, start, line) {
   let end;
   if (bracket) {
     const close = t.indexOf(bracket.close, pos + bracket.open.length);
-    if (close === -1) throw new ComponentError(`flow \u5F62\u72B6\u62EC\u53F7\u672A\u95ED\u5408\uFF1A\u7F3A\u5C11 ${bracket.close}`, line);
+    if (close === -1) throw new ComponentError(`flow: unclosed shape bracket, missing ${bracket.close}`, line);
     label = t.slice(pos + bracket.open.length, close).trim();
     end = close + bracket.close.length;
   } else {
@@ -4061,7 +6423,7 @@ function parseNode(t, start, line) {
     label = m[1].trim();
     end = pos + m[0].length;
   }
-  if (!label) throw new ComponentError(`flow \u5B58\u5728\u7A7A\u8282\u70B9\uFF1A"${t}"`, line);
+  if (!label) throw new ComponentError(`flow has an empty node: "${t}"`, line);
   return { node: { id: label, label, shape: bracket?.shape ?? "rect", explicit: Boolean(bracket), hi }, end };
 }
 function nodeSize(node) {
@@ -4078,47 +6440,189 @@ function nodeSize(node) {
   }[node.shape];
   return { lines, width: size[0], height: size[1] };
 }
-function layout2({ nodes, edges, groups }, rankdir, id) {
+var nodeKey = (i) => `n${i}`;
+var gkey = (i) => `g${i}`;
+var reserveKey = (i) => `r${i}`;
+function runLayout({ nodes, edges, groups }, rankdir, rtl, widths, reserve) {
   const g = new $o.graphlib.Graph({ compound: groups.length > 0, multigraph: true });
   g.setGraph({ rankdir, nodesep: 36, ranksep: 46, marginx: 14, marginy: groups.length ? 26 : 14 });
   g.setDefaultEdgeLabel(() => ({}));
+  const key = new Map([...nodes.keys()].map((name, i) => [name, nodeKey(i)]));
   const sizes = /* @__PURE__ */ new Map();
   for (const n of nodes.values()) {
     const s = nodeSize(n);
     sizes.set(n.id, s);
-    g.setNode(n.id, { width: s.width, height: s.height });
+    g.setNode(key.get(n.id), { width: s.width, height: s.height });
   }
+  const vertical = rankdir === "TB" || rankdir === "BT";
   groups.forEach((grp, i) => {
-    g.setNode(`__group${i}`, { label: grp.name });
-    grp.members.forEach((m) => g.setParent(m, `__group${i}`));
+    g.setNode(gkey(i), { label: grp.name });
+    grp.members.forEach((m) => g.setParent(key.get(m), gkey(i)));
+    if (!reserve.has(i) || !vertical) return;
+    g.setNode(reserveKey(i), { width: widths[i] + 4, height: CLUSTER_LABEL_H });
+    g.setParent(reserveKey(i), gkey(i));
+    const down = edges.map((e) => rankdir === "TB" ? [e.from, e.to] : [e.to, e.from]);
+    const link = (a, b, name) => rankdir === "TB" ? g.setEdge(a, b, {}, name) : g.setEdge(b, a, {}, name);
+    const inside = new Set(grp.members);
+    const first = grp.members.filter((m) => !down.some(([a, b]) => b === m && a !== m && inside.has(a)));
+    (first.length ? first : grp.members.slice(0, 1)).forEach((m, k2) => {
+      link(reserveKey(i), key.get(m), `r${i}-${k2}`);
+      down.forEach(([a, b], j2) => {
+        if (b === m && !inside.has(a)) link(key.get(a), reserveKey(i), `r${i}-${k2}-${j2}`);
+      });
+    });
   });
   edges.forEach((e, i) => {
-    const label2 = e.label ? { label: e.label, width: measure(e.label, EDGE_FS) + 12, height: 18, labelpos: "c" } : {};
-    g.setEdge(e.from, e.to, label2, `e${i}`);
+    const label = e.label ? { label: e.label, width: measure(e.label, EDGE_FS) + 12, height: 18, labelpos: "c" } : {};
+    g.setEdge(key.get(e.from), key.get(e.to), label, `e${i}`);
   });
   $o.layout(g);
+  if (rtl) mirrorLayout(g);
+  if (!vertical) {
+    for (const [i, side] of reserve) {
+      const c = g.node(gkey(i));
+      insertStrip(g, side === "top" ? top(c) + 2 : top(c) + c.height - 2, CLUSTER_LABEL_H + 3);
+    }
+  }
+  return { g, key, sizes };
+}
+function insertStrip(g, y2, d) {
+  for (const v of g.nodes()) {
+    const n = g.node(v);
+    if (v.startsWith("g") && top(n) < y2 && top(n) + n.height > y2) {
+      n.height += d;
+      n.y += d / 2;
+    } else if (n.y > y2) n.y += d;
+  }
+  for (const e of g.edges()) {
+    const edge = g.edge(e);
+    edge.points = edge.points.map((p) => p.y > y2 ? { ...p, y: p.y + d } : p);
+    if (edge.y !== void 0 && edge.y > y2) edge.y += d;
+  }
+  g.graph().height += d;
+}
+var top = (n) => n.y - n.height / 2;
+function placeLabels({ g, key, sizes }, { nodes, edges, groups }, widths, rtl, reserve) {
+  const boxes = [];
+  for (const n of nodes.values()) {
+    const { x: x2, y: y2 } = g.node(key.get(n.id));
+    const { width: w, height: h2 } = sizes.get(n.id);
+    boxes.push([x2 - w / 2, y2 - h2 / 2, x2 + w / 2, y2 + h2 / 2]);
+  }
+  const segments = [];
+  edges.forEach((e, i) => {
+    const data = g.edge({ v: key.get(e.from), w: key.get(e.to), name: `e${i}` });
+    const pts = data.points;
+    for (let k2 = 1; k2 < pts.length; k2++) segments.push([pts[k2 - 1], pts[k2]]);
+    if (e.label) {
+      const w = measure(e.label, EDGE_FS) + 10;
+      boxes.push([data.x - w / 2, data.y - 9, data.x + w / 2, data.y + 9]);
+    }
+  });
+  return groups.map((grp, i) => {
+    const c = g.node(gkey(i));
+    const left = c.x - c.width / 2;
+    const right = left + c.width;
+    const w = widths[i];
+    const own = grp.state ? [[rtl ? left - 8 : right - 8, top(c) - 8, rtl ? left + 8 : right + 8, top(c) + 8]] : [];
+    const free = (x02, y0, y1) => {
+      const box = [x02 - 5, y0 - 2, x02 + w + 5, y1 + 2];
+      const wide = [x02 - 10, y0 - 2, x02 + w + 10, y1 + 2];
+      return ![...boxes, ...own].some((b) => overlaps(wide, b)) && !segments.some(([p, q3]) => segmentHits(p, q3, box));
+    };
+    const room = g.hasNode(reserveKey(i)) ? g.node(reserveKey(i)) : null;
+    const baselines = reserve.get(i) === "bottom" ? [top(c) + c.height - 6] : room ? [top(c) + 14, room.y + 4] : [top(c) + 14];
+    for (const baseline2 of baselines) {
+      const [y0, y1] = [baseline2 - 11, baseline2 + 4];
+      for (let s = 0; s <= Math.max(0, c.width - 16 - w); s += 4) {
+        const x02 = rtl ? right - 8 - w - s : left + 8 + s;
+        if (free(x02, y0, y1)) {
+          boxes.push([x02, y0, x02 + w, y1]);
+          return [rtl ? x02 + w : x02, baseline2];
+        }
+      }
+    }
+    if (!room) return null;
+    const baseline = baselines.at(-1);
+    const x0 = room.x - w / 2;
+    boxes.push([x0, baseline - 11, x0 + w, baseline + 4]);
+    return [rtl ? x0 + w : x0, baseline];
+  });
+}
+var overlaps = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+function segmentHits(p, q3, [x0, y0, x1, y1]) {
+  const dx = q3.x - p.x;
+  const dy = q3.y - p.y;
+  let t0 = 0;
+  let t1 = 1;
+  for (const [a, b] of [[-dx, p.x - x0], [dx, x1 - p.x], [-dy, p.y - y0], [dy, y1 - p.y]]) {
+    if (a === 0) {
+      if (b < 0) return false;
+    } else {
+      const t = b / a;
+      if (a < 0) t0 = Math.max(t0, t);
+      else t1 = Math.min(t1, t);
+      if (t0 > t1) return false;
+    }
+  }
+  return true;
+}
+var labelWidth = (name, pageDir) => measure(name, CLUSTER_FS, { mono: pageDir !== "rtl" }) + 2;
+function layout2(model, rankdir, id, ui, pageDir = "ltr") {
+  const { nodes, edges, groups } = model;
+  const rtl = pageDir === "rtl";
+  const widths = groups.map((grp) => labelWidth(grp.name, pageDir));
+  let run2 = runLayout(model, rankdir, rtl, widths, /* @__PURE__ */ new Set());
+  let spots = placeLabels(run2, model, widths, rtl, /* @__PURE__ */ new Map());
+  const reserve = /* @__PURE__ */ new Map();
+  for (const side of ["top", "bottom"]) {
+    const crowded = spots.flatMap((s, i) => s ? [] : [i]);
+    if (!crowded.length) break;
+    for (const i of crowded) reserve.set(i, side);
+    run2 = runLayout(model, rankdir, rtl, widths, reserve);
+    spots = placeLabels(run2, model, widths, rtl, reserve);
+  }
+  const { g, key, sizes } = run2;
   const clusters = groups.map((grp, i) => {
-    const c = g.node(`__group${i}`);
+    const c = g.node(gkey(i));
     const x2 = c.x - c.width / 2;
     const y2 = c.y - c.height / 2;
-    return `<rect class="am-cluster" x="${f(x2)}" y="${f(y2)}" width="${f(c.width)}" height="${f(c.height)}" rx="4"/><text class="am-cluster-label" x="${f(x2 + 8)}" y="${f(y2 + 14)}">${esc(grp.name)}</text>`;
+    const mark = deltaAttr(grp.state);
+    const badgeX = rtl ? x2 : x2 + c.width;
+    const [labelX, labelY] = spots[i] ?? [rtl ? x2 + c.width - 8 : x2 + 8, y2 + 14];
+    return `<rect class="am-cluster"${mark} x="${f(x2)}" y="${f(y2)}" width="${f(c.width)}" height="${f(c.height)}" rx="4"/><text class="am-cluster-label"${mark} x="${f(labelX)}" y="${f(labelY)}">${esc(svgLine(grp.name, pageDir))}</text>${badgeSvg(grp.state, badgeX, y2)}`;
   });
+  const stepOf = new Map([.../* @__PURE__ */ new Set([...[...nodes.values()].map((n) => n.line), ...edges.map((e) => e.line)])].sort((a, b) => a - b).map((l3, k2) => [l3, k2]));
   const edgeSvg = edges.map((e, i) => {
-    const data = g.edge({ v: e.from, w: e.to, name: `e${i}` });
-    const pts = clipEnds(data.points, g.node(e.from), nodes.get(e.from).shape, g.node(e.to), nodes.get(e.to).shape);
-    const path = `<path class="am-edge${e.dashed ? " am-edge--dashed" : ""}" d="${smoothPath(pts)}" marker-end="url(#${id}-arrow)"/>`;
-    if (!e.label) return path;
+    const data = g.edge({ v: key.get(e.from), w: key.get(e.to), name: `e${i}` });
+    const pts = clipEnds(data.points, g.node(key.get(e.from)), nodes.get(e.from).shape, g.node(key.get(e.to)), nodes.get(e.to).shape);
+    const head = e.state ? `${id}-arrow-${e.state}` : `${id}-arrow`;
+    const path = `<path class="am-edge${e.dashed ? " am-edge--dashed" : ""}" d="${smoothPath(pts)}" marker-end="url(#${head})"/>`;
+    const open2 = `<g data-step="${stepOf.get(e.line)}"${deltaAttr(e.state)}>`;
+    if (!e.label) return `${open2}${path}</g>`;
     const w = measure(e.label, EDGE_FS) + 10;
-    return `${path}<g class="am-edge-label"><rect x="${f(data.x - w / 2)}" y="${f(data.y - 9)}" width="${f(w)}" height="18" rx="3"/>${textLines([e.label], data.x, data.y, LH2)}</g>`;
+    return `${open2}${path}<g class="am-edge-label"><rect x="${f(data.x - w / 2)}" y="${f(data.y - 9)}" width="${f(w)}" height="18" rx="3"/>${textLines([e.label], data.x, data.y, LH2, "", pageDir)}</g></g>`;
   });
   const nodeSvg = [...nodes.values()].map((n) => {
-    const { x: x2, y: y2 } = g.node(n.id);
+    const { x: x2, y: y2 } = g.node(key.get(n.id));
     const { width: w, height: h2, lines } = sizes.get(n.id);
-    return `<g class="am-node am-node--${n.shape}${n.hi ? " am-node--hi" : ""}">${shapeSvg(n.shape, x2, y2, w, h2)}${textLines(lines, x2, y2 + (n.shape === "db" ? 4 : 0), LH2)}</g>`;
+    const badge = badgeSvg(n.state, ...badgePoint(n.shape, x2, y2, w, h2, rtl));
+    return `<g class="am-node am-node--${n.shape}${n.hi ? " am-node--hi" : ""}" data-key="${esc(n.label)}" data-step="${stepOf.get(n.line)}"${deltaAttr(n.state)}>${shapeSvg(n.shape, x2, y2, w, h2)}${textLines(lines, x2, y2 + (n.shape === "db" ? 4 : 0), LH2, "", pageDir)}${badge}</g>`;
   });
   const { width, height } = g.graph();
-  const label = `\u6D41\u7A0B\u56FE\uFF1A${[...nodes.keys()].slice(0, 8).join("\u3001")}`;
-  return `${svgOpen(width, height, label)}${arrowDefs(id)}<g>${clusters.join("")}</g><g>${edgeSvg.join("")}</g><g>${nodeSvg.join("")}</g></svg>`;
+  const label = diagramLabel(ui, "flow", [...nodes.keys()].slice(0, 8));
+  const heads = ["added", "removed"].filter((state) => edges.some((e) => e.state === state));
+  return `${svgOpen(width, height, label, pageDir)}${arrowDefs(id, heads)}<g>${clusters.join("")}</g><g>${edgeSvg.join("")}</g><g>${nodeSvg.join("")}</g></svg>`;
+}
+function badgeSvg(state, x2, y2) {
+  if (!state) return "";
+  return `<g class="am-delta-badge am-delta-badge--${state}"${deltaAttr(state)} transform="translate(${f(x2)},${f(y2)})"><circle r="7"/><text text-anchor="middle" dominant-baseline="central">${SIGN[state]}</text></g>`;
+}
+function badgePoint(shape, x2, y2, w, h2, rtl = false) {
+  const s = rtl ? -1 : 1;
+  if (shape === "diamond") return [x2 + s * (w / 4), y2 - h2 / 4];
+  if (shape === "round") return [x2 + s * (w / 2 - h2 * 0.15), y2 - h2 / 2 + h2 * 0.15];
+  return [x2 + s * (w / 2), y2 - h2 / 2];
 }
 function shapeSvg(shape, x2, y2, w, h2) {
   const l3 = x2 - w / 2;
@@ -4147,8 +6651,486 @@ function diamondPoint(node, toward) {
   return { x: node.x + dx / k2, y: node.y + dy / k2 };
 }
 
+// src/components/er.js
+var FS3 = 13;
+var FIELD_FS = 12;
+var KEY_FS = 11;
+var EDGE_FS2 = 11.5;
+var LH3 = 17;
+var HEAD_LH = 20;
+var FIELD_LH = 17;
+var PAD = 11;
+var KEY_GAP = 12;
+var SIGN_W = 14;
+var MIN_WIDTH = 92;
+var LOOP_OUT = 34;
+var LOOP_STEP = 20;
+var LOOP_END = 18;
+var LOOP_LABEL = 24;
+var LOOP_GAP = 6;
+var DIRS2 = /* @__PURE__ */ new Set(["TB", "LR", "BT", "RL"]);
+var CARDS = ["1\\.\\.\\*", "0\\.\\.1", "\\*", "1"];
+var MARKERS = /* @__PURE__ */ new Set(["PK", "FK", "UK"]);
+var RELATIONSHIP = new RegExp(`^(\\S+)\\s+(${CARDS.join("|")})\\s*--\\s*(${CARDS.join("|")})\\s+(\\S+)\\s*(?::\\s*(.*))?$`);
+var MERMAID = /^(\S+)\s+([|o{}]{2})(?:--|\.\.)([|o{}]{2})\s+(\S+)\s*(?::\s*(.*))?$/;
+var MERMAID_CARDS = { "||": "1", "o|": "0..1", "|o": "0..1", "|{": "1..*", "}|": "1..*", "o{": "*", "}o": "*" };
+var er_default = {
+  name: "er",
+  summary: "Entity relationship diagram (automatic layout, crow's-foot ends)",
+  syntax: `\`\`\`er [TB|LR|BT|RL]
+*User                         \u2190 a line at column 0 is an entity; * highlights it
+  id PK                       \u2190 an indented line is a field: name [type] [PK|FK|UK]
+  email string UK
+Order
+  id PK
+  user_id FK -> User          \u2190 FK -> Entity draws the many-to-one relationship (*--1)
+User 1--* Order: places       \u2190 A <cardinality>--<cardinality> B: label (optional)
+\`\`\`
+- Cardinalities are 1, 0..1, * and 1..*. The left end is drawn at the entity on the left, the right end at the entity on the right.
+- A field's FK -> Entity already draws its relationship, so a relationship line is optional. A relationship line that names the same two entities replaces the implied one and sets the cardinality and the label. Two FK fields that point at the same entity draw two relationships.
+- The type is optional: \`email UK\` is a field with a key but no type.
+- A Mermaid line such as USER ||--o{ ORDER is an error that shows the line written for this component.
+- An entity a field or a relationship names must be written at column 0.
+- A field that points at its own entity draws a loop: beside the box, or below it in LR and RL.
+- The default direction is TB (top to bottom).
+- Change markers show what a plan adds, removes and changes. A line can start with + (added), - (removed) or ~ (changed), followed by a space: an entity line at column 0, a field line after its indentation, or a relationship line:
+\`\`\`er
+User
+  ~ email varchar(320) UK
+  + phone string
+Order
+  + coupon_id FK -> Coupon
+  - legacy_ref string
++ Coupon
+  id PK
+- AuditLog
+  id PK
++ User 1--* Coupon: owns
+\`\`\`
+  - An entity is marked only by its own line; a marked field does not mark it. The fields of a + or - entity inherit its marker, and a field with another marker is an error. ~ marks a field as changed and does not show the old value. Markers combine with *.
+  - A relationship from an FK field takes the marker of that field; otherwise it is added or removed with an entity at either end. A written relationship line takes its own marker. To change one, remove the old line with - and add the new one with +; ~ on a relationship line is an error.
+  - The Changes view draws added in the theme's ok color, removed faded with struck-through text, changed with a warn outline, and each marked entity with a +, \u2212 or ~ badge. A marked field row gets a tinted band and its sign at the start of the row. A count row (entities, fields and written relationship lines) and a Before / Changes / After switch sit under the diagram: Before and After show the schema as it was and as it will be, plain and without the items that are not in that view.
+  - A line that starts with a marker and a space is always read as a marker.`,
+  example: "```er LR\n*User\n  id PK\n  email string UK\nOrder\n  id PK\n  user_id FK -> User\nUser 1--* Order: places\n```",
+  render(text, { args, ui, video, dir: pageDir = "ltr" }) {
+    const model = parseEr(text);
+    const dir = (args.match(/\b(TB|LR|BT|RL)\b/i)?.[1] ?? "TB").toUpperCase();
+    const html = `<figure class="am-diagram am-er">${layout3(model, DIRS2.has(dir) ? dir : "TB", ui, pageDir)}</figure>`;
+    const states = [...model.entities.values()].flatMap((e) => [e.state, ...e.fields.map((x2) => x2.state)]).concat(model.written.map((rel) => rel.state));
+    return withDelta(html, states.map((state) => state ?? null), { ui, video });
+  }
+};
+function parseEr(text) {
+  const entities = /* @__PURE__ */ new Map();
+  const written = [];
+  let current = null;
+  for (const { raw, text: line, line: n } of contentLines(text)) {
+    const { mark, text: body } = splitMarker(line);
+    const state = markState(mark);
+    if (/^\s/.test(raw)) {
+      if (!current) throw new ComponentError(`"${line}": a field line must follow an entity; write the entity name at the start of its own line first`, n);
+      current.fields.push(settleField(parseField(body, n), mark, current, n));
+      continue;
+    }
+    const rel = body.match(RELATIONSHIP);
+    if (rel) {
+      if (mark === "~") throw new ComponentError('er: ~ marks an entity or a field, not a relationship. To change a relationship, remove the old line and add the new one: "- A 1--* B" then "+ A 1--1 B"', n);
+      written.push({ from: rel[1], fromCard: rel[2], to: rel[4], toCard: rel[3], label: rel[5]?.trim() ?? "", line: n, ...state && { state } });
+      current = null;
+      continue;
+    }
+    const mermaid = body.match(MERMAID);
+    if (mermaid && MERMAID_CARDS[mermaid[2]] && MERMAID_CARDS[mermaid[3]]) {
+      throw new ComponentError(`"${line}" is Mermaid syntax; write ${mark && mark !== "~" ? `${mark} ` : ""}${erLineOf(mermaid)}`, n);
+    }
+    if (body.includes("--") || body.includes("{") || body.includes("}")) {
+      throw new ComponentError(`"${line}" is not an entity of this component; write A 1--* B for a relationship, or the entity name at column 0 on its own line`, n);
+    }
+    const hi = body.startsWith("*");
+    const name = (hi ? body.slice(1) : body).trim();
+    if (!name) throw new ComponentError("an entity needs a name", n);
+    if (entities.has(name)) throw new ComponentError(`entity "${name}" is written twice`, n);
+    current = { name, hi, fields: [], line: n, ...state && { state } };
+    entities.set(name, current);
+  }
+  if (!entities.size) throw new ComponentError("an entity relationship diagram needs at least one entity (a line at column 0)", 1);
+  for (const entity of entities.values()) {
+    for (const field of entity.fields) {
+      if (field.ref && !entities.has(field.ref)) throw new ComponentError(`no entity "${field.ref}"; write it at column 0`, field.line);
+    }
+  }
+  for (const rel of written) {
+    for (const name of [rel.from, rel.to]) {
+      if (!entities.has(name)) throw new ComponentError(`no entity "${name}"; write it at column 0`, rel.line);
+    }
+  }
+  checkEnds(entities, written);
+  return { entities, written };
+}
+function checkEnds(entities, written) {
+  const replaced = new Set(written.map((rel) => pairKey(rel.from, rel.to)));
+  const implied = [...entities.values()].flatMap((entity) => entity.fields.filter((field) => field.ref && !replaced.has(pairKey(entity.name, field.ref))).map((field) => ({ from: entity.name, to: field.ref, line: field.line, state: field.state === "changed" ? void 0 : field.state })));
+  for (const rel of [...implied, ...written]) {
+    const ends = [rel.from, rel.to].map((name) => entities.get(name));
+    const added = ends.find((e) => e.state === "added");
+    const removed = ends.find((e) => e.state === "removed");
+    if (rel.state === "added" && removed) {
+      throw new ComponentError(`er: the + relationship ${rel.from} to ${rel.to} touches the removed entity ${removed.name}, so it would dangle in the After view. Remove the + or keep ${removed.name}`, rel.line);
+    }
+    if (rel.state === "removed" && added) {
+      throw new ComponentError(`er: the - relationship ${rel.from} to ${rel.to} touches the added entity ${added.name}, so it would dangle in the Before view. Remove the - or do not add ${added.name}`, rel.line);
+    }
+    if (!rel.state && added && removed) {
+      throw new ComponentError(`er: the relationship ${rel.from} to ${rel.to} joins the added entity ${added.name} and the removed entity ${removed.name}, so it exists in neither view. Remove it or change an entity marker`, rel.line);
+    }
+  }
+}
+function settleField(field, mark, entity, n) {
+  const own = markState(mark);
+  const inherited = entity.state === "added" || entity.state === "removed" ? entity.state : null;
+  if (inherited && own && own !== inherited) {
+    throw new ComponentError(`er: "${mark}" under the ${inherited} entity ${entity.name} contradicts it. The fields of a ${inherited} entity are ${inherited} too; remove the marker or move the field`, n);
+  }
+  const state = inherited ?? own;
+  return state ? { ...field, state } : field;
+}
+function parseField(line, n) {
+  const tokens = line.split(/\s+/);
+  const name = tokens.shift();
+  const arrow = tokens.indexOf("->");
+  const head = arrow === -1 ? tokens : tokens.slice(0, arrow);
+  const ref = arrow === -1 ? null : tokens[arrow + 1];
+  if (arrow !== -1 && (ref === void 0 || arrow + 2 !== tokens.length)) {
+    throw new ComponentError(`"${line}": write the entity a field points at as "-> Entity", after the key marker`, n);
+  }
+  if (ref !== null && head.at(-1) !== "FK") {
+    throw new ComponentError(`"${line}": only a FK field points at another entity; mark the field FK`, n);
+  }
+  const at3 = head.findIndex((t) => MARKERS.has(t));
+  if (at3 !== -1 && at3 !== head.length - 1) throw new ComponentError(`"${line}": "${head[at3]}" must be the last word before "->"`, n);
+  const marker = at3 === -1 ? null : head[at3];
+  const type = head.slice(0, at3 === -1 ? head.length : at3).join(" ");
+  return { name, type, marker, ref, line: n };
+}
+function erLineOf(mermaid) {
+  const [, from, left, right, to, label] = mermaid;
+  const text = label?.trim();
+  return `${from} ${MERMAID_CARDS[left]}--${MERMAID_CARDS[right]} ${to}${text ? `: ${text}` : ""}`;
+}
+function relationships({ entities, written }) {
+  const ends = (...names) => {
+    const states = names.map((name) => entities.get(name).state);
+    return ["removed", "added"].find((s) => states.includes(s));
+  };
+  const withState = (rel, state) => state ? { ...rel, state } : rel;
+  const implied = [];
+  for (const entity of entities.values()) {
+    for (const field of entity.fields) {
+      if (!field.ref) continue;
+      const own = field.state === "changed" ? null : field.state;
+      implied.push(withState({ from: entity.name, fromCard: "*", to: field.ref, toCard: "1", label: "", line: field.line }, own ?? ends(entity.name, field.ref)));
+    }
+  }
+  const replaced = new Set(written.map((rel) => pairKey(rel.from, rel.to)));
+  const lines = written.map((rel) => withState(rel, rel.state ?? ends(rel.from, rel.to) ?? implied.find((x2) => pairKey(x2.from, x2.to) === pairKey(rel.from, rel.to) && x2.state)?.state));
+  return [...implied.filter((rel) => !replaced.has(pairKey(rel.from, rel.to))), ...lines];
+}
+var pairKey = (a, b) => [a, b].sort().join("\0");
+var fieldText = (field) => field.type ? `${field.name} ${field.type}` : field.name;
+var nameWidth = (entity) => measure(entity.name, FS3, { bold: true });
+var rowWidth = (entity, field) => measure(fieldText(field), FIELD_FS, { bold: entity.hi }) + keyWidth(entity, field) + signWidth(entity) + 2 * PAD;
+var signWidth = (entity) => entity.fields.some((x2) => x2.state) ? SIGN_W : 0;
+var keyWidth = (entity, field) => field.marker ? measure(field.marker, KEY_FS, { mono: true, bold: entity.hi }) + KEY_GAP : 0;
+function nodeSize2(entity) {
+  const rows = entity.fields.map((field) => rowWidth(entity, field));
+  return { width: Math.ceil(Math.max(MIN_WIDTH, nameWidth(entity) + 2 * PAD, ...rows)), height: HEAD_LH + entity.fields.length * FIELD_LH + 2 * PAD };
+}
+function layout3(model, rankdir, ui, pageDir = "ltr") {
+  const { entities } = model;
+  const rels = relationships(model);
+  const loops = rels.filter((rel) => rel.from === rel.to);
+  const g = new $o.graphlib.Graph({ multigraph: true });
+  g.setGraph({ rankdir, nodesep: 44, ranksep: 62, marginx: 14, marginy: 14 });
+  g.setDefaultEdgeLabel(() => ({}));
+  const key = new Map([...entities.keys()].map((name, i) => [name, `n${i}`]));
+  const below = rankdir === "LR" || rankdir === "RL";
+  const room = /* @__PURE__ */ new Map();
+  if (below) {
+    for (const name of entities.keys()) {
+      const own = loops.filter((rel) => rel.from === name);
+      if (own.length) room.set(name, loopRoom(own));
+    }
+  }
+  const sizes = /* @__PURE__ */ new Map();
+  for (const entity of entities.values()) {
+    const size = nodeSize2(entity);
+    sizes.set(entity.name, size);
+    g.setNode(key.get(entity.name), { width: size.width, height: size.height + (room.get(entity.name) ?? 0) });
+  }
+  const centre = (name) => {
+    const { x: x2, y: y2 } = g.node(key.get(name));
+    return { x: x2, y: y2 - (room.get(name) ?? 0) / 2 };
+  };
+  rels.filter((rel) => rel.from !== rel.to).forEach((rel, i) => {
+    const label2 = rel.label ? { label: rel.label, width: measure(rel.label, EDGE_FS2) + 10, height: 18, labelpos: "c" } : {};
+    g.setEdge(key.get(rel.from), key.get(rel.to), label2, `e${i}`);
+  });
+  $o.layout(g);
+  const rtl = pageDir === "rtl";
+  if (rtl) mirrorLayout(g);
+  const steps = [.../* @__PURE__ */ new Set([...[...entities.values()].map((e) => e.line), ...rels.map((r) => r.line)])].sort((a, b) => a - b);
+  const stepOf = new Map(steps.map((line, i) => [line, i]));
+  const straight = rels.filter((rel) => rel.from !== rel.to).map((rel, i) => {
+    const data = g.edge({ v: key.get(rel.from), w: key.get(rel.to), name: `e${i}` });
+    const points = data.points.map((p) => ({ ...p }));
+    if (room.has(rel.from)) points[0] = clipToBox(centre(rel.from), sizes.get(rel.from), data.points[1]);
+    if (room.has(rel.to)) points[points.length - 1] = clipToBox(centre(rel.to), sizes.get(rel.to), data.points[data.points.length - 2]);
+    return { rel, data, points };
+  });
+  const edgeSvg = straight.map(({ rel, data, points }) => {
+    const label2 = rel.label ? labelSvg(rel.label, data.x, data.y, pageDir) : "";
+    return `<g data-step="${stepOf.get(rel.line)}"${deltaAttr(rel.state)}><path class="am-edge" d="${smoothPath(points)}"/>${endsSvg(points, rel)}${label2}</g>`;
+  });
+  const nodeSvg = [...entities.values()].map((entity) => {
+    const { x: x2, y: y2 } = centre(entity.name);
+    const size = sizes.get(entity.name);
+    return nodeSvgOf(entity, x2, y2, size, stepOf.get(entity.line), pageDir);
+  });
+  const s = rtl ? -1 : 1;
+  const seen = /* @__PURE__ */ new Map();
+  const loopSpecs = loops.map((rel) => {
+    const { nth, depth } = seen.get(rel.from) ?? { nth: 0, depth: 0 };
+    seen.set(rel.from, { nth: nth + 1, depth: depth + LOOP_STEP + (rel.label ? LOOP_LABEL : 0) });
+    const { x: x2, y: y2 } = centre(rel.from);
+    const size = sizes.get(rel.from);
+    return below ? loopBelow(rel, x2, y2, size, depth, s) : loopBeside(rel, x2, y2, size, nth, s);
+  });
+  const loopsSvg = loopSpecs.map((spec) => loopSvg(spec, stepOf.get(spec.rel.line), pageDir));
+  const xs = [];
+  const ys = [];
+  const at3 = (x2, y2) => {
+    xs.push(x2);
+    ys.push(y2);
+  };
+  for (const entity of entities.values()) {
+    const { x: x2, y: y2 } = centre(entity.name);
+    const size = sizes.get(entity.name);
+    at3(x2 - size.width / 2, y2 - size.height / 2);
+    at3(x2 + size.width / 2, y2 + size.height / 2);
+  }
+  straight.forEach(({ rel, data, points }) => {
+    for (const p of points) at3(p.x, p.y);
+    if (rel.label) {
+      const w = labelWidth2(rel.label);
+      at3(data.x - w / 2, data.y - 9);
+      at3(data.x + w / 2, data.y + 9);
+    }
+  });
+  for (const { corners } of loopSpecs) corners.forEach(([x2, y2]) => at3(x2, y2));
+  const margin = 14;
+  const shiftX = margin - Math.min(...xs);
+  const shiftY = margin - Math.min(...ys);
+  const shift = shiftX || shiftY ? ` transform="translate(${f(shiftX)},${f(shiftY)})"` : "";
+  const width = Math.ceil(Math.max(...xs) - Math.min(...xs)) + 2 * margin;
+  const height = Math.ceil(Math.max(...ys) - Math.min(...ys)) + 2 * margin;
+  const label = diagramLabel(ui, "er", [...entities.keys()].slice(0, 8));
+  return `${svgOpen(width, height, label, pageDir)}<g${shift}><g>${edgeSvg.join("")}</g><g>${loopsSvg.join("")}</g><g>${nodeSvg.join("")}</g></g></svg>`;
+}
+function loopRoom(own) {
+  const steps = own.slice(0, -1).reduce((depth, rel) => depth + LOOP_STEP + (rel.label ? LOOP_LABEL : 0), 0);
+  return LOOP_OUT + steps + (own.at(-1).label ? LOOP_LABEL : 0) + LOOP_GAP;
+}
+function clipToBox(centre, size, toward) {
+  const dx = toward.x - centre.x;
+  const dy = toward.y - centre.y;
+  const k2 = Math.max(Math.abs(dx) / (size.width / 2), Math.abs(dy) / (size.height / 2));
+  if (k2 === 0) return { ...centre };
+  return { x: centre.x + dx / k2, y: centre.y + dy / k2 };
+}
+function nodeSvgOf(entity, x2, y2, size, step, pageDir) {
+  const left = x2 - size.width / 2;
+  const top2 = y2 - size.height / 2;
+  const [nameX, keyX] = pageDir === "rtl" ? [left + size.width - PAD, left + PAD] : [left + PAD, left + size.width - PAD];
+  const head = `<text class="am-er-head" font-weight="600" x="${f(nameX)}" y="${f(top2 + PAD + HEAD_LH / 2)}" dominant-baseline="central">${esc(svgLine(entity.name, pageDir))}</text>`;
+  const rule = `<line class="am-er-rule am-edge" opacity="0.45" x1="${f(left)}" y1="${f(top2 + PAD + HEAD_LH)}" x2="${f(left + size.width)}" y2="${f(top2 + PAD + HEAD_LH)}"/>`;
+  const rtl = pageDir === "rtl";
+  const shift = (rtl ? -1 : 1) * signWidth(entity);
+  const fields2 = entity.fields.map((field, i) => {
+    const cy = top2 + PAD + HEAD_LH + FIELD_LH * (i + 0.5) + 1;
+    const mark = deltaAttr(field.state);
+    const marker = field.marker ? `<text class="am-er-key am-cluster-label"${mark} x="${f(keyX)}" y="${f(cy)}" text-anchor="end" dominant-baseline="central">${esc(svgLine(field.marker, pageDir))}</text>` : "";
+    const band = field.state ? `<rect class="am-er-band"${mark} x="${f(left + 1)}" y="${f(cy - FIELD_LH / 2)}" width="${f(size.width - 2)}" height="${FIELD_LH}"/><text class="am-er-sign"${mark} x="${f(nameX)}" y="${f(cy)}" dominant-baseline="central">${esc(svgLine(SIGN[field.state], pageDir))}</text>` : "";
+    return `${band}<text class="am-er-field"${mark} style="font-size:${FIELD_FS}px" x="${f(nameX + shift)}" y="${f(cy)}" dominant-baseline="central">${esc(svgLine(fieldText(field), pageDir))}</text>${marker}`;
+  }).join("");
+  const badge = badgeSvg(entity.state, rtl ? left : left + size.width, top2);
+  return `<g class="am-node am-node--er${entity.hi ? " am-node--hi" : ""}" data-key="${esc(entity.name)}" data-step="${step}"${deltaAttr(entity.state)}><rect class="am-node-shape" x="${f(left)}" y="${f(top2)}" width="${f(size.width)}" height="${f(size.height)}" rx="3"/>${head}${rule}${fields2}${badge}</g>`;
+}
+function loopBeside(rel, x2, y2, size, nth, s) {
+  const edge = x2 + s * size.width / 2;
+  const out = edge + s * LOOP_OUT + s * nth * LOOP_STEP;
+  const [ay, by] = [y2 - LOOP_END / 2, y2 + LOOP_END / 2];
+  const label = rel.label ? { x: out + s * 6 + s * labelWidth2(rel.label) / 2, y: y2 } : null;
+  return {
+    rel,
+    a: { x: edge, y: ay },
+    b: { x: edge, y: by },
+    c: [{ x: out, y: ay }, { x: out, y: by }],
+    away: { x: s, y: 0 },
+    label,
+    corners: [[out + s * 6 + s * (rel.label ? labelWidth2(rel.label) : 0), by], [out, ay]]
+  };
+}
+function loopBelow(rel, x2, y2, size, depth, s) {
+  const bottom = y2 + size.height / 2;
+  const out = bottom + LOOP_OUT + depth;
+  const [ax, bx] = [x2 - s * LOOP_END / 2, x2 + s * LOOP_END / 2];
+  const half = Math.max(LOOP_END / 2, rel.label ? labelWidth2(rel.label) / 2 : 0);
+  return {
+    rel,
+    a: { x: ax, y: bottom },
+    b: { x: bx, y: bottom },
+    c: [{ x: ax, y: out }, { x: bx, y: out }],
+    away: { x: 0, y: 1 },
+    label: rel.label ? { x: x2, y: out + 6 + 9 } : null,
+    corners: [[x2 - half, bottom], [x2 + half, out + (rel.label ? 6 + 18 : 0)]]
+  };
+}
+function loopSvg({ rel, a, b, c, away, label }, step, pageDir) {
+  const path = `<path class="am-edge" d="M${f(a.x)},${f(a.y)} C${f(c[0].x)},${f(c[0].y)} ${f(c[1].x)},${f(c[1].y)} ${f(b.x)},${f(b.y)}"/>`;
+  const ends = `${endMark(a, { x: a.x + away.x, y: a.y + away.y }, rel.fromCard)}${endMark(b, { x: b.x + away.x, y: b.y + away.y }, rel.toCard)}`;
+  const text = label ? labelSvg(rel.label, label.x, label.y, pageDir) : "";
+  return `<g data-step="${step}"${deltaAttr(rel.state)}>${path}${ends}${text}</g>`;
+}
+function labelWidth2(text) {
+  return measure(text, EDGE_FS2) + 10;
+}
+function labelSvg(text, x2, y2, pageDir) {
+  const w = labelWidth2(text);
+  return `<g class="am-edge-label"><rect x="${f(x2 - w / 2)}" y="${f(y2 - 9)}" width="${f(w)}" height="18" rx="3"/>${textLines([text], x2, y2, LH3, "", pageDir)}</g>`;
+}
+function endsSvg(points, rel) {
+  if (points.length < 2) return "";
+  return endMark(points.at(-1), points.at(-2), rel.toCard) + endMark(points[0], points[1], rel.fromCard);
+}
+var R3 = { back: 12, side: 5, gap: 5 };
+function endMark(point, toward, card) {
+  const dx = point.x - toward.x;
+  const dy = point.y - toward.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+  const px = -uy;
+  const py = ux;
+  const at3 = (back, side) => ({ x: point.x - ux * back + px * side, y: point.y - uy * back + py * side });
+  const line = (a, b) => `<line x1="${f(a.x)}" y1="${f(a.y)}" x2="${f(b.x)}" y2="${f(b.y)}"/>`;
+  const bar = (back) => line(at3(back, -R3.side), at3(back, R3.side));
+  const foot = (apexBack) => {
+    const apex = at3(apexBack, 0);
+    return [line(at3(0, -R3.side), apex), line(at3(0, 0), apex), line(at3(0, R3.side), apex)].join("");
+  };
+  const circle = (back) => {
+    const c = at3(back, 0);
+    return `<circle cx="${f(c.x)}" cy="${f(c.y)}" r="3.4" style="fill: var(--paper, #ffffff)"/>`;
+  };
+  const marks = {
+    "1": () => bar(R3.back),
+    "0..1": () => bar(R3.back) + circle(R3.back + R3.gap),
+    "*": () => foot(R3.back),
+    "1..*": () => foot(R3.back) + bar(R3.back + R3.gap)
+  }[card]();
+  return `<g class="am-er-end am-edge">${marks}</g>`;
+}
+
+// src/components/ask.js
+var OPTION = /^([*-])\s+(.+)$/;
+var ask_default = {
+  name: "ask",
+  summary: "A decision the reader makes on the page (collected by Reply)",
+  pageOnly: true,
+  panelOnly: true,
+  syntax: `\`\`\`ask [multi]
+The question, one sentence
+* The option you suggest | optional note   \u2190 * marks the suggestion; it starts selected
+- Another option | optional note
+\`\`\`
+- The first line is the question. Each option starts with * or -. Write 2 to 6 options.
+- One choice: exactly one * option. multi lets the reader pick several; * marks the ones that start picked.
+- Place the ask in the panel whose content the answer changes. The Reply button turns the answers into one reply.`,
+  example: "```ask\nWhich cache do we use?\n* Redis | keeps data after a restart\n- Memcached | simpler, no disk\n```",
+  // The text the STE check reads: options are list items; the note reads as a second clause of the item.
+  lint(text) {
+    return text.split("\n").map((l3) => l3.replace(OPTION, (_2, mark, body) => `- ${fields(body).filter(Boolean).join(": ")}`)).join("\n");
+  },
+  render(text, { args, uid, ui = {} }) {
+    const multi = /(^|\s)multi(\s|$)/.test(args);
+    const lines = contentLines(text);
+    const [first, ...rest] = lines;
+    if (!first || OPTION.test(first.text)) throw new ComponentError("ask: the first line is the question", first?.line ?? 1);
+    const options = rest.map(({ text: t, line }) => {
+      const m = t.match(OPTION);
+      if (!m) throw new ComponentError(`ask: "${t}" is not an option; start it with * (suggested) or -`, line);
+      const [label, note2 = ""] = fields(m[2]);
+      if (!label) throw new ComponentError("ask: an option needs a label before |", line);
+      return { label, note: note2, suggested: m[1] === "*", line };
+    });
+    if (options.length < 2 || options.length > 6) throw new ComponentError(`ask: write 2 to 6 options, not ${options.length}`, first.line);
+    const suggested = options.filter((o) => o.suggested).length;
+    if (!multi && suggested !== 1) {
+      throw new ComponentError(`ask: mark exactly one option with * as your suggestion (found ${suggested}); add multi to let the reader pick several`, first.line);
+    }
+    const seen = /* @__PURE__ */ new Set();
+    for (const o of options) {
+      if (seen.has(o.label)) throw new ComponentError(`ask: two options are both "${o.label}"`, o.line);
+      seen.add(o.label);
+    }
+    const id = uid();
+    const type = multi ? "checkbox" : "radio";
+    const items = options.map((o) => `<label class="am-ask-opt"><input type="${type}" name="${id}" value="${esc(o.label)}"${o.suggested ? " checked data-suggested" : ""}><span class="am-ask-body"><span class="am-ask-label">${mdInline(o.label)}</span>${o.suggested ? ` <span class="am-ask-tag">${esc(ui.reply?.suggested ?? "suggested")}</span>` : ""}${o.note ? `<small class="am-ask-note">${mdInline(o.note)}</small>` : ""}</span></label>`);
+    return `<fieldset class="am-ask" data-ask="${id}"${multi ? " data-multi" : ""}><legend class="am-ask-q">${mdInline(first.text)}</legend>${items.join("")}</fieldset>`;
+  }
+};
+
+// src/languages/research.js
+var LABELS = {
+  zh: {
+    paths: { label: "\u9605\u8BFB\u8DEF\u5F84", short: "5 \u5206\u949F \xB7 \u603B\u89C8", medium: "30 \u5206\u949F \xB7 + \u80CC\u666F\u4E0E\u53D1\u73B0", deep: "\u5B8C\u6574" },
+    overview: "\u603B\u89C8",
+    fig: { n: "\u56FE {n}", q: "\u95EE\uFF1A", read: "\u8BFB\u6CD5\uFF1A", takeaway: "\u8981\u70B9\uFF1A", pending: "\u56FE\u5F62\u6E32\u67D3\u4E2D\u2026\uFF08\u79BB\u7EBF\u67E5\u770B\u524D\u9700\u8FD0\u884C am bake\uFF09" },
+    prereq: { what: "\u662F\u4EC0\u4E48", why: "\u4E3A\u4EC0\u4E48\u8FD9\u91CC\u9700\u8981", example: "\u6700\u5C0F\u4F8B\u5B50", misconception: "\u5E38\u89C1\u8BEF\u89E3", deeper: "\u6DF1\u5165", needs: "\u4F9D\u8D56" },
+    finding: { claim: "\u8BBA\u65AD", evidence: "\u8BC1\u636E", implication: "\u5F71\u54CD", confidence: "\u7F6E\u4FE1\u5EA6" }
+  },
+  "zh-Hant": {
+    paths: { label: "\u95B1\u8B80\u8DEF\u5F91", short: "5 \u5206\u9418 \xB7 \u7E3D\u89BD", medium: "30 \u5206\u9418 \xB7 + \u80CC\u666F\u8207\u767C\u73FE", deep: "\u5B8C\u6574" },
+    overview: "\u7E3D\u89BD",
+    fig: { n: "\u5716 {n}", q: "\u554F\uFF1A", read: "\u8B80\u6CD5\uFF1A", takeaway: "\u8981\u9EDE\uFF1A", pending: "\u5716\u5F62\u7E6A\u88FD\u4E2D\u2026\uFF08\u96E2\u7DDA\u67E5\u770B\u524D\u9700\u57F7\u884C am bake\uFF09" },
+    prereq: { what: "\u662F\u4EC0\u9EBC", why: "\u70BA\u4EC0\u9EBC\u9019\u88E1\u9700\u8981", example: "\u6700\u5C0F\u4F8B\u5B50", misconception: "\u5E38\u898B\u8AA4\u89E3", deeper: "\u6DF1\u5165", needs: "\u4F9D\u8CF4" },
+    finding: { claim: "\u8AD6\u65B7", evidence: "\u8B49\u64DA", implication: "\u5F71\u97FF", confidence: "\u4FE1\u5FC3\u5EA6" }
+  },
+  en: {
+    paths: { label: "Reading path", short: "5 min \xB7 overview", medium: "30 min \xB7 + background + findings", deep: "Deep \xB7 everything" },
+    overview: "Overview",
+    fig: { n: "Fig {n}", q: "Q: ", read: "Read: ", takeaway: "Takeaway: ", pending: "Drawing\u2026 (run am bake for an offline copy)" },
+    prereq: { what: "What it is", why: "Why it matters here", example: "Minimal example", misconception: "Common misconception", deeper: "Go deeper", needs: "Needs" },
+    finding: { claim: "Claim", evidence: "Evidence", implication: "Implication", confidence: "confidence" }
+  },
+  ja: {
+    paths: { label: "\u8AAD\u307F\u65B9", short: "5 \u5206 \xB7 \u6982\u8981", medium: "30 \u5206 \xB7 + \u80CC\u666F\u3068\u767A\u898B", deep: "\u3059\u3079\u3066" },
+    overview: "\u6982\u8981",
+    fig: { n: "\u56F3 {n}", q: "\u554F\u3044\uFF1A", read: "\u8AAD\u307F\u65B9\uFF1A", takeaway: "\u8981\u70B9\uFF1A", pending: "\u56F3\u3092\u63CF\u753B\u4E2D\u2026\uFF08\u30AA\u30D5\u30E9\u30A4\u30F3\u3067\u898B\u308B\u306B\u306F am bake \u3092\u5B9F\u884C\uFF09" },
+    prereq: { what: "\u3053\u308C\u306F\u4F55\u304B", why: "\u3053\u3053\u3067\u5FC5\u8981\u306A\u7406\u7531", example: "\u6700\u5C0F\u306E\u4F8B", misconception: "\u3088\u304F\u3042\u308B\u8AA4\u89E3", deeper: "\u3055\u3089\u306B\u8A73\u3057\u304F", needs: "\u524D\u63D0" },
+    finding: { claim: "\u4E3B\u5F35", evidence: "\u6839\u62E0", implication: "\u5F71\u97FF", confidence: "\u78BA\u5EA6" }
+  },
+  he: {
+    paths: { label: "\u05DE\u05E1\u05DC\u05D5\u05DC \u05E7\u05E8\u05D9\u05D0\u05D4", short: "5 \u05D3\u05E7\u05D5\u05EA \xB7 \u05E1\u05E7\u05D9\u05E8\u05D4", medium: "30 \u05D3\u05E7\u05D5\u05EA \xB7 + \u05E8\u05E7\u05E2 \u05D5\u05DE\u05DE\u05E6\u05D0\u05D9\u05DD", deep: "\u05D4\u05DB\u05D5\u05DC" },
+    overview: "\u05E1\u05E7\u05D9\u05E8\u05D4",
+    fig: { n: "\u05D0\u05D9\u05D5\u05E8 {n}", q: "\u05E9\u05D0\u05DC\u05D4: ", read: "\u05D0\u05D9\u05DA \u05DC\u05E7\u05E8\u05D5\u05D0: ", takeaway: "\u05D4\u05E9\u05D5\u05E8\u05D4 \u05D4\u05EA\u05D7\u05EA\u05D5\u05E0\u05D4: ", pending: "\u05DE\u05E6\u05D9\u05D9\u05E8\u2026 (\u05D4\u05E8\u05D9\u05E6\u05D5 am bake \u05DC\u05E2\u05D5\u05EA\u05E7 \u05DC\u05D0 \u05DE\u05E7\u05D5\u05D5\u05DF)" },
+    prereq: { what: "\u05DE\u05D4 \u05D6\u05D4", why: "\u05DC\u05DE\u05D4 \u05D6\u05D4 \u05D7\u05E9\u05D5\u05D1 \u05DB\u05D0\u05DF", example: "\u05D3\u05D5\u05D2\u05DE\u05D4 \u05DE\u05D9\u05E0\u05D9\u05DE\u05DC\u05D9\u05EA", misconception: "\u05D8\u05E2\u05D5\u05EA \u05E0\u05E4\u05D5\u05E6\u05D4", deeper: "\u05DC\u05D4\u05E2\u05DE\u05E7\u05D4", needs: "\u05D3\u05D5\u05E8\u05E9" },
+    finding: { claim: "\u05D8\u05E2\u05E0\u05D4", evidence: "\u05E8\u05D0\u05D9\u05D5\u05EA", implication: "\u05D4\u05E9\u05DC\u05DB\u05D4", confidence: "\u05D5\u05D3\u05D0\u05D5\u05EA" }
+  }
+};
+var researchLabels = (id) => LABELS[id] ?? LABELS.en;
+
 // src/components/figure.js
-var hasCJK = (s) => [...String(s)].some(isCJK);
 function figureArgs(args) {
   const a = parseAttrs(args || "");
   const pick = (k2) => typeof a[k2] === "string" ? a[k2] : "";
@@ -4156,16 +7138,15 @@ function figureArgs(args) {
 }
 function figureHtml({ cls, live, kindLabel, meta, ctx, payload }) {
   const n = ctx.fig ? ctx.fig() : 1;
-  const zh = hasCJK(`${meta.q}${meta.read}${meta.takeaway}`);
-  const q3 = meta.q ? `<div class="am-fig-q"><b>Fig ${n}</b><span>Q: ${mdInline(meta.q)}</span>${kindLabel ? `<i>${esc(kindLabel)}</i>` : ""}</div>` : "";
+  const L2 = (ctx.ui?.research ?? researchLabels("en")).fig;
+  const q3 = meta.q ? `<div class="am-fig-q"><b>${esc(L2.n.replace("{n}", n))}</b><span>${esc(L2.q)}${mdInline(meta.q)}</span>${kindLabel ? `<i>${esc(kindLabel)}</i>` : ""}</div>` : "";
   const capParts = [
-    meta.read && `<b>${zh ? "\u8BFB\u6CD5\uFF1A" : "Read: "}</b>${mdInline(meta.read)}`,
-    meta.takeaway && `<b>${zh ? "\u8981\u70B9\uFF1A" : "Takeaway: "}</b>${mdInline(meta.takeaway)}`
+    meta.read && `<b>${esc(L2.read)}</b>${mdInline(meta.read)}`,
+    meta.takeaway && `<b>${esc(L2.takeaway)}</b>${mdInline(meta.takeaway)}`
   ].filter(Boolean);
   const cap = capParts.length ? `<figcaption class="am-fig-cap">${capParts.join(" ")}</figcaption>` : "";
-  const pending = zh || !meta.q ? "\u56FE\u5F62\u6E32\u67D3\u4E2D\u2026\uFF08\u79BB\u7EBF\u67E5\u770B\u524D\u9700\u8FD0\u884C am bake\uFF09" : "Rendering\u2026 (run am bake for an offline copy)";
   return `<figure class="am-fig am-${cls}" id="fig-${n}" data-am-live="${live}" data-line="${ctx.line ?? 0}"${meta.name ? ` data-name="${esc(meta.name)}"` : ""}>
-${q3}<div class="am-fig-canvas"><div class="am-fig-pending">${pending}</div></div>
+${q3}<div class="am-fig-canvas"><div class="am-fig-pending">${esc(L2.pending)}</div></div>
 ${payload}
 ${cap}</figure>`;
 }
@@ -4186,7 +7167,7 @@ function parseSpec(text) {
   } catch (e) {
     const pos = Number(e.message.match(/position (\d+)/)?.[1] ?? -1);
     const line = Number(e.message.match(/line (\d+)/)?.[1] ?? 0) || lineOfIndex(text, pos);
-    throw new ComponentError(`excalidraw spec \u4E0D\u662F\u5408\u6CD5 JSON\uFF1A${e.message.replace(/\s*\(line \d+ column \d+\)/, "")}`, line);
+    throw new ComponentError(`the excalidraw spec is not valid JSON: ${e.message.replace(/\s*\(line \d+ column \d+\)/, "")}`, line);
   }
 }
 function placeNodes(spec) {
@@ -4200,32 +7181,32 @@ function placeNodes(spec) {
     y: n.y ?? (n.row ?? 0) * G2.h + (n.dy || 0)
   }));
 }
-function labelWidth(label) {
+function labelWidth3(label) {
   const s = String(label);
   const cjk = [...s].filter(isCJK).length;
   return cjk * 16 + ([...s].length - cjk) * 9 + 50;
 }
 function validateSpec(spec, text) {
-  if (!spec || typeof spec !== "object" || Array.isArray(spec)) throw new ComponentError("excalidraw spec \u5FC5\u987B\u662F\u4E00\u4E2A JSON \u5BF9\u8C61", 1);
+  if (!spec || typeof spec !== "object" || Array.isArray(spec)) throw new ComponentError("the excalidraw spec must be a JSON object", 1);
   const nodes = spec.nodes ?? [];
-  if (!Array.isArray(nodes)) throw new ComponentError("nodes \u5FC5\u987B\u662F\u6570\u7EC4", lineOfIndex(text, text.indexOf('"nodes"')));
-  if (!nodes.length && !(spec.raw || []).length) throw new ComponentError("excalidraw \u81F3\u5C11\u9700\u8981\u4E00\u4E2A\u8282\u70B9\uFF08nodes\uFF09", 1);
+  if (!Array.isArray(nodes)) throw new ComponentError("nodes must be an array", lineOfIndex(text, text.indexOf('"nodes"')));
+  if (!nodes.length && !(spec.raw || []).length) throw new ComponentError("excalidraw needs at least one node (nodes)", 1);
   const ids = /* @__PURE__ */ new Set();
   for (const n of nodes) {
-    if (!n || typeof n.id !== "string" || !n.id) throw new ComponentError(`\u8282\u70B9\u7F3A\u5C11 id\uFF1A${JSON.stringify(n)}`, lineOfIndex(text, text.indexOf(JSON.stringify(n?.label ?? ""))));
-    if (ids.has(n.id)) throw new ComponentError(`\u8282\u70B9 id \u91CD\u590D\uFF1A"${n.id}"`, lineOfId(text, n.id));
+    if (!n || typeof n.id !== "string" || !n.id) throw new ComponentError(`a node has no id: ${JSON.stringify(n)}`, lineOfIndex(text, text.indexOf(JSON.stringify(n?.label ?? ""))));
+    if (ids.has(n.id)) throw new ComponentError(`duplicate node id "${n.id}"`, lineOfId(text, n.id));
     ids.add(n.id);
-    if (n.x === void 0 && n.col === void 0) throw new ComponentError(`\u8282\u70B9 "${n.id}" \u9700\u8981 col/row\uFF08\u7F51\u683C\uFF09\u6216 x/y\uFF08\u50CF\u7D20\uFF09`, lineOfId(text, n.id));
-    if (n.shape && !SHAPES.has(n.shape)) throw new ComponentError(`\u8282\u70B9 "${n.id}" \u7684 shape "${n.shape}" \u65E0\u6548\uFF0C\u53EF\u9009\uFF1A${[...SHAPES].join(" | ")}`, lineOfId(text, n.id));
+    if (n.x === void 0 && n.col === void 0) throw new ComponentError(`node "${n.id}" needs col/row (grid) or x/y (pixels)`, lineOfId(text, n.id));
+    if (n.shape && !SHAPES.has(n.shape)) throw new ComponentError(`node "${n.id}" has an invalid shape "${n.shape}". Choose one of: ${[...SHAPES].join(" | ")}`, lineOfId(text, n.id));
   }
   for (const e of spec.edges ?? []) {
     for (const end of ["from", "to"]) {
-      if (!ids.has(e[end])) throw new ComponentError(`\u8FB9 ${e.from} -> ${e.to} \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u8282\u70B9 "${e[end]}"`, lineOfEdge(text, e));
+      if (!ids.has(e[end])) throw new ComponentError(`edge ${e.from} -> ${e.to} names a node that does not exist: "${e[end]}"`, lineOfEdge(text, e));
     }
   }
   for (const b of spec.boxes ?? []) {
     for (const id of b.around ?? []) {
-      if (!ids.has(id)) throw new ComponentError(`\u5206\u7EC4\u6846 "${b.label ?? ""}" \u7684 around \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u8282\u70B9 "${id}"`, lineOfIndex(text, text.indexOf(`"${b.label ?? "around"}"`)));
+      if (!ids.has(id)) throw new ComponentError(`box "${b.label ?? ""}" names a node in around that does not exist: "${id}"`, lineOfIndex(text, text.indexOf(`"${b.label ?? "around"}"`)));
     }
   }
   const placed = placeNodes(spec);
@@ -4234,7 +7215,7 @@ function validateSpec(spec, text) {
       const a = placed[i];
       const b = placed[j2];
       if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) {
-        throw new ComponentError(`\u8282\u70B9 "${a.id}" \u4E0E "${b.id}" \u91CD\u53E0\uFF1A\u8C03\u6574 col/row\uFF0C\u6216\u52A0\u5927 grid.w / grid.h`, lineOfId(text, b.id));
+        throw new ComponentError(`nodes "${a.id}" and "${b.id}" overlap: change col/row, or make grid.w / grid.h larger`, lineOfId(text, b.id));
       }
     }
   }
@@ -4246,19 +7227,19 @@ function validateSpec(spec, text) {
     const gx = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), 0);
     const gy = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h), 0);
     const gap = Math.hypot(gx, gy);
-    const need = gx >= gy ? labelWidth(e.label) : 50;
+    const need = gx >= gy ? labelWidth3(e.label) : 50;
     if (gap < need) {
-      throw new ComponentError(`\u8FB9 ${e.from} -> ${e.to} \u7684\u6807\u7B7E "${e.label}" \u9700\u8981\u7EA6 ${need}px \u95F4\u8DDD\uFF0C\u5B9E\u9645 ${Math.round(gap)}px\uFF1A\u52A0\u5927 grid.w \u6216\u7F29\u77ED\u6807\u7B7E`, lineOfEdge(text, e));
+      throw new ComponentError(`the label "${e.label}" of edge ${e.from} -> ${e.to} needs about ${need}px of space and has ${Math.round(gap)}px: make grid.w larger or the label shorter`, lineOfEdge(text, e));
     }
   }
   return spec;
 }
 var excalidraw_default = {
   name: "excalidraw",
-  summary: "Excalidraw \u624B\u7ED8\u8349\u56FE\uFF08\u76F4\u89C9 / \u6982\u5FF5\u56FE / \u524D\u7F6E\u77E5\u8BC6\u5730\u56FE\uFF09\uFF0C\u9700 am bake \u70D8\u7119",
-  syntax: `\`\`\`excalidraw [q="\u8FD9\u5F20\u56FE\u56DE\u7B54\u7684\u95EE\u9898"] [read="\u8BFB\u6CD5"] [takeaway="\u8981\u70B9"] [name=\u6587\u4EF6\u540D] [kind=\u6807\u7B7E]
+  summary: "Excalidraw hand-drawn sketch (intuition / concept map / prerequisite map); baked by am bake",
+  syntax: `\`\`\`excalidraw [q="the question this figure answers"] [read="how to read it"] [takeaway="the point"] [name=file-name] [kind=label]
 {
-  "grid": {"w": 340, "h": 150},                 \u2190 \u53EF\u9009\uFF1A\u7F51\u683C\u5355\u5143\uFF08\u9ED8\u8BA4 340\xD7150\uFF09
+  "grid": {"w": 340, "h": 150},                 \u2190 optional: the grid cell (default 340\xD7150)
   "defaults": {"w": 180, "h": 70, "fontSize": 18},
   "nodes": [
     {"id": "a", "label": "Client", "col": 0, "row": 0},
@@ -4270,18 +7251,19 @@ var excalidraw_default = {
     {"from": "b", "to": "db", "dashed": true, "arrow": "both"}
   ],
   "boxes": [{"label": "GPU host", "around": ["b", "db"]}],
-  "texts": [{"x": 0, "y": 200, "text": "\u6CE8\u91CA", "color": "gray"}]
+  "texts": [{"x": 0, "y": 200, "text": "note", "color": "gray"}]
 }
 \`\`\`
-- \u8282\u70B9\uFF1Acol/row \u7F51\u683C\u5B9A\u4F4D\u6216 x/y \u50CF\u7D20\uFF1Bshape rectangle | ellipse | diamond\uFF1B
-  color blue green yellow red violet gray orange teal white none \u6216 #hex\uFF1Bfill solid | hachure | cross-hatch\uFF1B
-  stroke solid | dashed | dotted\uFF1BstrokeWidth\uFF1BfontSize\uFF1Bdx/dy \u5FAE\u8C03\u3002
-- \u8FB9\uFF1Alabel\u3001dashed\u3001dotted\u3001arrow end | both | none\u3001head arrow | triangle | dot | bar | diamond\u3001
-  strokeColor\u3001via [[x,y]] \u6298\u70B9\u3002\u7AEF\u70B9\u81EA\u52A8\u8D34\u5230\u5F62\u72B6\u8FB9\u7F18\u3002
-- \u989C\u8272\u8BED\u4E49\uFF08\u5168\u9875\u7EDF\u4E00\uFF09\uFF1A\u7070\u865A\u7EBF=\u5DF2\u77E5/\u5916\u90E8\uFF0C\u84DD=\u8BB2\u89E3\u5BF9\u8C61\uFF0C\u7EFF=\u4E3B\u9898/\u7ED3\u8BBA\uFF0C\u7EA2=\u6D6A\u8D39/\u95EE\u9898\uFF0C\u9EC4=\u5047\u8BBE/\u5224\u65AD\uFF0C\u7D2B=\u5B58\u50A8/\u72B6\u6001\u3002
-- \u5E26\u6807\u7B7E\u7684\u8FB9\u9700\u8981\u8DB3\u591F\u95F4\u8DDD\uFF08\u7EA6 \u6807\u7B7E\u5B57\u6570\xD716px+50\uFF09\uFF0C\u6821\u9A8C\u4E0D\u8FC7\u4F1A\u62A5\u9519\u3002\u226412 \u4E2A\u8282\u70B9\u3002
-- \u6E32\u67D3\u540E\u56FE\u4E0B\u65B9\u6709 "\u2193 .excalidraw" \u6309\u94AE\uFF0C\u53EF\u5728 excalidraw.com \u7EE7\u7EED\u7F16\u8F91\u3002`,
-  example: '```excalidraw q="\u8BF7\u6C42\u600E\u4E48\u5230\u8FBE\u6570\u636E\u5E93\uFF1F" takeaway="\u7F51\u5173\u53EA\u505A\u8F6C\u53D1"\n{"nodes": [\n  {"id": "u", "label": "\u7528\u6237", "col": 0, "row": 0},\n  {"id": "g", "label": "\u7F51\u5173", "col": 1, "row": 0, "color": "blue"},\n  {"id": "d", "label": "\u6570\u636E\u5E93", "col": 2, "row": 0, "shape": "ellipse", "color": "violet"}\n],\n "edges": [{"from": "u", "to": "g", "label": "HTTPS"}, {"from": "g", "to": "d"}]}\n```',
+- Nodes: place with col/row on the grid or x/y in pixels; shape rectangle | ellipse | diamond;
+  color blue green yellow red violet gray orange teal white none or #hex; fill solid | hachure | cross-hatch;
+  stroke solid | dashed | dotted; strokeWidth; fontSize; dx/dy to nudge.
+- Edges: label, dashed, dotted, arrow end | both | none, head arrow | triangle | dot | bar | diamond,
+  strokeColor, via [[x,y]] bend points. The ends snap to the shape outlines.
+- Colour meaning (the same on the whole page): gray dashed = known / external, blue = the thing explained, green = the subject / the
+  conclusion, red = waste / a problem, yellow = an assumption / a decision, violet = storage / state.
+- A labelled edge needs room (about label characters \xD7 16px + 50 for CJK, \xD7 9px + 50 for Latin); the check fails otherwise. 12 nodes at most.
+- After drawing, a "\u2193 .excalidraw" button under the figure saves a file to edit further on excalidraw.com.`,
+  example: '```excalidraw q="How does a request reach the database?" takeaway="The gateway only forwards"\n{"nodes": [\n  {"id": "u", "label": "User", "col": 0, "row": 0},\n  {"id": "g", "label": "Gateway", "col": 1, "row": 0, "color": "blue"},\n  {"id": "d", "label": "Database", "col": 2, "row": 0, "shape": "ellipse", "color": "violet"}\n],\n "edges": [{"from": "u", "to": "g", "label": "HTTPS"}, {"from": "g", "to": "d"}]}\n```',
   render(text, ctx) {
     const spec = validateSpec(parseSpec(text), text);
     const meta = figureArgs(ctx.args);
@@ -4327,7 +7309,7 @@ function umlType(text) {
   let i = 0;
   if (lines[0]?.trim() === "---") {
     const end = lines.findIndex((l3, k2) => k2 > 0 && l3.trim() === "---");
-    if (end === -1) throw new ComponentError("uml \u7684 --- \u914D\u7F6E\u5757\u672A\u95ED\u5408", 1);
+    if (end === -1) throw new ComponentError("the uml --- config block is not closed", 1);
     i = end + 1;
   }
   for (; i < lines.length; i++) {
@@ -4335,14 +7317,14 @@ function umlType(text) {
     if (!t || t.startsWith("%%")) continue;
     return { type: t.split(/\s+/)[0], line: i + 1 };
   }
-  throw new ComponentError("uml \u5185\u5BB9\u4E3A\u7A7A", 1);
+  throw new ComponentError("the uml block is empty", 1);
 }
 var uml_default = {
   name: "uml",
   aliases: ["mermaid"],
-  summary: "UML \u84DD\u56FE\uFF08Mermaid\uFF1Asequence / class / state / activity / component / ER\uFF09\uFF0C\u9700 am bake \u70D8\u7119",
-  syntax: `\`\`\`uml [q="\u8FD9\u5F20\u56FE\u56DE\u7B54\u7684\u95EE\u9898"] [read="\u8BFB\u6CD5"] [takeaway="\u8981\u70B9"]
-sequenceDiagram            \u2190 \u7B2C\u4E00\u884C\u662F\u56FE\u7C7B\u578B
+  summary: "UML blueprint (Mermaid: sequence / class / state / activity / component / ER); baked by am bake",
+  syntax: `\`\`\`uml [q="the question this figure answers"] [read="how to read it"] [takeaway="the point"]
+sequenceDiagram            \u2190 the first line is the diagram type
   autonumber
   participant C as Client
   C->>S: request
@@ -4350,19 +7332,19 @@ sequenceDiagram            \u2190 \u7B2C\u4E00\u884C\u662F\u56FE\u7C7B\u578B
     S-->>C: cached
   end
 \`\`\`
-- \u7C7B\u578B\uFF1AsequenceDiagram\uFF08\u8C01\u5728\u4F55\u65F6\u8C03\u7528\u8C01\uFF09\u3001classDiagram\uFF08\u7C7B\u578B\u4E0E\u5173\u7CFB\uFF09\u3001stateDiagram-v2\uFF08\u751F\u547D\u5468\u671F\uFF09\u3001
-  flowchart\uFF08\u6D3B\u52A8\u56FE\uFF1Asm-circ \u5F00\u59CB\u3001fr-circ \u7ED3\u675F\u3001fork \u5206\u53C9/\u6C47\u5408\u3001{\u5224\u65AD}\uFF09\u3001flowchart + \xABcomponent\xBB \u5B50\u56FE\uFF08\u7EC4\u4EF6 / \u90E8\u7F72\uFF09\u3001
-  erDiagram\uFF08\u6570\u636E\u5B9E\u4F53\uFF09\u3002\u4E0D\u8981\u7528 C4*\uFF08\u98CE\u683C\u51B2\u7A81\uFF09\u3002
-- \u539F\u6837\u5199 Mermaid\uFF1A<<interface>>\u3001<br/>\u3001List~int~ \u90FD\u4E0D\u9700\u8981\u8F6C\u4E49\u3002
-- \u6807\u7B7E\u542B ( ) : # \u65F6\u52A0\u5F15\u53F7\uFF1AA["f(x): int"]\uFF1Bflowchart \u4E0D\u80FD\u7528 end \u5F53\u8282\u70B9\u540D\u3002
-- \u60F3\u8981\u624B\u7ED8\u98CE\uFF1A\u5F00\u5934\u52A0 ---\\nconfig:\\n  look: handDrawn\\n---\uFF08sequence \u4E0D\u652F\u6301\uFF09\u3002
-- \u8BE6\u7EC6\u5199\u6CD5\u89C1 references/diagrams.md\u3002`,
-  example: '```uml q="\u4E00\u6B21\u8BF7\u6C42\u4F55\u65F6\u8BFB\u5199\u7F13\u5B58\uFF1F"\nsequenceDiagram\n  autonumber\n  participant C as Client\n  participant S as Server\n  C->>S: GET /item\n  alt cache hit\n    S-->>C: 200 (cached)\n  else miss\n    S-->>C: 200 (fresh)\n  end\n```',
+- Types: sequenceDiagram (who calls whom, when), classDiagram (types and relations), stateDiagram-v2 (lifecycle),
+  flowchart (activity: sm-circ start, fr-circ end, fork for fork / join, {decision}), flowchart + \xABcomponent\xBB subgraphs (component / deployment),
+  erDiagram (data entities). Do not use C4* (its style clashes).
+- Write Mermaid as it is: <<interface>>, <br/> and List~int~ need no escaping.
+- Quote a label with ( ) : #: A["f(x): int"]; a flowchart cannot use end as a node name.
+- For a hand-drawn look, start with ---\\nconfig:\\n  look: handDrawn\\n--- (not for sequence).
+- Details: references/diagrams.md.`,
+  example: '```uml q="When does a request read or write the cache?"\nsequenceDiagram\n  autonumber\n  participant C as Client\n  participant S as Server\n  C->>S: GET /item\n  alt cache hit\n    S-->>C: 200 (cached)\n  else miss\n    S-->>C: 200 (fresh)\n  end\n```',
   render(text, ctx) {
     const { type, line } = umlType(text);
-    if (DISCOURAGED[type]) throw new ComponentError(`\u4E0D\u8981\u7528 ${type}\uFF1AC4 \u56FE\u6E32\u67D3\u5F88\u5927\u4E14\u98CE\u683C\u51B2\u7A81\uFF0C\u6539\u7528 flowchart + \xABcomponent\xBB \u5B50\u56FE`, line);
+    if (DISCOURAGED[type]) throw new ComponentError(`do not use ${type}: C4 diagrams render very large and clash in style; use flowchart + \xABcomponent\xBB subgraphs`, line);
     if (!UML_KINDS[type]) {
-      throw new ComponentError(`\u672A\u77E5\u7684 UML \u56FE\u7C7B\u578B "${type}"\uFF0C\u7B2C\u4E00\u884C\u5E94\u4E3A\uFF1A${["sequenceDiagram", "classDiagram", "stateDiagram-v2", "flowchart TD", "erDiagram"].join(" | ")}`, line);
+      throw new ComponentError(`unknown UML diagram type "${type}"; the first line should be one of: ${["sequenceDiagram", "classDiagram", "stateDiagram-v2", "flowchart TD", "erDiagram"].join(" | ")}`, line);
     }
     const meta = figureArgs(ctx.args);
     return figureHtml({
@@ -4377,6 +7359,7 @@ sequenceDiagram            \u2190 \u7B2C\u4E00\u884C\u662F\u56FE\u7C7B\u578B
 };
 
 // src/components/research.js
+var labels = (ctx) => ctx?.ui?.research ?? researchLabels("en");
 function parseFields(text, keys, comp) {
   const alias = /* @__PURE__ */ new Map();
   for (const [k2, names] of Object.entries(keys)) for (const n of [k2, ...names]) alias.set(n.toLowerCase(), k2);
@@ -4399,51 +7382,52 @@ function parseFields(text, keys, comp) {
     }
     if (cur) out.fields[cur] += `
 ${line}`;
-    else if (t) throw new ComponentError(`${comp} \u65E0\u6CD5\u89E3\u6790\uFF1A"${t}"\u3002\u5E94\u4E3A "# \u6807\u9898" \u6216 "\u952E: \u503C"\uFF08\u53EF\u7528\u952E\uFF1A${Object.values(keys).map((v, j2) => `${Object.keys(keys)[j2]}/${v[0]}`).join("\u3001")}\uFF09`, i + 1);
+    else if (t) throw new ComponentError(`${comp} cannot read "${t}"; expected "# title" or "key: value" (keys: ${Object.keys(keys).join(", ")})`, i + 1);
   });
   for (const k2 of Object.keys(out.fields)) out.fields[k2] = out.fields[k2].trim();
   return out;
 }
 var PREREQ_KEYS = {
   what: ["\u662F\u4EC0\u4E48", "\u5B9A\u4E49"],
+  // lang-ok: Chinese key names accepted as input
   why: ["\u4E3A\u4EC0\u4E48\u9700\u8981", "\u4E3A\u4EC0\u4E48", "\u4E3A\u4F55\u9700\u8981"],
+  // lang-ok: Chinese key names accepted as input
   example: ["\u4F8B\u5B50", "\u6700\u5C0F\u4F8B\u5B50", "\u793A\u4F8B"],
+  // lang-ok: Chinese key names accepted as input
   misconception: ["\u8BEF\u89E3", "\u5E38\u89C1\u8BEF\u89E3"],
+  // lang-ok: Chinese key names accepted as input
   deeper: ["\u6DF1\u5165", "\u5EF6\u4F38\u9605\u8BFB", "\u6DF1\u5165\u9605\u8BFB"],
+  // lang-ok: Chinese key names accepted as input
   needs: ["\u4F9D\u8D56", "\u524D\u7F6E"]
+  // lang-ok: Chinese key names accepted as input
 };
-var PREREQ_LABEL = {
-  zh: { what: "\u662F\u4EC0\u4E48", why: "\u4E3A\u4EC0\u4E48\u8FD9\u91CC\u9700\u8981", example: "\u6700\u5C0F\u4F8B\u5B50", misconception: "\u5E38\u89C1\u8BEF\u89E3", deeper: "\u6DF1\u5165", needs: "\u4F9D\u8D56" },
-  en: { what: "What it is", why: "Why it matters here", example: "Minimal example", misconception: "Common misconception", deeper: "Go deeper", needs: "Needs" }
-};
-var zhKeys = (text) => /^\s*(是什么|定义|为什么|为何|例子|最小例子|示例|误解|常见误解|深入|延伸阅读|依赖|前置)\s*[:：]/m.test(text);
 var prereq = {
   name: "prereq",
-  summary: "\u524D\u7F6E\u77E5\u8BC6\u5361\u7247\uFF08\u7814\u7A76\u9875 Background\uFF09\uFF1A\u662F\u4EC0\u4E48 / \u4E3A\u4EC0\u4E48\u8FD9\u91CC\u9700\u8981 / \u4F8B\u5B50 / \u8BEF\u89E3 / \u6DF1\u5165",
+  summary: "prerequisite card (research page Background): what it is / why it matters here / example / misconception / go deeper",
   syntax: `\`\`\`prereq B-1 [l1] [8min]
-# \u6CE8\u610F\u529B\u4E2D\u7684 Q / K / V
-\u662F\u4EC0\u4E48: \u6BCF\u4E2A token \u751F\u6210 Query\u3001Key\u3001Value \u4E09\u4E2A\u5411\u91CF\u3002
-\u4E3A\u4EC0\u4E48\u9700\u8981: \u65E7 token \u7684 K\u3001V \u4E0D\u53D8\uFF0C\u6240\u4EE5\u53EF\u4EE5\u7F13\u5B58\u3002
-\u4F8B\u5B50: \`softmax(qK\u1D40/\u221Ad)\xB7V\`\uFF08\u53EF\u591A\u884C\uFF1B\u4EE3\u7801\u5757\u7528 ~~~\uFF09
-\u8BEF\u89E3: \u8BEF\u89E3\uFF1A\u7F13\u5B58\u7684\u662F\u8F93\u51FA token\u3002\u4E8B\u5B9E\uFF1A\u7F13\u5B58\u7684\u662F\u6BCF\u5C42\u7684 K\u3001V\u3002
-\u6DF1\u5165: [1] Vaswani 2017 \xA73.2
-\u4F9D\u8D56: B-0
+# Q / K / V in attention
+what: Each token makes three vectors: a query, a key and a value.
+why: The K and V of earlier tokens do not change, so they can be cached.
+example: \`softmax(qK\u1D40/\u221Ad)\xB7V\` (may span lines; use ~~~ for a code block)
+misconception: Myth: the cache holds output tokens. Fact: it holds the K and V of each layer.
+deeper: [1] Vaswani 2017 \xA73.2
+needs: B-0
 \`\`\`
-- \u53C2\u6570\uFF1A\u5361\u7247\u7F16\u53F7\uFF08\u4E0E\u524D\u7F6E\u77E5\u8BC6\u5730\u56FE\u8282\u70B9\u4E00\u81F4\uFF09\u3001l1 = \u5FC5\u987B\u5148\u61C2\uFF08\u9ED1\u8272\u6807\u7B7E\uFF09\u3001\u9884\u8BA1\u9605\u8BFB\u65F6\u95F4\u3002
-- "\u662F\u4EC0\u4E48" \u548C "\u4E3A\u4EC0\u4E48\u9700\u8981" \u5FC5\u586B\u3002\u82F1\u6587\u952E\uFF1Awhat / why / example / misconception / deeper / needs\u3002
-- \u540C\u4E00\u9762\u677F\u91CC\u7684\u591A\u5F20\u5361\u7247\u81EA\u52A8\u6392\u6210\u7F51\u683C\u3002`,
-  example: "```prereq B-0 l1 3min\n# \u81EA\u56DE\u5F52\u89E3\u7801\n\u662F\u4EC0\u4E48: \u6A21\u578B\u6BCF\u6B21\u53EA\u751F\u6210 1 \u4E2A token\uFF0C\u518D\u628A\u5B83\u63A5\u5230\u8F93\u5165\u672B\u5C3E\u3002\n\u4E3A\u4EC0\u4E48\u9700\u8981: \u751F\u6210 n \u4E2A token \u9700\u8981 n \u6B21\u524D\u5411\u8BA1\u7B97\u3002\n```",
-  render(text, { args }) {
-    const [id = "", ...flags] = args.split(/\s+/).filter(Boolean);
-    if (!id) throw new ComponentError("prereq \u9700\u8981\u5361\u7247\u7F16\u53F7\uFF0C\u4F8B\u5982 ```prereq B-1 l1 8min", 0);
+- Arguments: the card ID (the same as its node on the prerequisite map), l1 = must know first (dark tag), the expected reading time.
+- what and why are required. Keys: what / why / example / misconception / deeper / needs.
+- Several cards in one panel form a grid.`,
+  example: "```prereq B-0 l1 3min\n# Autoregressive decoding\nwhat: The model makes one token at a time and appends it to its input.\nwhy: Making n tokens takes n forward passes.\n```",
+  render(text, ctx) {
+    const [id = "", ...flags] = ctx.args.split(/\s+/).filter(Boolean);
+    if (!id) throw new ComponentError("prereq needs a card ID, for example ```prereq B-1 l1 8min", 0);
     const l1 = flags.includes("l1");
     const time = flags.find((f2) => /\d/.test(f2) && f2 !== "l1");
     const p = parseFields(text, PREREQ_KEYS, "prereq");
-    if (!p.title) throw new ComponentError('prereq \u7B2C\u4E00\u884C\u5199 "# \u6982\u5FF5\u540D"', 1);
+    if (!p.title) throw new ComponentError('the first line of a prereq is "# concept name"', 1);
     for (const k2 of ["what", "why"]) {
-      if (!p.fields[k2]) throw new ComponentError(`prereq ${id} \u7F3A\u5C11 "${PREREQ_LABEL.zh[k2]}"\uFF08${k2}\uFF09\u2014\u2014\u8FD9\u662F\u5361\u7247\u7684\u5FC5\u586B\u9879`, 1);
+      if (!p.fields[k2]) throw new ComponentError(`prereq ${id} has no "${k2}:" line; it is required`, 1);
     }
-    const L2 = PREREQ_LABEL[zhKeys(text) ? "zh" : "en"];
+    const L2 = labels(ctx).prereq;
     const rows = Object.keys(PREREQ_KEYS).filter((k2) => p.fields[k2] && k2 !== "needs").map((k2) => `<dt>${esc(L2[k2])}</dt><dd${k2 === "misconception" ? ' class="am-prereq-mis"' : ""}>${md(p.fields[k2])}</dd>`).join("");
     const needs = p.fields.needs ? `<p class="am-prereq-needs">${esc(L2.needs)}: ${mdInline(p.fields.needs)}</p>` : "";
     return `<article class="am-prereq" id="p-${esc(id)}">
@@ -4454,8 +7438,11 @@ var prereq = {
 };
 var FINDING_KEYS = {
   claim: ["\u7ED3\u8BBA", "\u8BBA\u65AD", "\u4E3B\u5F20"],
+  // lang-ok: Chinese key names accepted as input
   evidence: ["\u8BC1\u636E"],
+  // lang-ok: Chinese key names accepted as input
   implication: ["\u5F71\u54CD", "\u610F\u4E49", "\u542F\u793A"]
+  // lang-ok: Chinese key names accepted as input
 };
 var KINDS2 = {
   observed: "observed",
@@ -4465,40 +7452,40 @@ var KINDS2 = {
   \u89C2\u6D4B: "observed",
   \u63A8\u65AD: "inferred",
   \u63A8\u6D4B: "speculative"
+  // lang-ok: Chinese evidence kinds accepted as input
 };
 var CONF = { high: "high", medium: "medium", low: "low", \u9AD8: "high", \u4E2D: "medium", \u4F4E: "low" };
 var KIND_RE = /\[(observed|inferred|speculative|实测|观测|推断|推测)\]/g;
 var finding = {
   name: "finding",
-  summary: "\u53D1\u73B0\u5361\u7247\uFF1A\u8BBA\u65AD + \u8BC1\u636E\uFF08\u6807\u6CE8 observed / inferred / speculative\uFF09+ \u5F71\u54CD + \u7F6E\u4FE1\u5EA6",
+  summary: "finding card: claim + evidence (marked observed / inferred / speculative) + implication + confidence",
   syntax: `\`\`\`finding F1 high
-# \u4E00\u53E5\u8BDD\u8BBA\u65AD\uFF08\u5B8C\u6574\u53E5\u5B50\uFF09
-\u7ED3\u8BBA: \u5177\u4F53\u6570\u5B57\u548C\u6761\u4EF6\u3002
-\u8BC1\u636E: [observed] \u7531\u914D\u7F6E\u8BA1\u7B97\u5F97\u51FA\uFF0C\u89C1\u590D\u73B0\u3002[inferred] \u6743\u91CD\u7EA6 12.6 GiB\u3002
-\u5F71\u54CD: \u5BB9\u91CF\u89C4\u5212\u8981\u6309"\u6700\u5927\u4E0A\u4E0B\u6587 \xD7 \u5E76\u53D1"\u8BA1\u7B97\u3002
+# A one-sentence claim (a full sentence)
+claim: The numbers and the conditions.
+evidence: [observed] Computed from the config; see Reproduce. [inferred] The weights take about 12.6 GiB.
+implication: Plan capacity as "longest context \xD7 concurrency".
 \`\`\`
-- \u53C2\u6570\uFF1A\u7F16\u53F7\uFF08\u9875\u9762\u951A\u70B9 #F1\uFF0C\u53EF\u5728 TL;DR \u91CC\u5199 [F1](#F1)\uFF09\u3001\u7F6E\u4FE1\u5EA6 high | medium | low\uFF08\u6216 \u9AD8/\u4E2D/\u4F4E\uFF09\u3002
-- \u8BC1\u636E\u5FC5\u987B\u6807\u6CE8\u7C7B\u578B\uFF1A[observed] \u5B9E\u6D4B/\u76F4\u63A5\u8BFB\u5230\uFF0C[inferred] \u7531\u89C2\u6D4B\u63A8\u51FA\uFF0C[speculative] \u672A\u9A8C\u8BC1\u7684\u5047\u8BBE
-  \uFF08\u4E2D\u6587\u53EF\u5199 [\u5B9E\u6D4B] [\u63A8\u65AD] [\u63A8\u6D4B]\uFF09\u3002\u82F1\u6587\u952E\uFF1Aclaim / evidence / implication\u3002`,
-  example: "```finding F1 high\n# \u7F13\u5B58\u547D\u4E2D\u7387\u51B3\u5B9A\u5C3E\u5EF6\u8FDF\n\u7ED3\u8BBA: \u547D\u4E2D\u7387\u4ECE 80% \u964D\u5230 60% \u65F6\uFF0Cp99 \u4ECE 40 ms \u5347\u5230 210 ms\u3002\n\u8BC1\u636E: [observed] \u538B\u6D4B 3 \u8F6E\uFF0C\u89C1\u590D\u73B0\u3002\n\u5F71\u54CD: \u5148\u6269\u7F13\u5B58\uFF0C\u518D\u6269\u5B9E\u4F8B\u3002\n```",
-  render(text, { args }) {
-    const [id = "", confRaw = ""] = args.split(/\s+/).filter(Boolean);
-    if (!id) throw new ComponentError("finding \u9700\u8981\u7F16\u53F7\uFF0C\u4F8B\u5982 ```finding F1 high", 0);
-    const conf = CONF[confRaw.toLowerCase?.() ?? ""] ?? CONF[confRaw];
-    if (!conf) throw new ComponentError(`finding ${id} \u7684\u7F6E\u4FE1\u5EA6 "${confRaw}" \u65E0\u6548\uFF0C\u53EF\u9009\uFF1Ahigh | medium | low`, 0);
+- Arguments: the ID (page anchor #F1; link it from the TL;DR as [F1](#F1)) and the confidence high | medium | low.
+- Mark the kind of every piece of evidence: [observed] measured or read directly, [inferred] derived from observations,
+  [speculative] an assumption not yet checked. Keys: claim / evidence / implication.`,
+  example: "```finding F1 high\n# The cache hit rate sets the tail latency\nclaim: When the hit rate drops from 80% to 60%, p99 rises from 40 ms to 210 ms.\nevidence: [observed] Three load-test runs; see Reproduce.\nimplication: Grow the cache before adding instances.\n```",
+  render(text, ctx) {
+    const [id = "", confRaw = ""] = ctx.args.split(/\s+/).filter(Boolean);
+    if (!id) throw new ComponentError("finding needs an ID, for example ```finding F1 high", 0);
+    const conf = CONF[confRaw.toLowerCase()] ?? CONF[confRaw];
+    if (!conf) throw new ComponentError(`finding ${id} has an invalid confidence "${confRaw}". Choose one of: high | medium | low`, 0);
     const p = parseFields(text, FINDING_KEYS, "finding");
-    if (!p.title) throw new ComponentError('finding \u7B2C\u4E00\u884C\u5199 "# \u4E00\u53E5\u8BDD\u8BBA\u65AD"', 1);
-    if (!p.fields.evidence) throw new ComponentError(`finding ${id} \u7F3A\u5C11 "\u8BC1\u636E"\uFF08evidence\uFF09`, 1);
+    if (!p.title) throw new ComponentError('the first line of a finding is "# one-sentence claim"', 1);
+    if (!p.fields.evidence) throw new ComponentError(`finding ${id} has no "evidence:" line`, 1);
     if (!KIND_RE.test(p.fields.evidence)) {
-      throw new ComponentError(`finding ${id} \u7684\u8BC1\u636E\u6CA1\u6709\u6807\u6CE8\u7C7B\u578B\uFF1A\u5728\u8BC1\u636E\u524D\u5199 [observed] / [inferred] / [speculative]`, p.lines.evidence);
+      throw new ComponentError(`finding ${id}: the evidence has no kind; write [observed] / [inferred] / [speculative] before it`, p.lines.evidence);
     }
     KIND_RE.lastIndex = 0;
-    const zh = zhKeys(text) || /^\s*(结论|论断|证据|影响)\s*[:：]/m.test(text);
-    const L2 = zh ? { claim: "\u8BBA\u65AD", evidence: "\u8BC1\u636E", implication: "\u5F71\u54CD", conf: "\u7F6E\u4FE1\u5EA6" } : { claim: "Claim", evidence: "Evidence", implication: "Implication", conf: "confidence" };
+    const L2 = labels(ctx).finding;
     const badge = (s) => s.replace(KIND_RE, (_2, k2) => `<span class="am-kind am-kind--${KINDS2[k2]}">${esc(k2)}</span>`);
-    const rows = Object.keys(FINDING_KEYS).filter((k2) => p.fields[k2]).map((k2) => `<dt>${L2[k2]}</dt><dd>${badge(md(p.fields[k2]))}</dd>`).join("");
+    const rows = Object.keys(FINDING_KEYS).filter((k2) => p.fields[k2]).map((k2) => `<dt>${esc(L2[k2])}</dt><dd>${badge(md(p.fields[k2]))}</dd>`).join("");
     return `<article class="am-finding" id="${esc(id)}">
-<header><span class="am-finding-id">${esc(id)}</span><h3>${mdInline(p.title)}</h3><span class="am-conf am-conf--${conf}">${L2.conf}: ${conf}</span></header>
+<header><span class="am-finding-id">${esc(id)}</span><h3>${mdInline(p.title)}</h3><span class="am-conf am-conf--${conf}">${esc(L2.confidence)}: ${conf}</span></header>
 <dl>${rows}</dl>
 </article>`;
   }
@@ -4506,21 +7493,21 @@ var finding = {
 function parseGlossary(text) {
   return contentLines(text).map(({ text: t, line }) => {
     const [term, alias = "", def = "", not = ""] = fields(t);
-    if (!term || !def) throw new ComponentError(`glossary \u884C\u683C\u5F0F\u5E94\u4E3A\uFF1A\u672F\u8BED | \u522B\u540D | \u5B9A\u4E49 | \u6613\u6DF7\u6DC6\uFF08\u53EF\u7701\u7565\uFF09\u2014\u2014"${t}"`, line);
+    if (!term || !def) throw new ComponentError(`a glossary line is: term | alias | definition | often confused with (optional), not "${t}"`, line);
     return { term, alias, def, not, line, slug: termSlug(term) };
   });
 }
 var glossary = {
   name: "glossary",
-  summary: "\u672F\u8BED\u8868\uFF1B\u6B63\u6587\u7528 [[\u672F\u8BED]] \u5F15\u7528\uFF0C\u60AC\u505C\u663E\u793A\u5B9A\u4E49",
+  summary: "glossary; the text links a term with [[term]], and the definition shows on hover",
   syntax: `\`\`\`glossary
-KV cache | \u952E\u503C\u7F13\u5B58 | \u5728\u663E\u5B58\u4E2D\u4FDD\u5B58\u6BCF\u5C42\u7684 K\u3001V \u5411\u91CF\uFF0C\u89E3\u7801\u65F6\u91CD\u590D\u4F7F\u7528\u3002 | \u4E0D\u662F HTTP \u7F13\u5B58
-GQA | grouped-query attention | \u591A\u4E2A query head \u5171\u4EAB\u4E00\u7EC4 K/V head\u3002
+KV cache | key-value cache | Keeps the K and V vectors of every layer in GPU memory and reuses them while decoding. | not an HTTP cache
+GQA | grouped-query attention | Several query heads share one group of K/V heads.
 \`\`\`
-- \u6BCF\u884C\uFF1A\u672F\u8BED | \u522B\u540D | \u5B9A\u4E49 | \u6613\u6DF7\u6DC6\uFF08\u522B\u540D\u53EF\u7559\u7A7A\uFF0C\u6613\u6DF7\u6DC6\u53EF\u7701\u7565\uFF09\u3002\u6309\u9605\u8BFB\u987A\u5E8F\u6392\u5217\uFF0C\u4E0D\u6309\u5B57\u6BCD\u3002
-- \u6B63\u6587\u4EFB\u4F55\u5730\u65B9\u5199 [[KV cache]] \u6216 [[\u663E\u793A\u6587\u5B57|KV cache]] \u751F\u6210\u672F\u8BED\u94FE\u63A5\uFF1B\u672A\u5B9A\u4E49\u7684\u672F\u8BED\u4F1A\u62A5\u9519\u3002
-- \u522B\u540D\u4E5F\u80FD\u88AB [[\u2026]] \u5F15\u7528\u3002`,
-  example: "```glossary\nprefill | \u9884\u586B\u5145 | \u4E00\u6B21\u524D\u5411\u8BA1\u7B97\u5904\u7406\u6574\u4E2A prompt\uFF0C\u5E76\u5199\u5165\u5168\u90E8 KV\u3002\n```",
+- Each line: term | alias | definition | often confused with (the alias may be empty; the last column may be left out). Keep reading order, not alphabetical.
+- Anywhere in the text, [[KV cache]] or [[shown text|KV cache]] makes a term link; a term that is not defined is an error.
+- [[\u2026]] can name an alias too.`,
+  example: "```glossary\nprefill | | One forward pass reads the whole prompt and writes all of its KV.\n```",
   render(text) {
     const items = parseGlossary(text);
     return `<dl class="am-glossary">${items.map((g) => `<dt id="${esc(g.slug)}">${esc(g.term)}${g.alias ? `<span class="am-gl-alias">${esc(g.alias)}</span>` : ""}</dt><dd>${mdInline(g.def)}${g.not ? `<span class="am-gl-not">${mdInline(g.not)}</span>` : ""}</dd>`).join("")}</dl>`;
@@ -4528,43 +7515,47 @@ GQA | grouped-query attention | \u591A\u4E2A query head \u5171\u4EAB\u4E00\u7EC4
 };
 
 // src/components/index.js
-var ALL = [callout_default, kv_default, timeline_default, annot_default, tree_default, limits_default, excalidraw_default, uml_default, sequence_default, flow_default, prereq, finding, glossary];
-var LIVE = /* @__PURE__ */ new Set(["excalidraw", "uml"]);
-var COMPONENTS = new Map(ALL.map((c) => [c.name, c]));
-var ALIASES = new Map(ALL.flatMap((c) => (c.aliases ?? []).map((a) => [a, c.name])));
-var resolveComponent = (lang) => COMPONENTS.get(ALIASES.get(lang) ?? lang);
+var ALL2 = [callout_default, kv_default, timeline_default, annot_default, tree_default, limits_default, excalidraw_default, uml_default, sequence_default, flow_default, er_default, ask_default, prereq, finding, glossary];
+var COMPONENTS = new Map(ALL2.map((c) => [c.name, c]));
+var ALIASES2 = new Map(ALL2.flatMap((c) => (c.aliases ?? []).map((a) => [a, c.name])));
+var resolveComponent = (lang) => COMPONENTS.get(ALIASES2.get(lang) ?? lang);
 var RAW_LANGS = /* @__PURE__ */ new Set(["html", "svg"]);
+var LIVE = /* @__PURE__ */ new Set(["excalidraw", "uml"]);
 
 // src/templates/panel.js
-function panelHtml(panel, { cols = 3, grid = true, depth } = {}) {
+function panelHtml(panel, { cols = 3, grid = true, hints = {}, depth } = {}) {
   const { attrs } = panel;
   const span = Math.min(Number(attrs.span) || 1, cols);
   const rows = Number(attrs.rows) || 1;
-  const layout3 = [
+  const layout4 = [
     grid && span > 1 ? `grid-column: span ${span}` : "",
     grid && rows > 1 ? `grid-row: span ${rows}` : ""
   ].filter(Boolean).join("; ");
-  const style = layout3 ? ` style="${layout3}"` : "";
+  const style = layout4 ? ` style="${layout4}"` : "";
+  const hinted = Math.floor(Number(hints.span));
+  const data = grid && hinted >= 1 ? ` data-span="${Math.min(hinted, cols)}"` : "";
   const cls = `${span > 1 ? " am-span-wide" : ""}${attrs.bare ? " am-panel--bare" : ""}`;
   const meta = attrs.meta ? `<span class="am-panel-meta">${esc(attrs.meta)}</span>` : "";
   const head = attrs.bare ? "" : `<header class="am-panel-head"><span class="am-panel-id">${esc(panel.id)}</span><h2>${esc(panel.title)}</h2>${meta}</header>
 `;
   const dep = depth ? ` data-depth="${depth}"` : "";
-  return `<section class="am-panel${cls}" id="panel-${esc(panel.id)}"${style}${dep}>
+  return `<section class="am-panel${cls}" id="panel-${esc(panel.id)}"${style}${data}${dep}>
 ${head}<div class="am-panel-body">${panel.html}</div>
 </section>`;
 }
 var RESERVED = /* @__PURE__ */ new Set(["template", "theme", "style", "mode", "cols", "title", "subtitle", "lang", "bake"]);
-function headHtml(meta, introHtml) {
+function headHtml(meta, introHtml, language = {}) {
   const extras = Object.entries(meta).filter(([k2, v]) => !RESERVED.has(k2) && v !== "");
-  const metaRow = extras.length ? `<div class="am-head-meta">${extras.map(([k2, v]) => `<span><b>${esc(k2)}</b>${esc(v)}</span>`).join("")}</div>` : "";
+  const names = language.metaKeys ?? {};
+  const value = (v) => language.dir === "rtl" ? `<bdi${hasRtl(v) ? ' dir="rtl"' : ""}>${esc(v)}</bdi>` : esc(v);
+  const metaRow = extras.length ? `<div class="am-head-meta">${extras.map(([k2, v]) => `<span><b>${esc(names[k2.toLowerCase()] ?? k2)}</b>${value(v)}</span>`).join("")}</div>` : "";
   const sub = meta.subtitle ? `<p class="am-sub">${esc(meta.subtitle)}</p>` : "";
   const intro = introHtml ? `<div class="am-intro am-md">${introHtml}</div>` : "";
   return `<header class="am-head"><h1>${esc(meta.title || "Untitled")}</h1>${sub}${metaRow}${intro}</header>`;
 }
 
 // src/templates/sheet.js
-var ruler = (side, labels) => `<div class="am-ruler am-ruler--${side}" aria-hidden="true">${labels.map((l3) => `<span>${l3}</span>`).join("")}</div>`;
+var ruler = (side, labels2) => `<div class="am-ruler am-ruler--${side}" aria-hidden="true">${labels2.map((l3) => `<span>${l3}</span>`).join("")}</div>`;
 function fillRows(panels, cols) {
   const spans = panels.map((p) => Math.max(1, Math.min(Number(p.attrs.span) || 1, cols)));
   if (panels.some((p) => Number(p.attrs.rows) > 1)) return spans;
@@ -4573,34 +7564,54 @@ function fillRows(panels, cols) {
     if (used + span > cols) used = 0;
     used += span;
     const next = spans[i + 1];
-    const fill = next === void 0 || used + next > cols ? cols - used : 0;
-    used = fill || used === cols ? 0 : used;
-    return span + fill;
+    const fill2 = next === void 0 || used + next > cols ? cols - used : 0;
+    used = fill2 || used === cols ? 0 : used;
+    return span + fill2;
   });
 }
-function sheet({ meta, introHtml, panels }) {
+var WIDE_TABLE_COLS = 4;
+var TABLE_COLS_PER_SPAN = 2;
+var DIAGRAM_PX_PER_SPAN = 560;
+var CELL_SEP = /(?<!\\)\|/;
+var DELIMITER_ROW = /^\|[\s:|-]+\|?$/;
+function tableColumns(blocks) {
+  const counts = blocks.filter((b) => b.type === "md").flatMap((b) => {
+    const lines = b.text.split("\n").map((l3) => l3.trim());
+    return lines.flatMap((l3, i) => l3.startsWith("|") && DELIMITER_ROW.test(lines[i + 1] ?? "") ? [l3.split(CELL_SEP).length - 2] : []);
+  });
+  return Math.max(0, ...counts);
+}
+var svgWidth = (html) => Math.max(0, ...[...html.matchAll(/<svg\b[^>]*?\swidth="(\d+(?:\.\d+)?)"/g)].map((m) => Number(m[1])));
+function minSpan(panel) {
+  const tableCols = tableColumns(panel.blocks ?? []);
+  const byTable = tableCols >= WIDE_TABLE_COLS ? Math.ceil(tableCols / TABLE_COLS_PER_SPAN) : 1;
+  const byDiagram = Math.ceil(svgWidth(panel.html ?? "") / DIAGRAM_PX_PER_SPAN);
+  return Math.max(1, byTable, byDiagram);
+}
+function sheet({ meta, introHtml, panels, language }) {
   const cols = Math.max(1, Math.min(Number(meta.cols) || 3, 12));
-  const spans = fillRows(panels, cols);
-  const placed = panels.map((p, i) => ({ ...p, attrs: { ...p.attrs, span: spans[i] } }));
+  const sized = panels.map((p) => p.attrs.span === void 0 && minSpan(p) > 1 ? { ...p, attrs: { ...p.attrs, span: Math.min(minSpan(p), cols) } } : p);
+  const spans = fillRows(sized, cols);
+  const placed = sized.map((p, i) => ({ ...p, attrs: { ...p.attrs, span: spans[i] } }));
   const nums = Array.from({ length: 8 }, (_2, i) => i + 1);
   const letters = ["A", "B", "C", "D"];
   return `<main class="am-sheet">
-${headHtml(meta, introHtml)}
+${headHtml(meta, introHtml, language)}
 <div class="am-frame">
 ${ruler("top", nums)}${ruler("bottom", nums)}${ruler("left", letters)}${ruler("right", letters)}
 <div class="am-grid" style="--cols: ${cols}">
-${placed.map((p) => panelHtml(p, { cols })).join("\n")}
+${placed.map((p, i) => panelHtml(p, { cols, hints: { span: panels[i].attrs.span } })).join("\n")}
 </div>
 </div>
 </main>`;
 }
 
 // src/templates/doc.js
-function doc({ meta, introHtml, panels }) {
+function doc({ meta, introHtml, panels, ui, language }) {
   const withToc = panels.length >= 3;
-  const toc = withToc ? `<nav class="am-toc" aria-label="\u76EE\u5F55">${panels.map((p) => `<a href="#panel-${esc(p.id)}">${esc(p.id)} \xB7 ${esc(p.title)}</a>`).join("")}</nav>` : "";
+  const toc = withToc ? `<nav class="am-toc" aria-label="${esc(ui?.toc ?? "Contents")}">${panels.map((p) => `<a href="#panel-${esc(p.id)}">${esc(p.id)} \xB7 ${esc(p.title)}</a>`).join("")}</nav>` : "";
   return `<main class="am-doc">
-${headHtml(meta, introHtml)}
+${headHtml(meta, introHtml, language)}
 <div class="am-doc-layout${withToc ? "" : " am-doc-layout--notoc"}">
 ${toc}<div class="am-doc-body">
 ${panels.map((p) => panelHtml(p, { grid: false })).join("\n")}
@@ -4610,36 +7621,39 @@ ${panels.map((p) => panelHtml(p, { grid: false })).join("\n")}
 }
 
 // src/templates/research.js
-var ruler2 = (side, labels) => `<div class="am-ruler am-ruler--${side}" aria-hidden="true">${labels.map((l3) => `<span>${l3}</span>`).join("")}</div>`;
+var ruler2 = (side, labels2) => `<div class="am-ruler am-ruler--${side}" aria-hidden="true">${labels2.map((l3) => `<span>${l3}</span>`).join("")}</div>`;
 var depthOf = (p) => {
   if (p.attrs.sheet) return 1;
   const d = Number(p.attrs.depth);
   return d >= 1 && d <= 3 ? d : 2;
 };
-function research({ meta, introHtml, panels, ui }) {
+function research({ meta, introHtml, panels, ui, language }) {
+  const L2 = ui?.research ?? researchLabels("en");
   const cols = Math.max(1, Math.min(Number(meta.cols) || 3, 12));
   const sheetPanels = panels.filter((p) => p.attrs.sheet);
   const bodyPanels = panels.filter((p) => !p.attrs.sheet);
-  const spans = fillRows(sheetPanels, cols);
-  const placed = sheetPanels.map((p, i) => ({ ...p, attrs: { ...p.attrs, span: spans[i] } }));
+  const sized = sheetPanels.map((p) => p.attrs.span === void 0 && minSpan(p) > 1 ? { ...p, attrs: { ...p.attrs, span: Math.min(minSpan(p), cols) } } : p);
+  const spans = fillRows(sized, cols);
+  const placed = sized.map((p, i) => ({ ...p, attrs: { ...p.attrs, span: spans[i] } }));
   const nums = Array.from({ length: 8 }, (_2, i) => i + 1);
+  const letters = ["A", "B", "C", "D"];
   const overview = placed.length ? `<section class="am-overview" data-depth="1" id="overview">
 <div class="am-frame">
-${ruler2("top", nums)}${ruler2("bottom", nums)}${ruler2("left", ["A", "B", "C", "D"])}${ruler2("right", ["A", "B", "C", "D"])}
+${ruler2("top", nums)}${ruler2("bottom", nums)}${ruler2("left", letters)}${ruler2("right", letters)}
 <div class="am-grid" style="--cols: ${cols}">
-${placed.map((p) => panelHtml(p, { cols, depth: 1 })).join("\n")}
+${placed.map((p, i) => panelHtml(p, { cols, depth: 1, hints: { span: sheetPanels[i].attrs.span } })).join("\n")}
 </div>
 </div>
 </section>` : "";
-  const [label, p5, p30, pDeep] = ui.paths;
+  const { label, short, medium, deep } = L2.paths;
   const paths = `<div class="am-paths" role="group" aria-label="${esc(label)}"><span>${esc(label)}</span>
-<button class="am-btn" type="button" data-am-path="5">${esc(p5)}</button>
-<button class="am-btn" type="button" data-am-path="30">${esc(p30)}</button>
-<button class="am-btn" type="button" data-am-path="deep">${esc(pDeep)}</button>
+<button class="am-btn" type="button" data-am-path="5">${esc(short)}</button>
+<button class="am-btn" type="button" data-am-path="30">${esc(medium)}</button>
+<button class="am-btn" type="button" data-am-path="deep">${esc(deep)}</button>
 </div>`;
-  const toc = `<nav class="am-toc" aria-label="\u76EE\u5F55">${placed.length ? `<a href="#overview" data-depth="1">${esc(ui.paths[1].split("\xB7")[1]?.trim() || "Overview")}</a>` : ""}${bodyPanels.map((p) => `<a href="#panel-${esc(p.id)}" data-depth="${depthOf(p)}">${esc(p.id)} \xB7 ${esc(p.title)}</a>`).join("")}</nav>`;
+  const toc = `<nav class="am-toc" aria-label="${esc(ui?.toc ?? "Contents")}">${placed.length ? `<a href="#overview" data-depth="1">${esc(L2.overview)}</a>` : ""}${bodyPanels.map((p) => `<a href="#panel-${esc(p.id)}" data-depth="${depthOf(p)}">${esc(p.id)} \xB7 ${esc(p.title)}</a>`).join("")}</nav>`;
   return `<main class="am-research">
-${headHtml(meta, introHtml)}
+${headHtml(meta, introHtml, language)}
 ${paths}
 ${overview}
 <div class="am-doc-layout">
@@ -4654,122 +7668,39 @@ ${bodyPanels.map((p) => panelHtml(p, { grid: false, depth: depthOf(p) })).join("
 var TEMPLATES = { sheet, doc, research };
 
 // src/themes/index.js
-var SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif';
-var MONO = 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace';
-var shared = { "--font-sans": SANS, "--font-mono": MONO };
-var THEMES = Object.freeze({
-  blueprint: {
-    label: "\u56FE\u7EB8 Blueprint",
-    common: { ...shared, "--radius": "0px", "--shadow": "none", "--bw": "1.5px", "--head-font": "var(--font-sans)" },
-    light: {
-      "--bg": "#f6f6f3",
-      "--paper": "#ffffff",
-      "--ink": "#16181d",
-      "--ink-2": "#4b5260",
-      "--ink-3": "#8b929e",
-      "--line": "#1d2026",
-      "--line-2": "#d6dae1",
-      "--fill": "#f3f5f8",
-      "--accent": "#1d5fbf",
-      "--accent-bg": "#e4ecf8",
-      "--ok": "#1d5fbf",
-      "--ok-bg": "#e4ecf8",
-      "--err": "#c62828",
-      "--err-bg": "#fbeaea",
-      "--warn": "#a8620a",
-      "--warn-bg": "#fdf3e2",
-      "--head-bg": "#16181d",
-      "--head-fg": "#ffffff"
-    },
-    dark: {
-      "--bg": "#081322",
-      "--paper": "#0d1c31",
-      "--ink": "#e6edf7",
-      "--ink-2": "#a9b8cc",
-      "--ink-3": "#6b7f99",
-      "--line": "#c9d6e8",
-      "--line-2": "#23385a",
-      "--fill": "#12253f",
-      "--accent": "#6ea8ff",
-      "--accent-bg": "#16305a",
-      "--ok": "#6ea8ff",
-      "--ok-bg": "#16305a",
-      "--err": "#ff7070",
-      "--err-bg": "#3b1620",
-      "--warn": "#f0b14a",
-      "--warn-bg": "#3a2a10",
-      "--head-bg": "#e6edf7",
-      "--head-fg": "#081322"
-    }
-  },
-  shadcn: {
-    label: "\u5361\u7247 shadcn",
-    common: { ...shared, "--radius": "8px", "--shadow": "0 1px 2px 0 rgba(0,0,0,0.05)", "--bw": "1px", "--head-font": "var(--font-sans)" },
-    light: {
-      "--bg": "#fafafa",
-      "--paper": "#ffffff",
-      "--ink": "#09090b",
-      "--ink-2": "#71717a",
-      "--ink-3": "#a1a1aa",
-      "--line": "#e4e4e7",
-      "--line-2": "#f0f0f2",
-      "--fill": "#f4f4f5",
-      "--accent": "#2563eb",
-      "--accent-bg": "#eff6ff",
-      "--ok": "#16a34a",
-      "--ok-bg": "#f0fdf4",
-      "--err": "#dc2626",
-      "--err-bg": "#fef2f2",
-      "--warn": "#d97706",
-      "--warn-bg": "#fffbeb",
-      "--head-bg": "#18181b",
-      "--head-fg": "#fafafa"
-    },
-    dark: {
-      "--bg": "#09090b",
-      "--paper": "#121215",
-      "--ink": "#fafafa",
-      "--ink-2": "#a1a1aa",
-      "--ink-3": "#71717a",
-      "--line": "#27272a",
-      "--line-2": "#1c1c1f",
-      "--fill": "#18181b",
-      "--accent": "#60a5fa",
-      "--accent-bg": "#172554",
-      "--ok": "#4ade80",
-      "--ok-bg": "#052e16",
-      "--err": "#f87171",
-      "--err-bg": "#450a0a",
-      "--warn": "#fbbf24",
-      "--warn-bg": "#451a03",
-      "--head-bg": "#fafafa",
-      "--head-fg": "#18181b"
-    }
-  }
-});
 var block = (selector, vars) => `${selector} {
 ${Object.entries(vars).map(([k2, v]) => `  ${k2}: ${v};`).join("\n")}
 }`;
-function themeCss() {
-  return Object.entries(THEMES).map(([name, t]) => {
-    const sel = `html[data-theme="${name}"]`;
-    return [
-      block(`${sel}, ${sel}[data-mode="light"]`, { ...t.common, ...t.light }),
-      block(`${sel}[data-mode="dark"]`, t.dark),
-      `@media (prefers-color-scheme: dark) {
-${block(`${sel}[data-mode="auto"]`, t.dark)}
-}`
-    ].join("\n");
-  }).join("\n\n");
+function tokenCss(sel, { common = {}, light = {}, dark = {} }) {
+  const parts = [block(`${sel}, ${sel}[data-mode="light"]`, { ...common, ...light })];
+  if (Object.keys(dark).length) {
+    parts.push(block(`${sel}[data-mode="dark"]`, dark), `@media (prefers-color-scheme: dark) {
+${block(`${sel}[data-mode="auto"]`, dark)}
+}`);
+  }
+  return parts.join("\n");
 }
-function pageCss() {
-  return `${themeCss()}
-
-${BASE_CSS}`;
+var pageSel = (t) => `html[data-theme="${t.name}"]`;
+var videoSel = (t) => `html[data-video][data-theme="${t.name}"]`;
+var scoped = (css, sel) => css.replace(/&/g, sel);
+var languageFontCss = () => fontLanguages().map((l3) => block(langSelector(l3, "html", "[data-theme][data-mode]"), { "--font-sans": l3.fonts.sans }));
+var ownLanguageFont = (t) => fontLanguages().map((l3) => block(langSelector(l3, "html", `[data-theme="${t.name}"][data-mode]`), { "--font-sans": t.tokens.common["--font-sans"] }));
+function pageCss(list = themes("page"), { diff = false, delta = false, rtl = false } = {}) {
+  const decorations = list.filter((t) => t.css).map((t) => scoped(t.css, pageSel(t)));
+  const ownFonts = list.filter((t) => t.ownFont).flatMap(ownLanguageFont);
+  return [list.map((t) => tokenCss(pageSel(t), t.tokens)).join("\n\n"), ...languageFontCss(), ...ownFonts, BASE_CSS, ...diff ? [DIFF_CSS] : [], ...delta ? [DELTA_CSS] : [], ...rtl ? [RTL_CSS] : [], ...decorations].join("\n\n");
+}
+function videoCss(list = themes("video"), { diff = false, delta = false, rtl = false } = {}) {
+  const parts = list.filter((t) => t.video).flatMap((t) => [
+    t.video.tokens ? tokenCss(videoSel(t), t.video.tokens) : "",
+    t.video.css ? scoped(t.video.css, videoSel(t)) : "",
+    rtl && t.video.rtlCss ? scoped(t.video.rtlCss, videoSel(t)) : ""
+  ]).filter(Boolean);
+  return [pageCss(list.filter((t) => t.scope.includes("page")), { diff, delta, rtl }), VIDEO_CSS, ...parts].join("\n\n");
 }
 
 // src/lint/wordlist.en.js
-var EN_WORDS = Object.freeze({
+var EN_WORDS2 = Object.freeze({
   "utilize": "use",
   "utilise": "use",
   "utilization": "use",
@@ -4801,7 +7732,7 @@ var EN_WORDS = Object.freeze({
   "a number of": "some",
   "with regard to": "about",
   "in addition": "also",
-  // research fork：研究写作里常见的空话（删掉，或换成数字 / 具体性质）。
+  // Research fork: empty words common in research writing (delete them, or replace them with a number / a concrete property).
   "is able to": "can",
   "in terms of": "rewrite the sentence",
   "it is worth noting that": "delete",
@@ -4845,7 +7776,7 @@ var ZH_CLICHES = Object.freeze([
   "\u5E95\u5C42\u903B\u8F91",
   "\u9897\u7C92\u5EA6",
   "\u65B9\u6CD5\u8BBA",
-  // research fork
+  // Research fork: empty words common in research writing.
   "\u4E00\u5B9A\u7A0B\u5EA6\u4E0A",
   "\u57FA\u672C\u4E0A",
   "\u663E\u800C\u6613\u89C1",
@@ -4853,13 +7784,36 @@ var ZH_CLICHES = Object.freeze([
   "\u5927\u5E45\u63D0\u5347",
   "\u6781\u5927\u5730"
 ]);
+var UNIT = String.raw`(?:个|次|秒|天|分钟|小时|倍|字|条|项|人|行|位|%|MB|GB|KB|TB|ms)?`;
+var ZH_WORDS = Object.freeze([
+  // typos
+  { re: /登陆/g, suggestion: "\u767B\u5F55" },
+  { re: /帐号/g, suggestion: "\u8D26\u53F7" },
+  { re: /阀值/g, suggestion: "\u9608\u503C" },
+  { re: /布署/g, suggestion: "\u90E8\u7F72" },
+  // quantities without a number
+  { re: /尽快/g, suggestion: "give a concrete deadline" },
+  { re: /若干/g, suggestion: "write the number" },
+  { re: /大概|大约/g, suggestion: 'use "\u7EA6" in descriptions, a value in steps' },
+  { re: /多次/g, suggestion: "write the count" },
+  // 以上/以下/以内 after a number: it is unclear whether the endpoint is included
+  { re: new RegExp(String.raw`(?<=\d\s*${UNIT}\s*)(?:以上|以下)`, "g"), suggestion: "name the endpoint: \u5927\u4E8E / \u4E0D\u5C0F\u4E8E, \u5C0F\u4E8E / \u4E0D\u5927\u4E8E" },
+  { re: /(?<=\d[^。，；\n]{0,6})以内/g, suggestion: "\u4E0D\u8D85\u8FC7" },
+  // one meaning, one word
+  { re: /单击|点按/g, suggestion: "\u70B9\u51FB" },
+  { re: /键入/g, suggestion: "\u8F93\u5165" },
+  { re: /登出/g, suggestion: "\u9000\u51FA\u767B\u5F55" },
+  { re: /入参/g, suggestion: "\u53C2\u6570" },
+  { re: /出参/g, suggestion: "\u8FD4\u56DE\u503C" },
+  { re: /缺省/g, suggestion: "\u9ED8\u8BA4" }
+]);
 
 // src/lint/ste.js
 var LIMITS = { zh: { procedural: 35, descriptive: 45 }, en: { procedural: 20, descriptive: 25 } };
 var MAX_SENTENCES = 6;
 var ABBR = /\b(e\.g|i\.e|etc|vs|cf|approx|Fig|No)\./gi;
 var PASSIVE = /\b(?:am|is|are|was|were|be|been|being)\s+(?:\w+ly\s+)?(\w+ed|known|done|made|given|taken|seen|written|built|shown|sent|kept|held|found|set|put|run|begun|chosen|driven|broken)\b/i;
-var EN_RE = Object.entries(EN_WORDS).sort((a, b) => b[0].length - a[0].length).map(([word, suggestion]) => ({ re: new RegExp(`\\b${word.replace(/ /g, "\\s+")}\\b`, "gi"), word, suggestion }));
+var EN_RE = Object.entries(EN_WORDS2).sort((a, b) => b[0].length - a[0].length).map(([word, suggestion]) => ({ re: new RegExp(`\\b${word.replace(/ /g, "\\s+")}\\b`, "gi"), word, suggestion }));
 function splitSentences(text) {
   const masked = text.replace(ABBR, (m) => m.replace(/\./g, "\0"));
   const parts = masked.match(/[^。！？；!?;]+?(?:[。！？；!?;]+|\.(?=\s|$)|$)|[^.]+?\.(?=\s|$)/g) ?? [];
@@ -4867,30 +7821,46 @@ function splitSentences(text) {
 }
 function sentenceLength(sentence) {
   const cjk = [...sentence].filter(isCJK).filter((c) => !/[，。！？；：、（）「」『』“”‘’《》]/.test(c)).length;
-  const words = sentence.match(/[A-Za-z0-9][\w'’-]*/g)?.length ?? 0;
-  return cjk >= 4 || cjk > words ? { lang: "zh", count: cjk + words } : { lang: "en", count: words };
+  const words3 = sentence.match(/[A-Za-z0-9][\w'’-]*/g)?.length ?? 0;
+  return cjk >= 4 || cjk > words3 ? { lang: "zh", count: cjk + words3 } : { lang: "en", count: words3 };
+}
+var CJK_TEXT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu;
+function neutralLength(sentence) {
+  const han = sentence.match(CJK_TEXT)?.length ?? 0;
+  const rest = sentence.replace(CJK_TEXT, " ");
+  const words3 = countWords(rest);
+  return han >= 4 || han > words3 ? { lang: "zh", count: han + words3 } : { lang: "en", count: words3 };
+}
+var RULE_LANGUAGES = /* @__PURE__ */ new Set(["zh", "en", "ja"]);
+function ruleFamily(language) {
+  if (!language) return "auto";
+  const base = language.tag.split("-")[0];
+  if (!RULE_LANGUAGES.has(base)) return "neutral";
+  return language.declared ? base : "auto";
 }
 function formatWarning(w) {
   return `L${w.line} [${w.rule}] ${w.message}${w.suggestion ? ` \u2192 ${w.suggestion}` : ""}`;
 }
-var PROSE_FENCES = /* @__PURE__ */ new Set(["callout", "prereq", "finding"]);
+var PROSE_FENCES = /* @__PURE__ */ new Set(["prereq", "finding"]);
 var FIG_FENCES = /* @__PURE__ */ new Set(["excalidraw", "uml", "mermaid"]);
-function lintDoc(doc2) {
+function lintDoc(doc2, language) {
   const warnings = [];
+  const family = ruleFamily(language);
   const blocks = [...doc2.intro, ...doc2.panels.flatMap((p) => p.blocks)];
   for (const b of blocks) {
-    if (b.type === "md") lintMarkdown(b.text, b.line, warnings);
-    else if (b.lang === "callout") lintMarkdown(b.text, b.line + 1, warnings);
-    else if (PROSE_FENCES.has(b.lang)) lintFields(b.text, b.line + 1, warnings);
+    if (b.type === "md") lintMarkdown(b.text, b.line, warnings, family);
+    else if (b.lang === "callout") lintMarkdown(b.text, b.line + 1, warnings, family);
+    else if (PROSE_FENCES.has(b.lang)) lintFields(b.text, b.line + 1, warnings, family);
+    else if (COMPONENTS.get(b.lang)?.lint) lintMarkdown(COMPONENTS.get(b.lang).lint(b.text), b.line + 1, warnings, family);
   }
   if (doc2.meta.template === "research") lintResearch(doc2, blocks, warnings);
   return warnings;
 }
 var FIELD_KEY = /^\s*[^:：\s#~`][^:：]{0,15}?[:：]\s?/;
-function lintFields(text, startLine, out) {
+function lintFields(text, startLine, out, family) {
   let seg = null;
   const flush = () => {
-    if (seg) lintMarkdown(seg.lines.join("\n"), seg.line, out);
+    if (seg) lintMarkdown(seg.lines.join("\n"), seg.line, out, family);
     seg = null;
   };
   text.split("\n").forEach((raw, i) => {
@@ -4911,24 +7881,24 @@ function lintResearch(doc2, blocks, out) {
   const fences = blocks.filter((b) => b.type === "fence");
   for (const b of fences) {
     if (FIG_FENCES.has(b.lang) && !/\bq=/.test(b.args)) {
-      out.push({ line: b.line, rule: "research", message: `${b.lang} \u56FE\u7F3A\u5C11 q="\u8FD9\u5F20\u56FE\u56DE\u7B54\u7684\u95EE\u9898"`, suggestion: "\u52A0 q=\u2026 \u548C takeaway=\u2026" });
+      out.push({ line: b.line, rule: "research", message: `${b.lang} figure has no q="the question this figure answers"`, suggestion: "add q=\u2026 and takeaway=\u2026" });
     }
   }
   const has = (lang) => fences.some((b) => b.lang === lang);
   const first = doc2.panels[0]?.line ?? 1;
-  if (!has("prereq")) out.push({ line: first, rule: "research", message: "\u6CA1\u6709\u524D\u7F6E\u77E5\u8BC6\u5361\u7247\uFF08prereq\uFF09", suggestion: "\u4E3A\u8BFB\u8005\u57FA\u7EBF\u4E4B\u5916\u7684\u6BCF\u4E2A\u5173\u952E\u6982\u5FF5\u5199\u4E00\u5F20\u5361\u7247" });
-  if (!has("finding")) out.push({ line: first, rule: "research", message: "\u6CA1\u6709\u53D1\u73B0\u5361\u7247\uFF08finding\uFF09", suggestion: "\u6BCF\u4E2A\u8BBA\u65AD\u5199\u6210 finding\uFF0C\u5E76\u6807\u6CE8\u8BC1\u636E\u7C7B\u578B" });
-  if (!has("glossary")) out.push({ line: first, rule: "research", message: "\u6CA1\u6709\u672F\u8BED\u8868\uFF08glossary\uFF09", suggestion: "\u52A0\u4E00\u4E2A\u672F\u8BED\u8868\u9762\u677F\uFF0C\u6B63\u6587\u7528 [[\u672F\u8BED]] \u5F15\u7528" });
-  if (!doc2.panels.some((p) => p.attrs.sheet)) out.push({ line: first, rule: "research", message: "\u6CA1\u6709\u603B\u89C8\u9762\u677F\uFF08{sheet}\uFF09", suggestion: "\u7ED9 4\u20136 \u4E2A\u603B\u89C8\u9762\u677F\u52A0 {sheet}\uFF0C\u4F5C\u4E3A 5 \u5206\u949F\u9605\u8BFB\u8DEF\u5F84" });
+  if (!has("prereq")) out.push({ line: first, rule: "research", message: "no prerequisite cards (prereq)", suggestion: "write one card for each key concept outside the reader's baseline" });
+  if (!has("finding")) out.push({ line: first, rule: "research", message: "no finding cards (finding)", suggestion: "write each claim as a finding and mark the kind of evidence" });
+  if (!has("glossary")) out.push({ line: first, rule: "research", message: "no glossary (glossary)", suggestion: "add a glossary panel and link terms in the text with [[term]]" });
+  if (!doc2.panels.some((p) => p.attrs.sheet)) out.push({ line: first, rule: "research", message: "no overview panels ({sheet})", suggestion: "mark 4\u20136 overview panels with {sheet}; they are the 5-minute reading path" });
 }
 function clean(text) {
-  return text.replace(/~~[^~]*~~/g, "").replace(/`[^`]*`/g, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/<[^>]+>/g, "").replace(/[*_]{1,3}/g, "");
+  return text.replace(/~~[^~]*~~/g, "").replace(/`[^`]*`/g, "").replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/<[^>]+>/g, "").replace(/[*_]{1,3}/g, "");
 }
-function lintMarkdown(text, startLine, out) {
+function lintMarkdown(text, startLine, out, family) {
   let para = null;
   const flush = () => {
     if (para && para.count > MAX_SENTENCES) {
-      out.push({ line: para.line, rule: "paragraph-length", message: `\u6BB5\u843D ${para.count} \u53E5\uFF08\u4E0A\u9650 ${MAX_SENTENCES}\uFF09` });
+      out.push({ line: para.line, rule: "paragraph-length", message: `paragraph has ${para.count} sentences (max ${MAX_SENTENCES})` });
     }
     para = null;
   };
@@ -4947,48 +7917,510 @@ function lintMarkdown(text, startLine, out) {
       if (/^\|?[\s:|-]+\|?$/.test(t)) return;
       const cells = t.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
       if (cells.some((c) => /^(no|✗|✘)(\s|$)/.test(c))) return;
-      cells.forEach((c) => checkUnit(clean(c.replace(/^(ok|warn|✓|✔|⚠)(\s|$)/, "")), line, "descriptive", out));
+      cells.forEach((c) => checkUnit(clean(c.replace(/^(ok|warn|✓|✔|⚠)(\s|$)/, "")), line, "descriptive", out, family));
       return;
     }
     const list = t.match(/^(?:([-*+])|(\d+)[.)])\s+(.*)$/);
     if (list) {
       flush();
-      checkUnit(clean(list[3]), line, list[2] ? "procedural" : "descriptive", out);
+      checkUnit(clean(list[3]), line, list[2] ? "procedural" : "descriptive", out, family);
       return;
     }
     const body = clean(t.replace(/^>\s*/, ""));
-    const n = checkUnit(body, line, "descriptive", out);
+    const n = checkUnit(body, line, "descriptive", out, family);
     if (!para) para = { line, count: 0 };
     para.count += n;
   });
   flush();
 }
-function checkUnit(text, line, kind, out) {
+function checkUnit(text, line, kind2, out, family) {
   const sentences = splitSentences(text);
+  const zhFamily = family === "auto" || family === "zh";
+  const ja = family === "ja" || zhFamily && isJapanese(text);
+  const chineseRules = zhFamily && !ja;
+  const englishRules = family !== "neutral";
   for (const s of sentences) {
-    const { lang, count } = sentenceLength(s);
-    const limit = LIMITS[lang][kind];
-    if (count > limit) {
-      const unit = lang === "zh" ? "\u5B57" : "words";
+    const { lang, count: count2 } = family === "neutral" ? neutralLength(s) : sentenceLength(s);
+    const limit = LIMITS[lang][kind2];
+    if (count2 > limit) {
+      const unit = lang === "zh" ? "characters" : "words";
       const preview = s.length > 24 ? `${s.slice(0, 24)}\u2026` : s;
-      out.push({ line, rule: "sentence-length", message: `${kind === "procedural" ? "\u6B65\u9AA4" : "\u53E5\u5B50"} ${count} ${unit}\uFF08\u4E0A\u9650 ${limit}\uFF09\uFF1A"${preview}"` });
+      out.push({ line, rule: "sentence-length", message: `${kind2 === "procedural" ? "step" : "sentence"} has ${count2} ${unit} (max ${limit}): "${preview}"` });
     }
-    if (lang === "en" && PASSIVE.test(s)) {
-      out.push({ line, rule: "passive", message: `\u7591\u4F3C\u88AB\u52A8\u8BED\u6001\uFF1A"${s.match(PASSIVE)[0]}"`, suggestion: "\u6539\u4E3A\u4E3B\u52A8\u8BED\u6001" });
+    if (englishRules && lang === "en" && PASSIVE.test(s)) {
+      out.push({ line, rule: "passive", message: `possible passive voice: "${s.match(PASSIVE)[0]}"`, suggestion: "use active voice" });
     }
   }
   const lexical = [
-    ...EN_RE.flatMap(({ re: re3, suggestion }) => [...text.matchAll(re3)].map((m) => ({ index: m.index, rule: "word", message: `\u4E0D\u63A8\u8350 "${m[0]}"`, suggestion }))),
-    ...ZH_LIGHT_VERBS.flatMap(({ re: re3, label }) => [...text.matchAll(re3)].map((m) => ({ index: m.index, rule: "word", message: `\u865A\u52A8\u8BCD "${m[0]}"\uFF08${label}\uFF09`, suggestion: `\u76F4\u63A5\u7528\u300C${m[1]}\u300D` })))
+    ...(englishRules ? EN_RE : []).flatMap(({ re: re3, suggestion }) => [...text.matchAll(re3)].map((m) => ({ index: m.index, rule: "word", message: `not recommended: "${m[0]}"`, suggestion }))),
+    ...(chineseRules ? ZH_LIGHT_VERBS : []).flatMap(({ re: re3, label }) => [...text.matchAll(re3)].map((m) => ({ index: m.index, rule: "word", message: `light verb "${m[0]}" (${label})`, suggestion: `use "${m[1]}"` }))),
+    ...(chineseRules ? ZH_WORDS : []).flatMap(({ re: re3, suggestion }) => [...text.matchAll(re3)].map((m) => ({ index: m.index, rule: "word", message: `not recommended: "${m[0]}"`, suggestion })))
   ];
   out.push(...lexical.sort((a, b) => a.index - b.index).map(({ index, ...w }) => ({ line, ...w })));
   for (const s of sentences) {
-    if ((s.match(/的/g) ?? []).length >= 3) out.push({ line, rule: "de-chain", message: `"\u7684"\u5B57\u8FDE\u7528\uFF1A${s}`, suggestion: '\u62C6\u53E5\u6216\u5220\u53BB\u591A\u4F59\u7684"\u7684"' });
+    if (!zhFamily || isJapanese(s)) continue;
+    if ((s.match(/的/g) ?? []).length >= 3) out.push({ line, rule: "de-chain", message: `chained "\u7684": ${s}`, suggestion: 'split the sentence or remove extra "\u7684"' });
   }
-  for (const c of ZH_CLICHES) {
-    if (text.includes(c)) out.push({ line, rule: "cliche", message: `\u5957\u8BDD "${c}"`, suggestion: "\u5220\u9664\uFF0C\u6216\u6362\u6210\u5177\u4F53\u4E8B\u5B9E" });
+  for (const c of chineseRules ? ZH_CLICHES : []) {
+    if (text.includes(c)) out.push({ line, rule: "cliche", message: `clich\xE9 "${c}"`, suggestion: "delete it or state a concrete fact" });
   }
   return sentences.length;
+}
+
+// src/page.js
+var SOURCE_OPEN = '<textarea id="am-source"';
+var SOURCE_RE = new RegExp(`^${SOURCE_OPEN}[^>]*>([\\s\\S]*?)<\\/textarea>`);
+var AUDIO_OPEN = '<audio id="amv-audio"';
+function rootTag({ lang, dir, theme, mode, style, voice, video = false }) {
+  return `<html lang="${lang}"${dirAttr(dir)} data-theme="${esc(theme)}" data-mode="${esc(mode)}" data-style="${esc(style)}"${voice ? ` data-voice="${esc(voice)}"` : ""}${video ? " data-video" : ""}>`;
+}
+function rootCarrierAttrs({ lang, dir, theme, mode, style }) {
+  return ` data-am-root-lang="${lang}"${dir === "rtl" ? ' data-am-root-dir="rtl"' : ""} data-am-root-theme="${esc(theme)}" data-am-root-mode="${esc(mode)}" data-am-root-style="${esc(style)}"`;
+}
+var dirAttr = (dir) => dir === "rtl" ? ' dir="rtl"' : "";
+function audioTag(wav2) {
+  return `${AUDIO_OPEN} preload="auto" src="data:audio/wav;base64,${wav2.toString("base64")}"></audio>`;
+}
+function sourceTag(source) {
+  return `${SOURCE_OPEN} hidden readonly aria-hidden="true">${esc(source)}</textarea>`;
+}
+function readPage(html) {
+  const s = String(html);
+  const root = s.match(/<html\b[^>]*>/)?.[0] ?? "";
+  const attr = (name) => root.match(new RegExp(`\\s${name}="([^"]+)"`))?.[1];
+  const video = /\sdata-video\b/.test(root);
+  const open2 = s.lastIndexOf(SOURCE_OPEN);
+  const m = open2 === -1 ? null : s.slice(open2).match(SOURCE_RE);
+  const before = open2 === -1 ? "" : s.slice(0, open2).trimEnd();
+  return {
+    source: m ? unescapeHtml(m[1]) : null,
+    video,
+    // A <main class="am-doc"> in the body does not count; the template's <main> always comes before the body.
+    template: video ? "video" : s.match(/<main class="am-(doc|sheet|research)\b/)?.[1],
+    theme: attr("data-theme"),
+    mode: attr("data-mode"),
+    style: attr("data-style"),
+    lang: attr("lang"),
+    voice: attr("data-voice"),
+    voiced: video && before.endsWith("</audio>") && before.lastIndexOf(AUDIO_OPEN) > before.lastIndexOf("<textarea")
+  };
+}
+function unescapeHtml(s) {
+  return s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+}
+
+// src/han-forms.js
+var PAIRS = "\u8FD9\u9019 \u4E2A\u500B \u4EEC\u5011 \u8BF4\u8AAA \u56FD\u570B \u4E3A\u70BA \u6765\u4F86 \u65F6\u6642 \u4F1A\u6703 \u8FC7\u904E \u5BF9\u5C0D \u5B66\u5B78 \u8FD8\u9084 \u6CA1\u6C92 \u6837\u6A23 \u5F00\u958B \u95E8\u9580 \u95EE\u554F \u95F4\u9593 \u70B9\u9EDE \u73B0\u73FE \u79CD\u7A2E \u7ECF\u7D93 \u52A8\u52D5 \u5B9E\u5BE6 \u673A\u6A5F \u5173\u95DC \u4E1A\u696D \u4E0E\u8207 \u65E0\u7121 \u7535\u96FB \u4E66\u66F8 \u9A6C\u99AC \u8F66\u8ECA \u89C1\u898B \u4E70\u8CB7 \u5356\u8CE3 \u8BFB\u8B80 \u8BED\u8A9E \u8BDD\u8A71 \u8BF7\u8ACB \u8BA9\u8B93 \u8BA4\u8A8D \u5E94\u61C9 \u5F53\u7576 \u603B\u7E3D \u5C06\u5C07 \u4F53\u9AD4 \u534E\u83EF \u58F0\u8072 \u542C\u807D \u89C2\u89C0 \u89C9\u89BA \u8BB0\u8A18 \u8BBE\u8A2D \u8BA1\u8A08 \u8BBA\u8AD6 \u8BAE\u8B70 \u8BB8\u8A31 \u8BC1\u8B49 \u8BC6\u8B58 \u8C03\u8ABF \u8BD5\u8A66 \u8BE5\u8A72 \u8BE6\u8A73 \u8BEF\u8AA4 \u8C08\u8AC7 \u8C22\u8B1D \u8C01\u8AB0 \u8BFE\u8AB2 \u8D1F\u8CA0 \u8D23\u8CAC \u8D35\u8CB4 \u8D44\u8CC7 \u8D39\u8CBB \u8D5B\u8CFD \u8D22\u8CA1 \u8D2D\u8CFC \u8D27\u8CA8 \u8D38\u8CBF \u8D28\u8CEA \u94B1\u9322 \u94F6\u9280 \u94C1\u9435 \u7F51\u7DB2 \u9875\u9801 \u7EA7\u7D1A \u7EBF\u7DDA \u7C7B\u985E \u6570\u6578 \u636E\u64DA \u5E93\u5EAB \u6237\u6236 \u52A1\u52D9 \u533A\u5340 \u4E1C\u6771 \u4E50\u6A02 \u4EA7\u7522 \u4EB2\u89AA \u513F\u5152 \u529E\u8FA6 \u5174\u8208 \u519B\u8ECD \u519C\u8FB2 \u51B5\u6CC1 \u5218\u5289 \u521B\u5275 \u5267\u5287 \u5355\u55AE \u53CC\u96D9 \u53F7\u865F \u5458\u54E1 \u56ED\u5712 \u56F4\u570D \u56FE\u5716 \u5706\u5713 \u573A\u5834 \u5757\u584A \u574F\u58DE \u5904\u8655 \u5907\u5099 \u5934\u982D \u5939\u593E \u594B\u596E \u5987\u5A66 \u5B59\u5B6B \u5B81\u5BE7 \u5B9D\u5BF6 \u5BA1\u5BE9 \u5C42\u5C64 \u5C5E\u5C6C \u5C81\u6B72 \u5E08\u5E2B \u5E26\u5E36 \u5E2E\u5E6B \u5E7F\u5EE3 \u5F02\u7570 \u5F20\u5F35 \u5F3A\u5F37 \u5F55\u9304 \u5F52\u6B78 \u5F7B\u5FB9 \u5F84\u5F91 \u60AC\u61F8 \u60CA\u9A5A \u6218\u6230 \u62A4\u8B77 \u62A5\u5831 \u62E9\u64C7 \u62C5\u64D4 \u62E5\u64C1 \u62DF\u64EC \u6362\u63DB \u635F\u640D \u654C\u6575 \u65AD\u65B7 \u65E7\u820A \u663E\u986F \u6653\u66C9 \u6682\u66AB \u672F\u8853 \u6742\u96DC \u6781\u6975 \u6784\u69CB \u6807\u6A19 \u680F\u6B04 \u6811\u6A39 \u6863\u6A94 \u6865\u6A4B \u68C0\u6AA2 \u697C\u6A13 \u6B22\u6B61 \u6BD5\u7562 \u6C14\u6C23 \u6C49\u6F22 \u6D4E\u6FDF \u6D4F\u700F \u6D4B\u6E2C \u6E7E\u7063 \u6EE1\u6EFF \u706D\u6EC5 \u706F\u71C8 \u7231\u611B \u72B6\u72C0 \u72EC\u7368 \u73AF\u74B0 \u753B\u756B \u7597\u7642 \u76D8\u76E4 \u7801\u78BC \u786E\u78BA \u79BB\u96E2 \u79EF\u7A4D \u79F0\u7A31 \u7A77\u7AAE \u7ADE\u7AF6 \u7B14\u7B46 \u7B80\u7C21 \u7CAE\u7CE7 \u7D27\u7DCA \u7EA2\u7D05 \u7EA6\u7D04 \u7EAA\u7D00 \u7EAF\u7D14 \u7EB8\u7D19 \u7EC4\u7D44 \u7EC6\u7D30 \u7EC7\u7E54 \u7EC8\u7D42 \u7ED3\u7D50 \u7ED9\u7D66 \u7EDC\u7D61 \u7EDF\u7D71 \u7EE7\u7E7C \u7EED\u7E8C \u7EF4\u7DAD \u7EFC\u7D9C \u7EFF\u7DA0 \u7F13\u7DE9 \u7F16\u7DE8 \u7F57\u7F85 \u4E60\u7FD2 \u8054\u806F \u804C\u8077 \u8111\u8166 \u8138\u81C9 \u8282\u7BC0 \u8425\u71DF \u84DD\u85CD \u8651\u616E \u867D\u96D6 \u8865\u88DC \u88C5\u88DD \u89C8\u89BD \u89C4\u898F \u89C6\u8996 \u89E6\u89F8 \u8BA2\u8A02 \u8BA8\u8A0E \u8BAD\u8A13 \u8BB2\u8B1B \u8BBF\u8A2A \u8BC4\u8A55 \u8BCD\u8A5E \u8BD1\u8B6F \u8BC9\u8A34 \u8F93\u8F38 \u8F91\u8F2F \u8FB9\u908A \u8FBE\u9054 \u8FC1\u9077 \u8FD0\u904B \u8FDC\u9060 \u8FDE\u9023 \u8FDB\u9032 \u9009\u9078 \u9012\u905E \u9002\u9069 \u903B\u908F \u9057\u907A \u90AE\u90F5 \u94FA\u92EA \u94FE\u93C8 \u9500\u92B7 \u9501\u9396 \u9519\u932F \u952E\u9375 \u955C\u93E1 \u957F\u9577 \u95EA\u9583 \u95ED\u9589 \u95FB\u805E \u9605\u95B1 \u961F\u968A \u9636\u968E \u9645\u969B \u9690\u96B1 \u96BE\u96E3 \u9759\u975C \u9876\u9802 \u9879\u9805 \u987A\u9806 \u987B\u9808 \u9898\u984C \u989D\u984D \u98CE\u98A8 \u98DE\u98DB \u996D\u98EF \u9986\u9928 \u9A8C\u9A57 \u9A97\u9A19 \u9C7C\u9B5A \u9E1F\u9CE5 \u9E21\u96DE \u9EA6\u9EA5 \u9F50\u9F4A \u9F7F\u9F52 \u9F99\u9F8D".split(" ");
+var SIMPLIFIED_ONLY = PAIRS.map((pair) => [...pair][0]).join("");
+var TRADITIONAL_ONLY = PAIRS.map((pair) => [...pair][1]).join("");
+
+// src/language.js
+var CJK_PER_LATIN = 3;
+var SCRIPT_LANGUAGES = [
+  [new RegExp("\\p{Script=Thai}", "u"), "th"],
+  [new RegExp("\\p{Script=Hebrew}", "u"), "he"],
+  [new RegExp("\\p{Script=Greek}", "u"), "el"],
+  [new RegExp("\\p{Script=Arabic}", "u"), "ar"],
+  [new RegExp("\\p{Script=Cyrillic}", "u"), "ru"]
+];
+var HANGUL = new RegExp("\\p{Script=Hangul}", "u");
+var SIMPLIFIED = new Set(SIMPLIFIED_ONLY);
+var TRADITIONAL = new Set(TRADITIONAL_ONLY);
+function hanLanguage(text) {
+  let simplified = 0;
+  let traditional = 0;
+  for (const ch of text) {
+    if (SIMPLIFIED.has(ch)) simplified++;
+    else if (TRADITIONAL.has(ch)) traditional++;
+  }
+  return traditional > simplified ? "zh-Hant" : "zh";
+}
+function detectLang(text) {
+  const draft = String(text);
+  let cjk = 0;
+  let hangul = 0;
+  let latin = 0;
+  const others = /* @__PURE__ */ new Map();
+  for (const ch of draft) {
+    if (isCJK(ch)) {
+      cjk++;
+      if (HANGUL.test(ch)) hangul++;
+    } else if (/[a-z]/i.test(ch)) {
+      latin++;
+    } else {
+      const script = SCRIPT_LANGUAGES.find(([re3]) => re3.test(ch));
+      if (script) others.set(script[1], (others.get(script[1]) ?? 0) + 1);
+    }
+  }
+  const otherTotal = [...others.values()].reduce((sum2, n) => sum2 + n, 0);
+  if ((cjk + otherTotal) * CJK_PER_LATIN < latin) return "en";
+  const [topTag, topCount] = [...others].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  if (topCount > cjk) return topTag;
+  if (hangul * 2 > cjk) return "ko";
+  return isJapanese(draft) ? "ja" : hanLanguage(draft);
+}
+function canonicalTag(value) {
+  if (typeof value !== "string") return null;
+  const text = value.trim().replace(/_/g, "-");
+  if (!text) return null;
+  try {
+    const tag = Intl.getCanonicalLocales(text)[0];
+    const { language } = new Intl.Locale(tag);
+    return !language || language === "und" ? null : tag;
+  } catch {
+    return null;
+  }
+}
+var baseLanguage = (tag) => new Intl.Locale(tag).language;
+function voiceHints(tag) {
+  const locale = new Intl.Locale(tag).maximize();
+  return findLanguage(locale.language, locale.script)?.voice ?? null;
+}
+function directionOf(locale) {
+  const info = typeof locale.getTextInfo === "function" ? locale.getTextInfo() : locale.textInfo;
+  return info?.direction === "rtl" ? "rtl" : "ltr";
+}
+function resolveLanguage({ declared, previous, text = "" }) {
+  const declaredTag = canonicalTag(declared);
+  const tag = declaredTag ?? canonicalTag(previous) ?? detectLang(text);
+  const locale = new Intl.Locale(tag).maximize();
+  const entry = findLanguage(locale.language, locale.script);
+  const labels2 = entry ?? FALLBACK;
+  return Object.freeze({
+    tag,
+    declared: declaredTag !== null,
+    htmlLang: tag === "zh" ? "zh-CN" : tag,
+    script: locale.script,
+    dir: directionOf(locale),
+    supported: Boolean(entry),
+    labelKey: labels2.id,
+    ui: labels2.deltaCounts ? { ...labels2.ui, delta: { ...labels2.ui.delta, counts: labels2.deltaCounts } } : labels2.ui,
+    videoUi: labels2.videoUi,
+    metaKeys: labels2.metaKeys ?? {},
+    dateOrder: labels2.dateOrder ?? "ymd"
+  });
+}
+
+// src/images.js
+import { readFileSync as readFileSync2, statSync } from "node:fs";
+import { homedir } from "node:os";
+import { extname, isAbsolute, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+var TYPES = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".svg": "image/svg+xml"
+};
+var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+var IMAGE_EXAMPLE = "![What the picture shows](/absolute/path/to/screenshot.png)";
+var NOT_LOCAL = /^(?:(?!file:)[a-z][a-z0-9+.-]+:|\/\/|#)/i;
+var IMG_SRC = /<img\b([^>]*?)\bsrc="([^"]*)"/g;
+var TEXT_IMAGE = /!\[[^\]\n]*\](?:\([^)\n]*\)|\[[^\]\n]*\])/;
+var EMBEDDED = /<img\b[^>]*?\bdata-am-src="([^"]*)" src="(data:[^"]*)"/g;
+var ImageError = class extends Error {
+  constructor(message, ref) {
+    super(message);
+    this.name = "ImageError";
+    this.ref = ref;
+  }
+};
+function decodeRef(src) {
+  const ref = src.replace(/&amp;/g, "&");
+  try {
+    return decodeURI(ref);
+  } catch {
+    return ref;
+  }
+}
+function localPath(ref, baseDir) {
+  if (ref.startsWith("file:")) return fileURLToPath(ref);
+  if (ref.startsWith("~/")) return resolve(homedir(), ref.slice(2));
+  return resolve(baseDir, ref);
+}
+function readImage(ref, baseDir) {
+  const path = localPath(ref, baseDir);
+  const type = TYPES[extname(path).toLowerCase()];
+  if (!type) throw new ImageError(`"${ref}" is not an image file; use ${Object.keys(TYPES).join(" ")}`, ref);
+  let size;
+  try {
+    size = statSync(path).size;
+  } catch {
+    return null;
+  }
+  if (size > MAX_IMAGE_BYTES) {
+    throw new ImageError(`"${ref}" is ${(size / 1048576).toFixed(1)} MB; the limit is ${MAX_IMAGE_BYTES / 1048576} MB. Shrink or crop the image first`, ref);
+  }
+  return `data:${type};base64,${readFileSync2(path).toString("base64")}`;
+}
+function assertNoImageText(html) {
+  const left = html.replace(/<(code|pre)\b[\s\S]*?<\/\1>/g, "").replace(/<[^>]*>/g, "").match(TEXT_IMAGE);
+  if (left) throw new ImageError(`"${left[0]}" was not read as an image. Check the path: write a space as %20, or put the path in < and >`, left[0]);
+}
+function inlineImages(html, { baseDir = process.cwd(), known = /* @__PURE__ */ new Map(), checkText = true } = {}) {
+  if (checkText) assertNoImageText(html);
+  return html.replace(IMG_SRC, (whole, before, src) => {
+    const ref = decodeRef(src);
+    if (NOT_LOCAL.test(ref)) return whole;
+    const uri = readImage(ref, baseDir) ?? known.get(ref);
+    if (!uri) throw new ImageError(`Image not found: "${ref}"${isAbsolute(ref) ? "" : ` (relative paths are read from ${baseDir})`}. Use the absolute path of an existing file`, ref);
+    return `<img${before}data-am-src="${src}" src="${uri}"`;
+  });
+}
+function readEmbeddedImages(html) {
+  return new Map([...String(html).matchAll(EMBEDDED)].map(([, src, uri]) => [decodeRef(src), uri]));
+}
+
+// src/code.js
+import { readFileSync as readFileSync3, statSync as statSync2 } from "node:fs";
+import { basename as basename2, extname as extname2, isAbsolute as isAbsolute2, relative, resolve as resolve2, sep } from "node:path";
+
+// src/diff.js
+var DiffError = class extends Error {
+  constructor(message, line) {
+    super(message);
+    this.name = "DiffError";
+    this.line = line;
+  }
+};
+var DIFF_EXAMPLE = "```diff file=src/code.js\n@@ -60,3 +60,3 @@\n export function parseCodeArgs(args) {\n-  const attrs = parseAttrs(args);\n+  const attrs = parseAttrs(args, { diff: true });\n   const opts = {};\n```";
+var HUNK = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+var GIT_HEAD = /^(?:diff --git |index |new file mode |deleted file mode |old mode |new mode |similarity index |rename (?:from|to) )/;
+var ELLIPSIS = /^ ?(?:…|\.\.\.)\s*$/;
+var KIND = { "+": "add", "-": "del", " ": "ctx" };
+var headPath = (line) => {
+  const path = line.slice(4).split("	")[0].trim().replace(/^[ab]\//, "");
+  return path === "/dev/null" ? "" : path;
+};
+function parseDiff(text, start) {
+  const lines = text.split("\n");
+  while (lines.length && lines[lines.length - 1] === "") lines.pop();
+  const numbered = start !== void 0 || lines.some((l3) => HUNK.test(l3));
+  const rows = [];
+  const warnings = [];
+  const newLines = /* @__PURE__ */ new Set();
+  let title = "";
+  let from = "";
+  let o = start ?? 1;
+  let n = start ?? 1;
+  let hunk = null;
+  let started = false;
+  const closeHunk = () => {
+    if (hunk && (hunk.got.o !== hunk.want.o || hunk.got.n !== hunk.want.n)) {
+      warnings.push({ rule: "diff-counts", message: `the hunk "${hunk.header}" has ${hunk.got.o} old and ${hunk.got.n} new lines, but its header says ${hunk.want.o} and ${hunk.want.n}. Fix the numbers in the @@ line, or add the missing lines` });
+    }
+    hunk = null;
+  };
+  const preamble = () => !hunk && !started || hunk && hunk.got.o >= hunk.want.o && hunk.got.n >= hunk.want.n;
+  lines.forEach((line, i) => {
+    const fail = (message) => {
+      throw new DiffError(message, i + 1);
+    };
+    const meta = () => rows.push({ kind: "meta", text: line });
+    if (line.startsWith("diff --git ")) {
+      closeHunk();
+      started = false;
+      from = "";
+      return meta();
+    }
+    if (GIT_HEAD.test(line) || line.startsWith("\\")) return meta();
+    if (preamble() && line.startsWith("--- ") && lines[i + 1]?.startsWith("+++ ")) {
+      from = headPath(line);
+      return meta();
+    }
+    if (preamble() && line.startsWith("+++ ") && rows[rows.length - 1]?.text.startsWith("--- ")) {
+      title ||= headPath(line) || from;
+      return meta();
+    }
+    const m = line.match(HUNK);
+    if (m) {
+      closeHunk();
+      o = Number(m[1]);
+      n = Number(m[3]);
+      hunk = { header: m[0], want: { o: m[2] === void 0 ? 1 : Number(m[2]), n: m[4] === void 0 ? 1 : Number(m[4]) }, got: { o: 0, n: 0 } };
+      return rows.push({ kind: "hunk", text: line });
+    }
+    if (line.startsWith("@@")) fail(`line ${i + 1} is not a hunk header; write it as @@ -60,4 +60,5 @@ (old start and count, new start and count)`);
+    if (ELLIPSIS.test(line)) fail(`line ${i + 1} stands for cut lines: the gutter cannot know how many lines were skipped. Split the diff into two hunks, each with its own @@ header`);
+    if (!rows.length && line === "") return;
+    const kind2 = line === "" ? "ctx" : KIND[line[0]];
+    if (!kind2) fail(`line ${i + 1} is not a diff line ("${line.length > 40 ? `${line.slice(0, 40)}\u2026` : line}"); start it with +, -, a space or @@. A line of code that did not change starts with a space`);
+    started = true;
+    const row = { kind: kind2, text: line };
+    if (kind2 !== "add") {
+      row.o = o++;
+      if (hunk) hunk.got.o++;
+    }
+    if (kind2 !== "del") {
+      row.n = n;
+      newLines.add(n++);
+      if (hunk) hunk.got.n++;
+    }
+    rows.push(row);
+  });
+  closeHunk();
+  const count2 = (kind2) => rows.filter((r) => r.kind === kind2).length;
+  return { rows, title, add: count2("add"), del: count2("del"), numbered, newLines, warnings };
+}
+function diffRowsHtml({ rows, numbered }, hl) {
+  return rows.map((r) => {
+    const marked2 = r.n !== void 0 && hl.has(r.n) ? " am-ln--hl" : "";
+    const nums = numbered ? `${r.o === void 0 ? "" : ` data-o="${r.o}"`}${r.n === void 0 ? "" : ` data-n="${r.n}"`}` : "";
+    return `<span class="am-ln am-ln--${r.kind}${marked2}"${nums}>${esc(r.text)}</span>`;
+  }).join("");
+}
+
+// src/code.js
+var MAX_CODE_LINES = 200;
+var LONG_CODE_LINES = 40;
+var MAX_FILE_BYTES = 2 * 1024 * 1024;
+var KEYS = /* @__PURE__ */ new Set(["src", "lines", "hl", "title", "start"]);
+var DIFF_KEYS = /* @__PURE__ */ new Set([...KEYS, "file"]);
+var CODE_EXAMPLE = "```ts src=server/routes.ts lines=18-30 hl=22\n```";
+var SECRET_FILE = new RegExp([
+  "^\\.env(?!\\.(?:example|sample|template)$)(?:\\..*)?$",
+  "^(?:\\.netrc|\\.npmrc|\\.yarnrc(?:\\.yml)?|\\.pypirc|\\.pgpass|\\.my\\.cnf|\\.git-credentials|\\.htpasswd)$",
+  "^(?:id_(?:rsa|dsa|ecdsa|ed25519).*|credentials.*|secrets?(?:\\..*)?|.*_history|.*\\.local\\.json)$",
+  "\\.(?:pem|key|p12|pfx|keystore|jks|tfvars|tfstate(?:\\.backup)?|sqlite3?|db|kdbx|ovpn)$"
+].join("|"), "i");
+var SECRET_DIR = /* @__PURE__ */ new Set([".git", ".ssh", ".aws", ".azure", ".gnupg", ".kube", ".docker", ".password-store"]);
+var SECRET_TEXT = /sk-ant-|sk-[A-Za-z0-9]{32,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|xox[abeprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.|(?:password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)["']?\s*[:=]\s*["'][^"'\s$<{]{12,}["']/i;
+var CodeError = class extends Error {
+  constructor(message, line = 0, example = CODE_EXAMPLE) {
+    super(message);
+    this.name = "CodeError";
+    this.line = line;
+    this.example = example;
+  }
+};
+function parseRange(value, name) {
+  const m = String(value).match(/^(\d+)(?:-(\d+))?$/);
+  if (!m) throw new CodeError(`${name}="${value}" is not a line range; write ${name}=18-30 or ${name}=18`);
+  const from = Number(m[1]);
+  const to = m[2] === void 0 ? from : Number(m[2]);
+  if (from < 1 || to < from) throw new CodeError(`${name}="${value}": the first line must be 1 or more and not after the last line`);
+  return { from, to };
+}
+function parseHighlight(value) {
+  const set = /* @__PURE__ */ new Set();
+  for (const part of String(value).split(",").map((s) => s.trim()).filter(Boolean)) {
+    const { from, to } = parseRange(part, "hl");
+    for (let n = from; n <= to; n++) set.add(n);
+  }
+  return set;
+}
+function parseCodeArgs(args, diff = false) {
+  const attrs = parseAttrs(args);
+  const keys = diff ? DIFF_KEYS : KEYS;
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value !== true && !keys.has(key)) throw new CodeError(`unknown code block setting "${key}"; use ${[...keys].join(", ")}`, 0, diff ? DIFF_EXAMPLE : CODE_EXAMPLE);
+  }
+  const text = (key) => typeof attrs[key] === "string" || typeof attrs[key] === "number" ? String(attrs[key]) : void 0;
+  return { src: text("src"), lines: text("lines"), hl: text("hl"), title: text("title"), start: text("start"), file: text("file") };
+}
+function localPath2(ref, baseDir) {
+  const path = resolve2(baseDir, ref);
+  const rel = relative(baseDir, path);
+  return rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute2(rel) ? null : path;
+}
+function readSlice(ref, range, baseDir) {
+  const path = localPath2(ref, baseDir);
+  if (!path) return null;
+  if (SECRET_FILE.test(basename2(path)) || relative(baseDir, path).split(sep).some((part) => SECRET_DIR.has(part))) {
+    throw new CodeError(`"${ref}" is a file that holds keys or passwords by convention; it is not embedded. Write a sketch instead`);
+  }
+  let size;
+  try {
+    const stat = statSync2(path);
+    if (!stat.isFile()) throw new CodeError(`"${ref}" is not a file`);
+    size = stat.size;
+  } catch (err) {
+    if (err instanceof CodeError) throw err;
+    return null;
+  }
+  if (size > MAX_FILE_BYTES) throw new CodeError(`"${ref}" is ${(size / 1048576).toFixed(1)} MB; code files up to ${MAX_FILE_BYTES / 1048576} MB are read`);
+  const buf = readFileSync3(path);
+  if (buf.includes(0)) throw new CodeError(`"${ref}" is a binary file, not code`);
+  if (SECRET_TEXT.test(buf.toString("utf8"))) throw new CodeError(`"${ref}" looks like it holds a key or a token somewhere in the file; no part of it is embedded. Write a sketch instead`);
+  const all = buf.toString("utf8").replace(/\r\n?/g, "\n").replace(/\n$/, "").split("\n");
+  const from = range?.from ?? 1;
+  const to = range?.to ?? all.length;
+  if (to > all.length) throw new CodeError(`"${ref}" has ${all.length} lines; lines=${range.from}-${range.to} goes past the end`);
+  return all.slice(from - 1, to);
+}
+var EMBEDDED_BLOCK = /<figure class="am-codeblock"[^>]*?\sdata-am-src="([^"]*)"(?:\sdata-am-lines="([^"]*)")?[^>]*>([\s\S]*?)<\/figure>/g;
+var LINE_SPAN = /<span class="am-ln[^"]*"[^>]*>([\s\S]*?)<\/span>/g;
+function readEmbeddedCode(html) {
+  return new Map([...String(html).matchAll(EMBEDDED_BLOCK)].map(([, src, lines = "", inner]) => [
+    `${unescapeHtml(src)}#${lines}`,
+    [...inner.matchAll(LINE_SPAN)].map((m) => unescapeHtml(m[1]))
+  ]));
+}
+function renderCode({ lang, args, text }, { baseDir = process.cwd(), known = /* @__PURE__ */ new Map(), ui = {}, copy = true } = {}) {
+  const isDiff = lang === "diff";
+  const opts = parseCodeArgs(args, isDiff);
+  if (isDiff && opts.src) throw new CodeError("a diff block takes the diff you paste; src= is not supported for it yet, so paste the diff into the block", 0, DIFF_EXAMPLE);
+  const range = opts.lines ? parseRange(opts.lines, "lines") : null;
+  if (range && !opts.src) throw new CodeError("lines= needs src=; for code you type, use start= to number the lines");
+  let body;
+  let first = 1;
+  if (opts.src) {
+    if (text.trim()) throw new CodeError("a block with src= takes its code from the file; leave the block empty");
+    body = readSlice(opts.src, range, baseDir) ?? known.get(`${opts.src}#${opts.lines ?? ""}`);
+    if (!body) {
+      const where2 = localPath2(opts.src, baseDir) ? "not found" : `outside the current folder ${baseDir}; only files inside it are quoted`;
+      throw new CodeError(`Code file "${opts.src}" is ${where2}`);
+    }
+    first = range?.from ?? 1;
+  } else {
+    body = text.split("\n");
+    if (opts.start) first = parseRange(opts.start, "start").from;
+  }
+  if (body.length > MAX_CODE_LINES) throw new CodeError(`the block has ${body.length} lines; quote ${MAX_CODE_LINES} lines at most, and pick the lines that make the point`);
+  const slice = body.join("\n");
+  if (SECRET_TEXT.test(slice)) throw new CodeError(`${opts.src ? `"${opts.src}"` : "the block"} looks like it holds a key or a token; it is not embedded. Quote other lines or write a sketch`);
+  const copyButton = copy ? `<button class="am-code-copy" type="button" data-am="copy-code" data-done="${esc(ui.done ?? "Copied \u2713")}">${esc(ui.copyCode ?? "Copy")}</button>` : "";
+  const long = body.length > LONG_CODE_LINES ? [{ rule: "code-length", message: `the block has ${body.length} lines; readers skim past long code. Pick the 10 to ${LONG_CODE_LINES} lines that make the point` }] : [];
+  if (isDiff) return renderDiff(text, opts, { copyButton, long });
+  const last = first + body.length - 1;
+  const hl = opts.hl ? parseHighlight(opts.hl) : /* @__PURE__ */ new Set();
+  const outside = [...hl].find((n) => n < first || n > last);
+  if (outside !== void 0) throw new CodeError(`hl=${opts.hl}: line ${outside} is not in the block (lines ${first}-${last})`);
+  const shownLang = lang || (opts.src ? extname2(opts.src).slice(1).toLowerCase() : "");
+  const numbered = Boolean(opts.src || opts.start);
+  const where = opts.src ? `${opts.src}${range ? `:${range.from === range.to ? range.from : `${range.from}-${range.to}`}` : ""}` : "";
+  const title = opts.title ?? where;
+  const lines = body.map((l3, i) => {
+    const n = first + i;
+    return `<span class="am-ln${hl.has(n) ? " am-ln--hl" : ""}"${numbered ? ` data-n="${n}"` : ""}>${esc(l3)}</span>`;
+  }).join("");
+  const source = opts.src ? ` data-am-src="${esc(opts.src)}"${opts.lines ? ` data-am-lines="${esc(opts.lines)}"` : ""}` : "";
+  const head = `<figcaption class="am-code-head"><span class="am-code-title"${opts.title && where ? ` title="${esc(where)}"` : ""}>${esc(title)}</span>${shownLang ? `<span class="am-code-lang">${esc(shownLang)}</span>` : ""}${copyButton}</figcaption>`;
+  const html = `<figure class="am-codeblock"${source}>${head}<pre class="am-code${numbered ? " am-code--num" : ""}"><code${shownLang ? ` data-lang="${esc(shownLang)}"` : ""}>${lines}</code></pre></figure>`;
+  return { html, file: where || null, warnings: long };
+}
+function renderDiff(text, opts, { copyButton, long }) {
+  const diff = (() => {
+    try {
+      return parseDiff(text, opts.start ? parseRange(opts.start, "start").from : void 0);
+    } catch (err) {
+      if (err instanceof DiffError) throw new CodeError(err.message, err.line, DIFF_EXAMPLE);
+      throw err;
+    }
+  })();
+  const hl = opts.hl ? parseHighlight(opts.hl) : /* @__PURE__ */ new Set();
+  if (hl.size && !diff.numbered) throw new CodeError("hl= on a diff needs line numbers: add an @@ header or start=");
+  const outside = [...hl].find((n) => !diff.newLines.has(n));
+  if (outside !== void 0) throw new CodeError(`hl=${opts.hl}: line ${outside} is not a new-side line of the diff`);
+  const file = opts.file ?? diff.title;
+  const shownLang = extname2(file).slice(1).toLowerCase() || "diff";
+  const stat = `<span class="am-code-stat"><span class="am-code-stat-add">+${diff.add}</span> <span class="am-code-stat-del">\u2212${diff.del}</span></span>`;
+  const head = `<figcaption class="am-code-head"><span class="am-code-title"${opts.title && file ? ` title="${esc(file)}"` : ""}>${esc(opts.title ?? file)}</span>${stat}<span class="am-code-lang">${esc(shownLang)}</span>${copyButton}</figcaption>`;
+  const html = `<figure class="am-codeblock am-codeblock--diff">${head}<pre class="am-code am-code--diff${diff.numbered ? " am-code--dnum" : ""}"><code data-lang="${esc(shownLang)}">${diffRowsHtml(diff, hl)}</code></pre></figure>`;
+  return { html, file: null, warnings: [...diff.warnings, ...long] };
 }
 
 // src/render.js
@@ -5003,70 +8435,42 @@ var RenderError = class extends Error {
 };
 var LintError = class extends Error {
   constructor(warnings) {
-    super(`STE \u68C0\u67E5\u672A\u901A\u8FC7\uFF08style: strict\uFF09\uFF1A${warnings.length} \u6761`);
+    super(`STE check failed (style: strict): ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`);
     this.name = "LintError";
     this.warnings = warnings;
   }
 };
-var UI = {
-  zh: {
-    theme: { blueprint: "\u4E3B\u9898\uFF1A\u56FE\u7EB8", shadcn: "\u4E3B\u9898\uFF1A\u5361\u7247" },
-    mode: { auto: "\u660E\u6697\uFF1A\u8DDF\u968F\u7CFB\u7EDF", light: "\u660E\u6697\uFF1A\u4EAE", dark: "\u660E\u6697\uFF1A\u6697" },
-    copy: "\u590D\u5236\u6E90\u7A3F",
-    done: "\u5DF2\u590D\u5236 \u2713",
-    paths: ["\u9605\u8BFB\u8DEF\u5F84", "5 \u5206\u949F \xB7 \u603B\u89C8", "30 \u5206\u949F \xB7 + \u80CC\u666F\u4E0E\u53D1\u73B0", "\u5B8C\u6574"]
-  },
-  en: {
-    theme: { blueprint: "Theme: Blueprint", shadcn: "Theme: Cards" },
-    mode: { auto: "Mode: Auto", light: "Mode: Light", dark: "Mode: Dark" },
-    copy: "Copy source",
-    done: "Copied \u2713",
-    paths: ["Reading path", "5 min \xB7 overview", "30 min \xB7 + background + findings", "Deep \xB7 everything"]
-  }
-};
-function detectLang(text) {
-  let cjk = 0;
-  let latin = 0;
-  for (const ch of String(text)) {
-    if (isCJK(ch)) cjk++;
-    else if (/[a-z]/i.test(ch)) latin++;
-  }
-  return cjk * 3 >= latin ? "zh" : "en";
-}
-function renderDoc(source, overrides = {}, defaults2 = {}) {
-  const doc2 = parseDoc(source, { defaults: defaults2 });
-  for (const [key, value] of Object.entries(overrides)) {
-    if (value === void 0) continue;
-    if (CHOICES[key] && !CHOICES[key].includes(String(value))) {
-      throw new ParseError(`${key} \u7684\u503C "${value}" \u65E0\u6548\uFF0C\u53EF\u9009\uFF1A${CHOICES[key].join(" | ")}`, 0);
-    }
-    doc2.meta[key] = value;
-  }
-  const warnings = doc2.meta.style === "off" ? [] : lintDoc(doc2);
+function renderDoc(source, overrides = {}, defaults2 = {}, { themes: themes2 = BUILTIN, previousLanguage, baseDir, codeDir, knownImages, knownCode } = {}) {
+  const choices = { theme: themes2.choices("page") };
+  const parsed = canonicalLangs(parseDoc(source, { defaults: defaults2, choices }));
+  const meta = applyOverrides(parsed.meta, overrides, { ...CHOICES, ...choices });
+  if (meta.template === "video") throw new ParseError("template: video is a video draft; render it with am video", 0);
+  const problem = themes2.problem(meta.theme, "page");
+  if (problem) throw new ParseError(problem, 0);
+  const doc2 = { ...parsed, meta: meta.theme === AUTO ? { ...meta, theme: pickTheme({ scope: "page", template: meta.template, visuals: hasVisuals(parsed) }) } : meta };
+  const language = resolveLanguage({ declared: doc2.meta.lang, previous: previousLanguage, text: source });
+  const warnings = doc2.meta.style === "off" ? [] : lintDoc(doc2, language);
   if (doc2.meta.style === "strict" && warnings.length) throw new LintError(warnings);
-  const stats = { panels: doc2.panels.length, components: {} };
-  const ctx = { seq: 0, figs: 0, line: 0, stats, live: /* @__PURE__ */ new Set() };
+  const stats = { panels: doc2.panels.length, components: {}, code: [], codeWarnings: [], componentWarnings: [], htmlWarnings: [] };
+  const ui = { ...language.ui, research: researchLabels(language.labelKey) };
+  const ctx = { seq: 0, figs: 0, live: /* @__PURE__ */ new Set(), stats, ui, dir: language.dir, images: { baseDir, known: knownImages }, code: { baseDir: codeDir, known: knownCode } };
+  const loose = doc2.intro.find((b) => b.type === "fence" && COMPONENTS.get(b.lang)?.panelOnly);
+  if (loose) throw new RenderError(`${loose.lang} belongs in a panel: put it under the ## heading of the panel the answer changes`, { line: loose.line, component: loose.lang, example: COMPONENTS.get(loose.lang).example });
   const glossary2 = collectGlossary(doc2);
-  const lang = doc2.meta.lang || detectLang(source);
-  const { value: body, missing } = withTerms(glossary2, () => {
+  const { value: page, missing } = withTerms(glossary2, () => {
     const introHtml = renderBlocks(doc2.intro, ctx);
     const panels = doc2.panels.map((p) => ({ ...p, html: renderBlocks(p.blocks, ctx) }));
-    return TEMPLATES[doc2.meta.template]({ meta: doc2.meta, introHtml, panels, ui: UI[lang] ?? UI.zh });
+    return TEMPLATES[doc2.meta.template]({ meta: doc2.meta, introHtml, panels, ui, language });
   });
-  if (missing.length) {
-    const term = missing[0];
-    const idx = String(source).split("\n").findIndex((l3) => l3.includes(`[[${term}`) || l3.includes(`|${term}]]`));
-    throw new RenderError(`\u672F\u8BED "${term}" \u6CA1\u6709\u5728 glossary \u4E2D\u5B9A\u4E49${missing.length > 1 ? `\uFF08\u53E6\u6709 ${missing.slice(1).join("\u3001")}\uFF09` : ""}`, {
-      line: idx + 1,
-      component: "glossary",
-      example: `\`\`\`glossary
-${term} | \u522B\u540D | \u4E00\u4E24\u53E5 STE \u5B9A\u4E49\u3002 | \u6613\u6DF7\u6DC6\u7684\u6982\u5FF5
-\`\`\``
-    });
-  }
+  if (missing.length) throw missingTerms(missing, source);
+  const body = language.dir === "rtl" ? isolateLtrRuns(page) : page;
   const live = [...ctx.live];
-  const html = shell({ meta: doc2.meta, lang, body, source, live });
-  return { html, warnings, stats, meta: doc2.meta, live };
+  const html = shell({ meta: doc2.meta, language, body, source, embedded: themes2.embedFor(doc2.meta.theme, "page"), live });
+  return { html, warnings, stats, meta: doc2.meta, language, live };
+}
+function canonicalLangs(doc2) {
+  const fix = (blocks) => blocks.map((b) => b.type === "fence" && ALIASES2.has(b.lang) ? { ...b, lang: ALIASES2.get(b.lang) } : b);
+  return { ...doc2, intro: fix(doc2.intro), panels: doc2.panels.map((p) => ({ ...p, blocks: fix(p.blocks) })) };
 }
 function collectGlossary(doc2) {
   const map = /* @__PURE__ */ new Map();
@@ -5077,68 +8481,156 @@ function collectGlossary(doc2) {
       items = parseGlossary(b.text);
     } catch (err) {
       if (!(err instanceof ComponentError)) throw err;
-      throw new RenderError(err.message, { line: b.line + (err.line || 0), component: "glossary", example: resolveComponent("glossary").example });
+      throw new RenderError(err.message, { line: b.line + (err.line || 0), component: "glossary", example: COMPONENTS.get("glossary").example });
     }
     for (const g of items) {
-      const entry = { slug: g.slug, tip: `${g.term}${g.alias ? `\uFF08${g.alias}\uFF09` : ""}\uFF1A${g.def.replace(/[`*_]/g, "")}` };
+      const entry = { slug: g.slug, tip: `${g.term}${g.alias ? ` (${g.alias})` : ""}: ${g.def.replace(/[`*_]/g, "")}` };
       map.set(g.term.toLowerCase(), entry);
       if (g.alias) map.set(g.alias.toLowerCase(), entry);
     }
   }
   return map;
 }
+function missingTerms(missing, source) {
+  const [term, ...more] = missing;
+  const idx = String(source).split("\n").findIndex((l3) => l3.includes(`[[${term}`) || l3.includes(`|${term}]]`));
+  return new RenderError(`term "${term}" is not defined in a glossary${more.length ? ` (also: ${more.join(", ")})` : ""}`, {
+    line: idx + 1,
+    component: "glossary",
+    example: `\`\`\`glossary
+${term} | alias | A one- or two-sentence STE definition. | what it is often confused with
+\`\`\``
+  });
+}
+function hasVisuals({ intro, panels }) {
+  return [...intro, ...panels.flatMap((p) => p.blocks)].some((b) => b.type === "fence" && (COMPONENTS.has(b.lang) || RAW_LANGS.has(b.lang)));
+}
 function renderBlocks(blocks, ctx) {
-  return blocks.map((b) => b.type === "md" ? `<div class="am-md">${md(b.text)}</div>` : renderFence(b, ctx)).join("\n");
+  return blocks.map((b) => {
+    const { result, notes } = collectHtmlNotes(() => b.type === "md" ? `<div class="am-md">${md(b.text)}</div>` : renderFence(b, ctx));
+    noteHtml(b, notes, ctx);
+    return embedImages(b, result, ctx);
+  }).join("\n");
+}
+function noteHtml(block2, notes, ctx) {
+  if (!notes.length || !ctx.stats.htmlWarnings) return;
+  const lines = block2.text.split("\n");
+  const first = block2.type === "md" ? block2.line : block2.line + 1;
+  const used = /* @__PURE__ */ new Map();
+  for (const { at: at3, message } of notes) {
+    const tag = at3.split("\n")[0];
+    const places = lines.flatMap((l3, i) => Array(l3.split(tag).length - 1).fill(i));
+    const n = used.get(tag) ?? 0;
+    used.set(tag, n + 1);
+    ctx.stats.htmlWarnings.push({ line: first + (places[Math.min(n, places.length - 1)] ?? 0), message });
+  }
+}
+var MARKDOWN_FENCES = /* @__PURE__ */ new Set(["callout", "kv", "tree", "timeline"]);
+function embedImages(block2, html, ctx) {
+  try {
+    return inlineImages(html, { ...ctx.images, checkText: block2.type === "md" || MARKDOWN_FENCES.has(block2.lang) });
+  } catch (err) {
+    if (!(err instanceof ImageError)) throw err;
+    const idx = block2.text.split("\n").findIndex((l3) => l3.includes(err.ref) || l3.includes(encodeURI(err.ref)));
+    const first = block2.type === "md" ? block2.line : block2.line + 1;
+    throw new RenderError(err.message, { line: first + Math.max(idx, 0), component: "image", example: IMAGE_EXAMPLE });
+  }
 }
 function renderFence(block2, ctx) {
   const { lang, args, text, line } = block2;
   if (RAW_LANGS.has(lang)) return text;
-  const comp = resolveComponent(lang);
-  if (!comp) {
-    return `<pre class="am-code"><code${lang ? ` data-lang="${esc(lang)}"` : ""}>${esc(text)}</code></pre>`;
-  }
-  ctx.stats.components[comp.name] = (ctx.stats.components[comp.name] ?? 0) + 1;
-  if (LIVE.has(comp.name)) ctx.live.add(comp.name);
-  ctx.line = line;
+  const comp = COMPONENTS.get(lang);
+  if (!comp) return codeBlock(block2, ctx);
+  if (comp.pageOnly && ctx.video) throw new RenderError(`${lang} works on a page only; a video cannot take answers`, { line, component: lang, example: comp.example });
+  ctx.stats.components[lang] = (ctx.stats.components[lang] ?? 0) + 1;
+  if (LIVE.has(lang)) ctx.live?.add(lang);
   try {
-    return comp.render(text, { args, line, uid: () => `am${++ctx.seq}`, fig: () => ++ctx.figs });
+    const warn = ({ line: at3 = 0, message }) => ctx.stats.componentWarnings?.push({ line: line + at3, component: lang, message });
+    return comp.render(text, { args, line, uid: () => `am${++ctx.seq}`, fig: () => ctx.figs = (ctx.figs ?? 0) + 1, ui: ctx.ui, dir: ctx.dir ?? "ltr", video: ctx.video, warn });
   } catch (err) {
     if (!(err instanceof ComponentError)) throw err;
     throw new RenderError(err.message, {
       line: line + (err.line || 0),
-      component: comp.name,
+      component: lang,
       example: comp.example
     });
   }
 }
-function timestamp(d = /* @__PURE__ */ new Date()) {
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+function codeBlock(block2, ctx) {
+  try {
+    const { html, file, warnings } = renderCode(block2, { ...ctx.code, ui: ctx.ui, copy: !ctx.video });
+    if (file && ctx.stats.code) ctx.stats.code.push(file);
+    if (ctx.stats.codeWarnings) ctx.stats.codeWarnings.push(...warnings.map((w) => ({ line: block2.line, ...w })));
+    return html;
+  } catch (err) {
+    if (!(err instanceof CodeError)) throw err;
+    throw new RenderError(err.message, { line: block2.line + err.line, component: "code", example: err.example });
+  }
 }
-function shell({ meta, lang, body, source, live = [] }) {
-  const ui = UI[lang] ?? UI.zh;
+function timestamp(d = /* @__PURE__ */ new Date(), order = "ymd") {
+  const p = (n) => String(n).padStart(2, "0");
+  const time = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  if (order === "dmy") return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${time}`;
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${time}`;
+}
+function colophon(language) {
+  const repo = "https://github.com/QingYunA/answer-me-with-html";
+  const link = `<a href="${repo}" target="_blank" rel="noopener">Answer me with HTML</a>`;
+  const star = `<a href="${repo}" target="_blank" rel="noopener">\u2605 Star on GitHub</a>`;
+  const label = esc(language.ui.generated ?? "Generated by");
+  const time = esc(timestamp(/* @__PURE__ */ new Date(), language.dateOrder));
+  if (language.dir === "rtl") return `<footer class="am-colophon">${label} <bdi>${link} ${VERSION}</bdi> \xB7 <bdi>${time}</bdi> \xB7 <bdi>${star}</bdi></footer>`;
+  return `<footer class="am-colophon">${label} ${link} ${VERSION} \xB7 ${time} \xB7 ${star}</footer>`;
+}
+var hasDelta = (html) => html.includes('class="am-delta-bar"');
+function lightboxShell(ui, hasDiagrams) {
+  if (!hasDiagrams) return "";
+  return `<div class="am-lightbox" hidden aria-modal="true" role="dialog" aria-label="${esc(ui.diagram)}" data-expand="${esc(ui.expand)}">
+<div class="am-lightbox-backdrop"></div>
+<div class="am-lightbox-header">
+<div class="am-lightbox-title">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+<span class="am-lightbox-title-text"></span>
+</div>
+<div class="am-lightbox-actions">
+<button class="am-lightbox-close" data-action="close" title="${esc(ui.close)}" aria-label="${esc(ui.close)}">\u2715</button>
+</div>
+</div>
+<div class="am-lightbox-stage">
+<div class="am-lightbox-canvas am-diagram"></div>
+</div>
+</div>
+`;
+}
+function shell({ meta, language, body, source, embedded, live = [] }) {
+  const { ui, labelKey } = language;
+  const pick = (name, label, values, current) => `<label class="am-pick">${esc(label)}<select data-am="${name}">${values.map(([value, text]) => `<option value="${esc(value)}"${value === current ? " selected" : ""}>${esc(text)}</option>`).join("")}</select></label>`;
+  const root = { lang: language.htmlLang, dir: language.dir, theme: meta.theme, mode: meta.mode, style: meta.style };
+  const rootHtml = live.length ? rootTag(root).replace(/>$/, ' data-am-live="pending">') : rootTag(root);
   return `<!doctype html>
-<html lang="${lang === "zh" ? "zh-CN" : "en"}" data-theme="${esc(meta.theme)}" data-mode="${esc(meta.mode)}"${live.length ? ' data-am-live="pending"' : ""}>
+${rootHtml}
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Answer me with HTML ${VERSION}">
 <title>${esc(meta.title || "Answer me with HTML")}</title>
 <style>
-${pageCss()}
+${pageCss(embedded, { diff: body.includes('class="am-codeblock am-codeblock--diff"'), delta: hasDelta(body), rtl: language.dir === "rtl" })}
 </style>
 </head>
 <body>
-<div class="am-toolbar">
-<button class="am-btn" type="button" data-am="theme" data-labels="${esc(JSON.stringify(ui.theme))}">${esc(ui.theme[meta.theme])}</button>
-<button class="am-btn" type="button" data-am="mode" data-labels="${esc(JSON.stringify(ui.mode))}">${esc(ui.mode[meta.mode])}</button>
+<div class="am-toolbar"${rootCarrierAttrs(root)}>
+${pick("theme", ui.theme, embedded.map((t) => [t.name, t.label[labelKey]]), meta.theme)}
+${pick("mode", ui.modeLabel, Object.entries(ui.mode), meta.mode)}
+<button class="am-btn am-btn--reply" type="button" data-am="reply" data-ui="${esc(JSON.stringify({ ...ui.reply, done: ui.done, remarks: ui.remark.section, kinds: ui.remark.kinds }))}">${esc(ui.reply.button)}</button>
+<button class="am-btn am-btn--remark" type="button" data-am="remark" data-ui="${esc(JSON.stringify(ui.remark))}">${esc(ui.remark.button)}</button>
 <button class="am-btn" type="button" data-am="copy" data-done="${esc(ui.done)}">${esc(ui.copy)}</button>
 </div>
 ${body}
-<footer class="am-colophon">Generated by Answer me with HTML ${VERSION} \xB7 ${esc(timestamp())}</footer>
-<textarea id="am-source" hidden readonly aria-hidden="true">${esc(source)}</textarea>
+${lightboxShell(ui, body.includes('class="am-diagram'))}${colophon(language)}
+${sourceTag(source)}
 <script>
-${RUNTIME_JS}</script>
+${RUNTIME_JS}${language.dir === "rtl" ? RTL_JS : ""}${hasDelta(body) ? DELTA_JS : ""}</script>
 ${live.length ? `<div id="am-render-errors" hidden></div>
 <script type="module" id="am-diagram-runtime">
 ${DIAGRAM_JS}</script>
@@ -5149,9 +8641,9 @@ ${DIAGRAM_JS}</script>
 
 // src/bake.js
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync as existsSync2, mkdtempSync, rmSync, readFileSync as readFileSync4, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve, basename } from "node:path";
+import { join as join2, resolve as resolve3, basename as basename3 } from "node:path";
 import { pathToFileURL } from "node:url";
 var BakeUnavailable = class extends Error {
   constructor(message) {
@@ -5166,8 +8658,8 @@ var CANDIDATES = {
 };
 function findChrome(env = process.env) {
   const explicit = env.AM_CHROME || env.CHROME;
-  if (explicit) return existsSync(explicit) ? explicit : null;
-  return (CANDIDATES[process.platform] ?? []).find((p) => existsSync(p)) ?? null;
+  if (explicit) return existsSync2(explicit) ? explicit : null;
+  return (CANDIDATES[process.platform] ?? []).find((p) => existsSync2(p)) ?? null;
 }
 var CDP = class {
   constructor(ws) {
@@ -5200,10 +8692,10 @@ var CDP = class {
 };
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function launch(width, env) {
-  if (typeof WebSocket === "undefined") throw new BakeUnavailable(`\u70D8\u7119\u9700\u8981 Node 22+\uFF08\u5185\u7F6E WebSocket\uFF09\uFF0C\u5F53\u524D ${process.version}`);
+  if (typeof WebSocket === "undefined") throw new BakeUnavailable(`baking needs Node 22+ (built-in WebSocket); this is ${process.version}`);
   const chrome = findChrome(env);
-  if (!chrome) throw new BakeUnavailable("\u6CA1\u6709\u627E\u5230 Chrome / Chromium / Edge\uFF1B\u8BBE\u7F6E\u73AF\u5883\u53D8\u91CF AM_CHROME=/path/to/chrome");
-  const profile = mkdtempSync(join(tmpdir(), "am-chrome-"));
+  if (!chrome) throw new BakeUnavailable("no Chrome / Chromium / Edge found; set AM_CHROME=/path/to/chrome");
+  const profile = mkdtempSync(join2(tmpdir(), "am-chrome-"));
   const proc = spawn(chrome, [
     "--headless=new",
     "--disable-gpu",
@@ -5225,7 +8717,7 @@ async function launch(width, env) {
   try {
     const wsUrl = await new Promise((ok, ko) => {
       let buf = "";
-      const timer = setTimeout(() => ko(new BakeUnavailable("Chrome 30 \u79D2\u5185\u6CA1\u6709\u542F\u52A8")), 3e4);
+      const timer = setTimeout(() => ko(new BakeUnavailable("Chrome did not start within 30 seconds")), 3e4);
       proc.stderr.on("data", (d) => {
         buf += d;
         const m = buf.match(/DevTools listening on (ws:\/\/\S+)/);
@@ -5236,11 +8728,11 @@ async function launch(width, env) {
       });
       proc.on("exit", () => {
         clearTimeout(timer);
-        ko(new BakeUnavailable("Chrome \u542F\u52A8\u540E\u7ACB\u5373\u9000\u51FA"));
+        ko(new BakeUnavailable("Chrome exited right after it started"));
       });
       proc.on("error", (e) => {
         clearTimeout(timer);
-        ko(new BakeUnavailable(`\u65E0\u6CD5\u542F\u52A8 Chrome\uFF1A${e.message}`));
+        ko(new BakeUnavailable(`cannot start Chrome: ${e.message}`));
       });
     });
     const port = new URL(wsUrl).port;
@@ -5253,11 +8745,11 @@ async function launch(width, env) {
       }
       if (!page) await sleep(200);
     }
-    if (!page) throw new BakeUnavailable("Chrome \u6CA1\u6709\u63D0\u4F9B\u53EF\u7528\u7684\u9875\u9762");
+    if (!page) throw new BakeUnavailable("Chrome offers no page to drive");
     const ws = new WebSocket(page.webSocketDebuggerUrl);
     await new Promise((ok, ko) => {
       ws.onopen = ok;
-      ws.onerror = () => ko(new BakeUnavailable("\u65E0\u6CD5\u8FDE\u63A5 Chrome DevTools"));
+      ws.onerror = () => ko(new BakeUnavailable("cannot connect to Chrome DevTools"));
     });
     const cdp = new CDP(ws);
     return { cdp, close: () => {
@@ -5290,67 +8782,1107 @@ async function open(cdp, url, width, timeout) {
   return { state: state === "pending" || !state ? "timeout" : state, stage, errors, exceptions, ms: Date.now() - t0 };
 }
 async function bakeFile(file, { width = 1440, timeout = 12e4, env = process.env } = {}) {
-  const path = resolve(file);
+  const path = resolve3(file);
   const { cdp, close } = await launch(width, env);
   try {
     const r = await open(cdp, pathToFileURL(path).href, width, timeout);
     if (r.state !== "ok") return { ...r, baked: false };
-    const html = await cdp.js(`(() => {
-      document.getElementById('am-diagram-runtime')?.remove();
-      document.getElementById('am-render-errors')?.remove();
-      const root = document.documentElement;
-      for (const k of ['amLive', 'amStage', 'amErrors', 'path']) delete root.dataset[k];
-      root.dataset.amBaked = new Date().toISOString().slice(0, 16);
-      document.querySelectorAll('[aria-pressed]').forEach((b) => b.removeAttribute('aria-pressed'));
-      return '<!doctype html>\\n' + root.outerHTML + '\\n';
-    })()`);
-    writeFileSync(path, html);
-    return { ...r, baked: true, figures: (html.match(/data-am-done="1"/g) || []).length };
+    const figures = JSON.parse(await cdp.js(
+      `JSON.stringify([...document.querySelectorAll('figure.am-fig[data-am-done="1"]')].map((f) => [f.id, f.outerHTML]))`
+    ));
+    writeFileSync(path, spliceFigures(readFileSync4(path, "utf8"), figures));
+    return { ...r, baked: true, figures: figures.length };
   } finally {
     close();
   }
 }
+function spliceFigures(html, figures, when = (/* @__PURE__ */ new Date()).toISOString().slice(0, 16)) {
+  let out = html;
+  for (const [id, drawn] of figures) {
+    out = out.replace(new RegExp(`<figure class="am-fig[^"]*" id="${id}"[\\s\\S]*?</figure>`), () => drawn);
+  }
+  return out.replace(/<div id="am-render-errors" hidden><\/div>\n/, "").replace(/<script type="module" id="am-diagram-runtime">[\s\S]*?<\/script>\n/, "").replace(/(<html\b[^>]*?) data-am-live="pending"/, `$1 data-am-baked="${when}"`);
+}
 async function shotFile(file, { outDir, only, width = 1440, timeout = 12e4, maxCrop = 2400, env = process.env } = {}) {
-  const path = resolve(file);
-  const dir = resolve(outDir ?? join(tmpdir(), "am-shots", basename(path, ".html")));
+  const path = resolve3(file);
+  const dir = resolve3(outDir ?? join2(tmpdir(), "am-shots", basename3(path, ".html")));
   mkdirSync(dir, { recursive: true });
   const { cdp, close } = await launch(width, env);
   try {
     const r = await open(cdp, `${pathToFileURL(path).href}?shot=1`, width, timeout);
-    const layout3 = await cdp.js(`(() => {
+    const layout4 = await cdp.js(`(() => {
       const box = (el) => { const b = el.getBoundingClientRect(); return [Math.round(b.left + scrollX), Math.round(b.top + scrollY), Math.round(b.width), Math.round(b.height)]; };
       const items = {};
       for (const el of document.querySelectorAll('.am-overview, .am-panel[id], figure.am-fig[id], .am-frame, .am-doc-body')) {
         const id = el.id || (el.classList.contains('am-frame') ? 'sheet' : el.classList.contains('am-doc-body') ? 'body' : '');
         if (id && !(id in items)) items[id] = box(el);
       }
-      // \u6A2A\u5411\u6EA2\u51FA\uFF1A\u9875\u9762\u6BD4\u89C6\u53E3\u5BBD\u8BF4\u660E\u6709\u5143\u7D20\u6491\u7834\u4E86\u5E03\u5C40\uFF08\u79FB\u52A8\u7AEF\u6700\u5E38\u89C1\u7684\u95EE\u9898\uFF09\u3002
+      // Horizontal overflow: a page wider than the viewport means an element breaks the layout (the most common phone problem).
       return { docH: document.documentElement.scrollHeight, docW: document.documentElement.scrollWidth, viewW: innerWidth, items };
     })()`);
     const shoot = async (name, [x2, y2, w, h2]) => {
       const res = await cdp.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { x: x2, y: y2, width: w, height: h2, scale: 1 } });
-      writeFileSync(join(dir, `${name}.png`), Buffer.from(res.data, "base64"));
+      writeFileSync(join2(dir, `${name}.png`), Buffer.from(res.data, "base64"));
       return `${name}.png`;
     };
-    const made = [await shoot("full", [0, 0, width, Math.min(layout3.docH, 16e3)])];
-    for (const [id, [x2, y2, w, h2]] of Object.entries(layout3.items)) {
+    const made = [await shoot("full", [0, 0, width, Math.min(layout4.docH, 16e3)])];
+    for (const [id, [x2, y2, w, h2]] of Object.entries(layout4.items)) {
       if (only && !only.includes(id)) continue;
       if (w < 4 || h2 < 4) continue;
       made.push(await shoot(id, [Math.max(0, x2 - 10), Math.max(0, y2 - 10), w + 20, Math.min(h2 + 20, maxCrop)]));
     }
-    return { ...r, dir, shots: made, layout: layout3 };
+    return { ...r, dir, shots: made, layout: layout4 };
   } finally {
     close();
   }
 }
 function needsBake(file) {
-  return readFileSync(file, "utf8").includes('id="am-diagram-runtime"');
+  return readFileSync4(file, "utf8").includes('id="am-diagram-runtime"');
+}
+
+// src/video/script.js
+var NARRATION = /^\s*>\s?(.*)$/;
+var FOCUS = /\[([^\]\n]+)\]/g;
+var VIDEO_THEMES = Object.freeze(themeNames("video"));
+function parseVideo(source, { defaults: defaults2 = {}, themeChoices = VIDEO_THEMES } = {}) {
+  const doc2 = parseDoc(source, { defaults: { ...defaults2, template: "video" }, choices: { theme: themeChoices } });
+  const intro = splitNarration(doc2.intro);
+  const scenes = doc2.panels.map((p) => {
+    const { blocks, beats } = splitNarration(p.blocks);
+    if (!beats.length) throw new ParseError(`Scene "${p.title}" has no narration: write at least one > narration line in every scene`, p.line);
+    return { id: p.id, title: p.title, line: p.line, attrs: p.attrs, blocks, beats };
+  });
+  if (!scenes.length) throw new ParseError("A video draft needs at least one scene (## Scene title)", 1);
+  return { meta: doc2.meta, doc: doc2, intro: intro.blocks, introBeats: intro.beats, scenes };
+}
+function splitNarration(blocks) {
+  const beats = [];
+  const out = [];
+  for (const b of blocks) {
+    if (b.type !== "md") {
+      out.push(b);
+      continue;
+    }
+    const rest = [];
+    b.text.split("\n").forEach((raw, i) => {
+      const m = raw.match(NARRATION);
+      if (m && m[1].trim()) beats.push(beat(m[1].trim(), b.line + i));
+      else if (!m) rest.push(raw);
+    });
+    if (rest.some((l3) => l3.trim())) out.push({ ...b, text: rest.join("\n") });
+  }
+  return { blocks: out, beats };
+}
+function beat(raw, line) {
+  const focus = [...raw.matchAll(FOCUS)].map((m) => m[1].trim());
+  return { raw, text: raw.replace(FOCUS, "$1"), focus: focus[0] ?? null, line };
+}
+function estimateSeconds(text) {
+  let cjk = 0;
+  let rest = "";
+  for (const ch of text) {
+    if (isCJK(ch)) cjk++;
+    rest += isCJK(ch) ? " " : ch;
+  }
+  return Math.max(1.6, cjk / 4.2 + countWords(rest) / 2.6 + 0.3);
+}
+var TIMING = Object.freeze({
+  title: 2.4,
+  // intro hold when there is no narration
+  transition: 0.9,
+  // scene change (including cross-scene morphs)
+  gap: 0.35,
+  // pause between two narration lines
+  tail: 0.8,
+  // hold after a scene's last line
+  outro: 1.5
+  // outro hold
+});
+function buildTimeline(video, durations) {
+  let t = 0;
+  let k2 = 0;
+  const lay = (beats) => beats.map((b) => {
+    const dur = durations[k2++];
+    const start = t;
+    t += dur + TIMING.gap;
+    return { text: b.text, focus: b.focus, start: round2(start), end: round2(start + dur) };
+  });
+  const titleBeats = lay(video.introBeats);
+  if (!titleBeats.length) t = TIMING.title;
+  const title = { start: 0, end: round2(t), beats: titleBeats };
+  const scenes = video.scenes.map((s) => {
+    const start = t;
+    t += TIMING.transition;
+    const beats = lay(s.beats);
+    t += TIMING.tail - TIMING.gap;
+    return { id: s.id, title: s.title, start: round2(start), end: round2(t), beats };
+  });
+  t += TIMING.outro;
+  return { duration: round2(t), title, scenes };
+}
+var allBeats = (video) => [...video.introBeats, ...video.scenes.flatMap((s) => s.beats)];
+var round2 = (x2) => Math.round(x2 * 1e3) / 1e3;
+
+// src/video/tts.js
+import { spawn as spawn2, spawnSync as spawnSync2 } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync as mkdirSync2, readFileSync as readFileSync5, writeFileSync as writeFileSync2, existsSync as existsSync3, rmSync as rmSync2, mkdtempSync as mkdtempSync2, renameSync } from "node:fs";
+import { tmpdir as tmpdir2 } from "node:os";
+import { join as join3 } from "node:path";
+
+// src/sys.js
+import { spawnSync } from "node:child_process";
+function hasCommand(cmd) {
+  return spawnSync(process.platform === "win32" ? "where" : "which", [cmd], { stdio: "ignore" }).status === 0;
+}
+
+// src/video/tts.js
+var SAMPLE_RATE = 22050;
+var ELEVEN_DEFAULT_VOICE = "bIHbv24MWmeRgasZH58o";
+var ELEVEN_DEFAULT_MODEL = "eleven_v4_turbo";
+var ELEVEN_TIMEOUT_MS = 6e4;
+var LOCAL_TIMEOUT_MS = 3e5;
+var LOCAL_RATIO = Object.freeze([0.5, 2]);
+var LOCAL_ATTEMPTS = 3;
+var SILENCE = 300;
+var TtsError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "TtsError";
+  }
+};
+function pickProvider(choice, env, { platform = process.platform, which = hasCommand } = {}) {
+  const eleven = () => elevenLabs(env);
+  const system = () => systemVoice(platform, which);
+  if (choice === "off") return null;
+  if (choice === "elevenlabs") {
+    if (!env.ELEVENLABS_API_KEY) throw new TtsError("voice=elevenlabs needs the ELEVENLABS_API_KEY environment variable");
+    return eleven();
+  }
+  if (choice === "local") return localSpeech(env);
+  if (choice === "system") {
+    const p = system();
+    if (!p) throw new TtsError("No system TTS found: macOS has say built in; on Linux install espeak-ng");
+    return p;
+  }
+  if (env.ELEVENLABS_API_KEY) return eleven();
+  return system();
+}
+function elevenLabs(env) {
+  const voice = env.ELEVENLABS_VOICE_ID || ELEVEN_DEFAULT_VOICE;
+  const model = env.ELEVENLABS_MODEL_ID || ELEVEN_DEFAULT_MODEL;
+  return {
+    name: "elevenlabs",
+    voice: "elevenlabs",
+    id: `elevenlabs:${voice}:${model}`,
+    concurrency: 2,
+    async synth(text) {
+      const url = `https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=pcm_${SAMPLE_RATE}`;
+      let res;
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          // No language_code: the API ignores it for the models that do not support it (multilingual_v2 is documented as
+          // not supporting it) and every model reads the language from the text, so one voice reads every line.
+          headers: { "xi-api-key": env.ELEVENLABS_API_KEY, "content-type": "application/json" },
+          body: JSON.stringify({ text, model_id: model }),
+          signal: AbortSignal.timeout(ELEVEN_TIMEOUT_MS)
+        });
+      } catch (e) {
+        throw new TtsError(`Cannot connect to ElevenLabs: ${e.name === "TimeoutError" ? `no response within ${ELEVEN_TIMEOUT_MS / 1e3} seconds` : e.message}`);
+      }
+      if (!res.ok) throw new TtsError(`ElevenLabs returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const buf = Buffer.from(await res.arrayBuffer());
+      return new Int16Array(buf.buffer, buf.byteOffset, Math.floor(buf.length / 2)).slice();
+    }
+  };
+}
+function localSpeech(env) {
+  if (!env.AM_TTS_URL) throw new TtsError("voice=local needs the AM_TTS_URL environment variable (such as http://127.0.0.1:8000)");
+  const url = `${env.AM_TTS_URL.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/audio/speech`;
+  let extra = {};
+  if (env.AM_TTS_EXTRA) {
+    try {
+      extra = JSON.parse(env.AM_TTS_EXTRA);
+    } catch {
+      extra = null;
+    }
+    if (!extra || typeof extra !== "object" || Array.isArray(extra)) throw new TtsError("AM_TTS_EXTRA must be a JSON object");
+  }
+  const attempts = env.AM_TTS_ATTEMPTS ? Number(env.AM_TTS_ATTEMPTS) : LOCAL_ATTEMPTS;
+  if (!Number.isInteger(attempts) || attempts < 1) throw new TtsError("AM_TTS_ATTEMPTS must be a positive integer");
+  const body = { ...extra, response_format: "wav", stream: false };
+  delete body.input;
+  if (env.AM_TTS_MODEL) body.model = env.AM_TTS_MODEL;
+  if (env.AM_TTS_VOICE) body.voice = env.AM_TTS_VOICE;
+  const speed = typeof body.speed === "number" && body.speed > 0 ? body.speed : 1;
+  const headers = { "content-type": "application/json", ...env.AM_TTS_API_KEY ? { authorization: `Bearer ${env.AM_TTS_API_KEY}` } : {} };
+  const request = async (text) => {
+    const signal = AbortSignal.timeout(LOCAL_TIMEOUT_MS);
+    const why = (e) => signal.aborted ? `not finished within ${LOCAL_TIMEOUT_MS / 1e3} seconds` : e.message;
+    let res;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ...body, input: text }),
+        signal
+      });
+    } catch (e) {
+      throw new TtsError(`Cannot connect to the local TTS ${url}: ${why(e)}`);
+    }
+    let buf;
+    try {
+      buf = Buffer.from(await res.arrayBuffer());
+    } catch (e) {
+      throw new TtsError(`Cannot read the local TTS response (HTTP ${res.status}): ${why(e)}`);
+    }
+    if (!res.ok) throw new TtsError(`The local TTS returned ${res.status}: ${buf.toString("utf8", 0, 200)}`);
+    try {
+      return readWav(buf);
+    } catch (e) {
+      throw new TtsError(`Cannot decode the audio from the local TTS (needs 16-bit PCM WAV): ${e.message}`);
+    }
+  };
+  return {
+    name: "local",
+    voice: "local",
+    id: `local:${url}:${attempts}:${stableJson(body)}`,
+    concurrency: 1,
+    async synth(text) {
+      const expected = estimateSeconds(text) / speed;
+      let best = null;
+      for (let i = 0; i < attempts; i++) {
+        const samples = trimSilence(await request(text));
+        if (!samples.some((x2) => Math.abs(x2) >= SILENCE)) continue;
+        const ratio = samples.length / SAMPLE_RATE / expected;
+        if (!best || Math.abs(Math.log(ratio)) < Math.abs(Math.log(best.ratio))) best = { samples, ratio };
+        if (ratio >= LOCAL_RATIO[0] && ratio <= LOCAL_RATIO[1]) break;
+      }
+      if (!best) throw new TtsError(`The local TTS returned only silence ${attempts} time${attempts === 1 ? "" : "s"} in a row`);
+      return best.samples;
+    }
+  };
+}
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((k2) => `${JSON.stringify(k2)}:${stableJson(value[k2])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+function systemVoice(platform, which) {
+  if (platform === "darwin" && which("say")) {
+    const voices = macVoices();
+    return {
+      name: "say",
+      voice: "system",
+      id: "say",
+      concurrency: 4,
+      usesLanguage: true,
+      // The voice this machine has for a line's language, or null: the line then keeps its caption instead of being read
+      // by a voice for another language.
+      voiceFor: (language) => macVoiceFor(voices, language),
+      // A caller that does not say which language a line is in (languageOf is optional) gets the system default voice.
+      synth: (text, { voice } = {}) => withTemp(async (file) => {
+        await run("say", [...voice ? ["-v", voice] : [], "-o", file, "--file-format=WAVE", `--data-format=LEI16@${SAMPLE_RATE}`, "-f", textFile(file, text)]);
+        return readWav(readFileSync5(file));
+      })
+    };
+  }
+  if (which("espeak-ng")) {
+    const voices = espeakVoices();
+    return {
+      name: "espeak-ng",
+      voice: "system",
+      id: "espeak-ng",
+      concurrency: 4,
+      usesLanguage: true,
+      voiceFor: (language) => espeakVoiceFor(voices, language),
+      // A caller that does not say which language a line is in gets the English voice, which every espeak-ng build has.
+      synth: (text, { voice } = {}) => withTemp(async (file) => {
+        await run("espeak-ng", ["-v", voice ?? "en-us", "-w", file, "-f", textFile(file, text)]);
+        return readWav(readFileSync5(file));
+      })
+    };
+  }
+  return null;
+}
+function macVoices() {
+  return parseMacVoices(spawnSync2("say", ["-v", "?"], { encoding: "utf8" }).stdout || "");
+}
+function espeakVoices() {
+  return parseEspeakVoices(spawnSync2("espeak-ng", ["--voices"], { encoding: "utf8" }).stdout || "");
+}
+function parseMacVoices(out) {
+  return out.split("\n").map((l3) => l3.match(/^(.+?)\s+([a-z]{2,3}[_-][A-Za-z0-9]{2,4})\s+#/)).filter(Boolean).map((m) => ({ name: m[1].trim(), locale: m[2] }));
+}
+function parseEspeakVoices(out) {
+  return out.split("\n").map((l3) => l3.match(/^\s*\d+\s+(\S+)\s/)).filter(Boolean).map((m) => m[1]);
+}
+var PREFERRED_VOICES = {
+  zh: ["Tingting", "Ting-Ting", "Meijia", "Sinji"],
+  en: ["Samantha", "Alex", "Daniel", "Ava"],
+  ja: ["Kyoko", "Otoya"]
+};
+var SHARED_VOICES = /* @__PURE__ */ new Set(["Eddy", "Flo", "Grandma", "Grandpa", "Reed", "Rocko", "Sandy", "Shelley"]);
+function macVoiceFor(voices, language) {
+  if (!voices.length) return "";
+  const base = baseLanguage(language);
+  const implied = new Intl.Locale(language).maximize();
+  const named = voiceHints(language)?.say;
+  const wanted = [language, implied.region && `${implied.language}-${implied.region}`, named].filter(Boolean).map(localeKey);
+  for (const locale of new Set(wanted)) {
+    const voice = bestVoice(voices.filter((v) => localeKey(v.locale) === locale), base);
+    if (voice) return voice;
+  }
+  return bestVoice(voices.filter((v) => localeKey(v.locale).split("_")[0] === base), base);
+}
+function espeakVoiceFor(voices, language) {
+  const base = baseLanguage(language);
+  const name = voiceHints(language)?.espeak ?? base;
+  if (!voices.length) return name;
+  const installed = voices.includes(name) || voices.includes(base) || voices.some((v) => v.startsWith(`${base}-`));
+  return installed ? name : null;
+}
+var localeKey = (locale) => String(locale).toLowerCase().replace(/-/g, "_");
+function bestVoice(candidates, base) {
+  if (!candidates.length) return null;
+  for (const name of PREFERRED_VOICES[base] ?? []) {
+    const hit = candidates.find((v) => stripName(v.name) === name);
+    if (hit) return hit.name;
+  }
+  const own = candidates.filter((v) => !SHARED_VOICES.has(stripName(v.name)));
+  return (own[0] ?? candidates[0]).name;
+}
+var stripName = (name) => name.replace(/\s*[(（].*$/, "");
+function run(cmd, args) {
+  return new Promise((resolve6, reject) => {
+    const p = spawn2(cmd, args, { stdio: ["ignore", "ignore", "pipe"] });
+    let err = "";
+    p.stderr.on("data", (d) => {
+      err += d;
+    });
+    p.on("error", reject);
+    p.on("close", (code) => code === 0 ? resolve6() : reject(new TtsError(`${cmd} failed (${code}): ${err.slice(0, 200)}`)));
+  });
+}
+function textFile(wavFile, text) {
+  const p = `${wavFile}.txt`;
+  writeFileSync2(p, text);
+  return p;
+}
+async function withTemp(fn3) {
+  const dir = mkdtempSync2(join3(tmpdir2(), "am-tts-"));
+  try {
+    return await fn3(join3(dir, "out.wav"));
+  } finally {
+    rmSync2(dir, { recursive: true, force: true });
+  }
+}
+function readWav(buf) {
+  if (buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WAVE") throw new TtsError("Not a WAV file");
+  let pos = 12;
+  let fmt = null;
+  while (pos + 8 <= buf.length) {
+    const id = buf.toString("ascii", pos, pos + 4);
+    const size = buf.readUInt32LE(pos + 4);
+    if (id === "fmt ") fmt = { channels: buf.readUInt16LE(pos + 10), rate: buf.readUInt32LE(pos + 12), bits: buf.readUInt16LE(pos + 22) };
+    if (id === "data") {
+      if (!fmt || fmt.bits !== 16) throw new TtsError("Only 16-bit PCM WAV is supported");
+      const n = Math.floor(Math.min(size, buf.length - pos - 8) / 2 / fmt.channels);
+      const samples = new Int16Array(n);
+      for (let i = 0; i < n; i++) samples[i] = buf.readInt16LE(pos + 8 + i * 2 * fmt.channels);
+      return fmt.rate === SAMPLE_RATE ? samples : resample({ rate: fmt.rate, samples });
+    }
+    pos += 8 + size + size % 2;
+  }
+  throw new TtsError("The WAV has no data chunk");
+}
+function resample(input) {
+  if (input instanceof Int16Array) return input;
+  const { rate, samples } = input;
+  const n = Math.floor(samples.length * SAMPLE_RATE / rate);
+  const out = new Int16Array(n);
+  for (let i = 0; i < n; i++) {
+    const x2 = i * rate / SAMPLE_RATE;
+    const a = Math.floor(x2);
+    const b = Math.min(a + 1, samples.length - 1);
+    out[i] = Math.round(samples[a] + (samples[b] - samples[a]) * (x2 - a));
+  }
+  return out;
+}
+async function synthAll(texts, provider, { cacheDir, languageOf } = {}) {
+  if (cacheDir) mkdirSync2(cacheDir, { recursive: true });
+  const results = new Array(texts.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < texts.length) {
+      const i = next++;
+      const language = provider.usesLanguage ? languageOf?.(texts[i]) : void 0;
+      const voice = language && provider.voiceFor ? provider.voiceFor(language) : void 0;
+      if (language && provider.voiceFor && voice === null) {
+        results[i] = null;
+        continue;
+      }
+      const key = `${provider.id}${voice ? `:${voice}` : ""}${language ? `
+${language}` : ""}
+${texts[i]}`;
+      const file = cacheDir && join3(cacheDir, `${createHash("sha1").update(key).digest("hex")}.pcm`);
+      const cached = file && readCache(file);
+      if (cached) {
+        results[i] = cached;
+        continue;
+      }
+      results[i] = trimSilence(await provider.synth(texts[i], { language, voice }));
+      if (file) writeCache(file, results[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(provider.concurrency ?? 2, texts.length) }, worker));
+  return results;
+}
+function readCache(file) {
+  if (!existsSync3(file)) return null;
+  const buf = readFileSync5(file);
+  if (!buf.length || buf.length % 2) return null;
+  return new Int16Array(buf.buffer, buf.byteOffset, buf.length / 2).slice();
+}
+function writeCache(file, samples) {
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync2(tmp, Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength));
+  renameSync(tmp, file);
+}
+function trimSilence(samples, threshold = SILENCE) {
+  let a = 0;
+  let b = samples.length;
+  while (a < b && Math.abs(samples[a]) < threshold) a++;
+  while (b > a && Math.abs(samples[b - 1]) < threshold) b--;
+  const pad = Math.floor(SAMPLE_RATE * 0.04);
+  return samples.slice(Math.max(0, a - pad), Math.min(samples.length, b + pad));
+}
+function mixTrack(clips, starts, duration) {
+  const total = Math.ceil(duration * SAMPLE_RATE);
+  const track = new Int16Array(total);
+  clips.forEach((clip, i) => {
+    if (!clip) return;
+    const s0 = Math.round(starts[i] * SAMPLE_RATE);
+    for (let j2 = 0; j2 < clip.length && s0 + j2 < total; j2++) track[s0 + j2] = clip[j2];
+  });
+  return wav(track);
+}
+function wav(samples) {
+  const buf = Buffer.alloc(44 + samples.length * 2);
+  buf.write("RIFF", 0);
+  buf.writeUInt32LE(36 + samples.length * 2, 4);
+  buf.write("WAVE", 8);
+  buf.write("fmt ", 12);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20);
+  buf.writeUInt16LE(1, 22);
+  buf.writeUInt32LE(SAMPLE_RATE, 24);
+  buf.writeUInt32LE(SAMPLE_RATE * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write("data", 36);
+  buf.writeUInt32LE(samples.length * 2, 40);
+  Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength).copy(buf, 44);
+  return buf;
+}
+
+// src/video/render.js
+async function renderVideo(source, { provider = null, cacheDir, defaults: defaults2 = {}, overrides = {}, onProgress, themes: themes2 = BUILTIN, previousLanguage } = {}) {
+  const themeChoices = themes2.choices("video");
+  const video = parseVideo(source, { defaults: defaults2, themeChoices });
+  const picked = applyOverrides(video.meta, overrides, { ...CHOICES, theme: themeChoices });
+  const problem = themes2.problem(picked.theme, "video");
+  if (problem) throw new ParseError(problem, 0);
+  const meta = picked.theme === AUTO ? { ...picked, theme: pickTheme({ scope: "video" }) } : picked;
+  const language = resolveLanguage({ declared: meta.lang, previous: previousLanguage, text: source });
+  const warnings = meta.style === "off" ? [] : lintDoc(video.doc, language).filter((w) => w.rule !== "paragraph-length");
+  if (meta.style === "strict" && warnings.length) throw new LintError(warnings);
+  const beats = allBeats(video);
+  const languageOf = (text) => language.declared ? language.tag : detectLang(text);
+  const { clips, durations, captionsOnly } = await voiceBeats(beats, provider, cacheDir, onProgress, languageOf);
+  const timeline = buildTimeline(video, durations);
+  const flat = [...timeline.title.beats, ...timeline.scenes.flatMap((s) => s.beats)];
+  const wav2 = clips?.some(Boolean) ? mixTrack(clips, flat.map((b) => b.start), timeline.duration) : null;
+  const stats = { panels: video.scenes.length, components: {}, componentWarnings: [], htmlWarnings: [] };
+  const scenesHtml = renderScenes(video, meta, timeline, { seq: 0, stats, ui: language.ui, dir: language.dir, video: true }, language.videoUi);
+  const html = shell2({ meta, language, scenesHtml, data: playerData(video, meta, timeline), wav: wav2, voice: wav2 ? provider.voice : void 0, source, embedded: themes2.embedFor(meta.theme, "video") });
+  return { html, wav: wav2, warnings, stats, meta, language, duration: timeline.duration, beats: beats.length, captionsOnly };
+}
+async function voiceBeats(beats, provider, cacheDir, onProgress, languageOf) {
+  if (!provider) return { clips: null, captionsOnly: [], durations: beats.map((b) => estimateSeconds(b.text)) };
+  onProgress?.(`Voice-over: ${provider.name}, ${beats.length} line${beats.length === 1 ? "" : "s"}`);
+  const clips = await synthAll(beats.map((b) => b.text), provider, { cacheDir, languageOf });
+  const silent = /* @__PURE__ */ new Map();
+  clips.forEach((clip, i) => {
+    if (clip) return;
+    const tag = languageOf(beats[i].text);
+    silent.set(tag, (silent.get(tag) ?? 0) + 1);
+  });
+  const captionsOnly = [...silent].map(([language, lines]) => ({ language, lines }));
+  for (const { language, lines } of captionsOnly) {
+    const n = `${lines} line${lines === 1 ? "" : "s"}`;
+    onProgress?.(`No ${language} voice on this machine: captions only for ${n}`);
+  }
+  return { clips, captionsOnly, durations: clips.map((c, i) => c ? c.length / SAMPLE_RATE : estimateSeconds(beats[i].text)) };
+}
+function playerData(video, meta, timeline) {
+  return {
+    duration: timeline.duration,
+    fps: 30,
+    segments: [timeline.title, ...timeline.scenes].map((s, i) => ({
+      start: s.start,
+      end: s.end,
+      id: i === 0 ? "" : s.id,
+      title: i === 0 ? meta.title : s.title,
+      beats: s.beats.map((b, k2) => ({ ...b, html: captionHtml(beatsOf(video, i)[k2].raw) }))
+    }))
+  };
+}
+function renderScenes(video, meta, timeline, ctx, ui) {
+  const total = video.scenes.length;
+  return [
+    titleScene(meta, renderBlocks(video.intro, ctx), { scenes: total, duration: timeline.duration }, ui),
+    ...video.scenes.map((s, i) => scene(s, i, total, renderBlocks(s.blocks, ctx), ui))
+  ].join("\n");
+}
+var beatsOf = (video, i) => i === 0 ? video.introBeats : video.scenes[i - 1].beats;
+function captionHtml(raw) {
+  return raw.split(/(\[[^\]\n]+\])/).map((part) => {
+    const m = part.match(/^\[([^\]]+)\]$/);
+    return m ? `<b>${esc(m[1])}</b>` : esc(part);
+  }).join("");
+}
+function formatClock(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+function titleScene(meta, introHtml, { scenes, duration }, ui) {
+  const mmss = formatClock(duration);
+  const cells = [[ui.drawn, "Answer me with HTML"], [ui.date, timestamp().slice(0, 10)], [ui.scenes, String(scenes)], [ui.duration, mmss]];
+  const block2 = `<div class="amv-titleblock">${cells.map(([k2, v]) => `<div><b>${esc(k2)}</b><span>${esc(v)}</span></div>`).join("")}</div>`;
+  return `<section class="amv-scene amv-scene--title" data-i="0">
+<div class="amv-title-wrap"><h1 class="amv-title">${esc(meta.title || "Answer me with HTML")}</h1>${meta.subtitle ? `<p class="amv-subtitle">${esc(meta.subtitle)}</p>` : ""}${introHtml ? `<div class="amv-intro">${introHtml}</div>` : ""}${block2}</div>
+</section>`;
+}
+function scene(s, i, total, body, ui) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `<section class="amv-scene" data-i="${i + 1}">
+<header class="amv-scene-head"><span class="amv-scene-n">${esc(s.id)}</span><span class="amv-scene-title">${esc(s.title)}</span><span class="amv-scene-meta">${esc(ui.sheet.replace("{n}", pad(i + 1)).replace("{total}", pad(total)))}</span></header>
+<div class="amv-body"><div class="amv-fit">${body}</div></div>
+</section>`;
+}
+function sheetFrame() {
+  const ruler3 = (side, labels2) => `<div class="amv-ruler amv-ruler--${side}">${labels2.map((l3) => `<span>${l3}</span>`).join("")}</div>`;
+  const nums = [1, 2, 3, 4, 5, 6, 7, 8];
+  const letters = ["A", "B", "C", "D"];
+  return `<div class="amv-sheet" aria-hidden="true">${ruler3("top", nums)}${ruler3("bottom", nums)}${ruler3("left", letters)}${ruler3("right", letters)}</div>`;
+}
+function shell2({ meta, language, scenesHtml, data, wav: wav2, voice, source, embedded }) {
+  const ui = language.videoUi;
+  const json = JSON.stringify(data).replace(/</g, "\\u003c");
+  return `<!doctype html>
+${rootTag({ lang: language.htmlLang, dir: language.dir, theme: meta.theme, mode: embedded.find((t) => t.name === meta.theme).mode ?? (meta.mode === "dark" ? "dark" : "light"), style: meta.style, voice, video: true })}
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Answer me with HTML ${VERSION}">
+<title>${esc(meta.title || "Answer me with HTML")}</title>
+<style>
+${videoCss(embedded, { diff: scenesHtml.includes('class="am-codeblock am-codeblock--diff"'), delta: hasDelta(scenesHtml), rtl: language.dir === "rtl" })}
+</style>
+</head>
+<body>
+<div class="amv-viewport">
+<div class="amv-stage">
+${sheetFrame()}
+<div class="amv-camera">
+${scenesHtml}
+<div class="amv-overlay"></div>
+</div>
+<div class="amv-caption"><span></span></div>
+<button class="amv-bigplay" type="button" aria-label="${esc(ui.play)}">\u25B6</button>
+</div>
+</div>
+<div class="amv-controls">
+<button class="amv-btn" type="button" data-amv="toggle" data-play="${esc(ui.play)}" data-pause="${esc(ui.pause)}" aria-label="${esc(ui.play)}">\u25B6</button>
+<span class="amv-time">0:00 / 0:00</span>
+<div class="amv-track"><input class="amv-seek" type="range" min="0" step="0.01" value="0" aria-label="seek"><div class="amv-marks"></div></div>
+<button class="amv-btn amv-rate" type="button" data-amv="rate" data-speed="${esc(ui.speed)}" aria-label="${esc(ui.speed)}">1\xD7</button>
+<button class="amv-btn amv-export" type="button" data-amv="export" data-label="${esc(ui.export)}" data-icon="&#8681;" aria-label="${esc(ui.export)}">&#8681;</button>
+<span class="amv-brand">Answer me with HTML ${VERSION} \xB7 ${esc(timestamp())}</span>
+</div>
+<nav class="amv-chapters" aria-label="${esc(ui.chapters)}"></nav>
+<script type="application/json" id="amv-data">${json}</script>
+${wav2 ? audioTag(wav2) : ""}
+${sourceTag(source)}
+<script>
+${VIDEO_MUX_JS}</script>
+<script>
+${VIDEO_EXPORT_JS}</script>
+<script>
+${VIDEO_JS}</script>
+</body>
+</html>
+`;
+}
+
+// src/video/export.js
+import { spawn as spawn3 } from "node:child_process";
+import { existsSync as existsSync4, mkdtempSync as mkdtempSync3, rmSync as rmSync3, writeFileSync as writeFileSync3 } from "node:fs";
+import { tmpdir as tmpdir3 } from "node:os";
+import { join as join4 } from "node:path";
+import { pathToFileURL as pathToFileURL2 } from "node:url";
+var ExportError = class extends Error {
+};
+var CDP_TIMEOUT_MS = 3e4;
+var CHROME_START_TIMEOUT_MS = 2e4;
+var WIDTH = 1920;
+var HEIGHT = 1080;
+var QUALITY = 92;
+var WEBM_BITRATE = 35e5;
+var WEBM_SLICE = 1048572;
+var WEBM_POLL_MS = 250;
+var CHROME_PATHS = {
+  darwin: [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+  ],
+  win32: [
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+  ],
+  linux: ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge"]
+};
+function findChrome2(env = process.env, platform = process.platform) {
+  const custom = env.AM_CHROME || env.CHROME_PATH;
+  if (custom) return custom;
+  const list = CHROME_PATHS[platform] ?? CHROME_PATHS.linux;
+  return list.find((p) => p.includes("/") || p.includes("\\") ? existsSync4(p) : hasCommand(p)) ?? null;
+}
+async function openPlayer(htmlFile, { env, startTimeoutMs }) {
+  const chromePath = findChrome2(env);
+  if (!chromePath) throw new ExportError("No Chrome / Chromium / Edge found. Set the browser path with the AM_CHROME environment variable");
+  const tmp = mkdtempSync3(join4(tmpdir3(), "am-export-"));
+  const chrome = spawn3(chromePath, [
+    "--headless=new",
+    "--remote-debugging-port=0",
+    `--user-data-dir=${join4(tmp, "profile")}`,
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--hide-scrollbars",
+    "--mute-audio",
+    "--force-device-scale-factor=1",
+    `--window-size=${WIDTH},${HEIGHT}`,
+    "about:blank"
+  ], { stdio: ["ignore", "ignore", "pipe"] });
+  let cdp = null;
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    cdp?.close();
+    await new Promise((r) => {
+      if (chrome.exitCode !== null) return r();
+      const timer = setTimeout(r, 3e3);
+      chrome.once("exit", () => {
+        clearTimeout(timer);
+        r();
+      });
+      chrome.kill();
+    });
+    try {
+      rmSync3(tmp, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
+    } catch {
+    }
+  };
+  try {
+    cdp = await connect(await devtoolsUrl(chrome, startTimeoutMs));
+    const { targetId } = await cdp.send("Target.createTarget", { url: "about:blank" });
+    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
+    const page = (method, params) => cdp.send(method, params, sessionId);
+    await page("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+    await page("Page.enable");
+    const loaded = cdp.once("Page.loadEventFired");
+    await page("Page.navigate", { url: pathToFileURL2(htmlFile).href });
+    await loaded;
+    const evaluate = async (expression) => {
+      const r = await page("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      if (r.exceptionDetails) throw new ExportError(`Player page script error: ${r.exceptionDetails.exception?.description ?? r.exceptionDetails.text}`);
+      return r.result.value;
+    };
+    const info = await evaluate("document.fonts.ready.then(() => { window.__amv.exportMode(); return { duration: window.__amv.duration, fps: window.__amv.fps }; })");
+    const screenshot = async () => (await page("Page.captureScreenshot", { format: "jpeg", quality: QUALITY, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT, scale: 1 } })).data;
+    return { info, evaluate, screenshot, close, tmp };
+  } catch (e) {
+    await close();
+    throw e;
+  }
+}
+async function exportMp4(htmlFile, mp4File, { wav: wav2, env = process.env, onProgress = () => {
+}, startTimeoutMs = CHROME_START_TIMEOUT_MS } = {}) {
+  if (typeof WebSocket === "undefined") throw new ExportError("MP4 export needs Node.js 22 or later (built-in WebSocket)");
+  if (!hasCommand("ffmpeg")) throw new ExportError("MP4 export needs ffmpeg: on macOS run brew install ffmpeg; on Linux install it with the package manager");
+  const player = await openPlayer(htmlFile, { env, startTimeoutMs });
+  try {
+    const { info, evaluate, screenshot, tmp } = player;
+    const wavFile = wav2 ? join4(tmp, "voice.wav") : null;
+    if (wav2) writeFileSync3(wavFile, wav2);
+    const ffmpeg = spawn3("ffmpeg", [
+      "-y",
+      "-loglevel",
+      "error",
+      "-f",
+      "image2pipe",
+      "-framerate",
+      String(info.fps),
+      "-c:v",
+      "mjpeg",
+      "-i",
+      "-",
+      ...wavFile ? ["-i", wavFile] : [],
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-crf",
+      "20",
+      "-preset",
+      "medium",
+      ...wavFile ? ["-c:a", "aac", "-b:a", "160k", "-shortest"] : [],
+      "-movflags",
+      "+faststart",
+      mp4File
+    ], { stdio: ["pipe", "ignore", "pipe"] });
+    let ffErr = "";
+    let exited = false;
+    ffmpeg.stderr.on("data", (d) => {
+      ffErr += d;
+    });
+    ffmpeg.stdin.on("error", () => {
+    });
+    const done = new Promise((resolve6, reject) => {
+      ffmpeg.on("error", (e) => {
+        exited = true;
+        reject(new ExportError(`Cannot run ffmpeg: ${e.message}`));
+      });
+      ffmpeg.on("close", (code) => {
+        exited = true;
+        if (code === 0) resolve6();
+        else reject(new ExportError(`ffmpeg failed (${code}): ${ffErr.slice(0, 300)}`));
+      });
+    });
+    done.catch(() => {
+    });
+    const frames = Math.ceil(info.duration * info.fps);
+    for (let i = 0; i < frames && !exited; i++) {
+      await evaluate(`render(${i / info.fps})`);
+      const data = await screenshot();
+      if (exited) break;
+      if (!ffmpeg.stdin.write(Buffer.from(data, "base64"))) {
+        await Promise.race([new Promise((r) => ffmpeg.stdin.once("drain", r)), done.catch(() => {
+        })]);
+      }
+      if (i % 30 === 0 || i === frames - 1) onProgress(i + 1, frames);
+    }
+    if (!exited) ffmpeg.stdin.end();
+    await done;
+    return { frames, duration: info.duration };
+  } finally {
+    await player.close();
+  }
+}
+async function exportWebm(htmlFile, webmFile, { env = process.env, onProgress = () => {
+}, startTimeoutMs = CHROME_START_TIMEOUT_MS, bitrate = WEBM_BITRATE } = {}) {
+  if (typeof WebSocket === "undefined") throw new ExportError("The built-in encoder needs Node.js 22 or later (built-in WebSocket)");
+  const player = await openPlayer(htmlFile, { env, startTimeoutMs });
+  try {
+    const { info, evaluate } = player;
+    if (!await evaluate("window.__amvEnc.supported()")) {
+      throw new ExportError("This browser cannot encode video (WebCodecs is missing). Install ffmpeg to export an MP4");
+    }
+    const started = await evaluate(`window.__amvEnc.start(${JSON.stringify({ bitrate })})`);
+    if (started.error) throw new ExportError(`The browser could not encode the video: ${started.error}`);
+    let state = null;
+    for (; ; ) {
+      state = await evaluate("window.__amvEnc.progress()");
+      if (state.error) throw new ExportError(`The browser stopped encoding: ${state.error}`);
+      onProgress(state.done, state.total);
+      if (!state.running) break;
+      await new Promise((r) => setTimeout(r, WEBM_POLL_MS));
+    }
+    const size = await evaluate("window.__amvEnc.size()");
+    const file = Buffer.alloc(size);
+    for (let at3 = 0; at3 < size; at3 += WEBM_SLICE) {
+      const slice = await evaluate(`window.__amvEnc.bytes(${at3}, ${Math.min(WEBM_SLICE, size - at3)})`);
+      Buffer.from(slice, "base64").copy(file, at3);
+    }
+    writeFileSync3(webmFile, file);
+    return { frames: state.done, duration: info.duration, codec: state.codec, audio: Boolean(state.audio) };
+  } finally {
+    await player.close();
+  }
+}
+function devtoolsUrl(chrome, timeoutMs = CHROME_START_TIMEOUT_MS) {
+  return new Promise((resolve6, reject) => {
+    let buf = "";
+    const fail = (msg) => {
+      clearTimeout(timer);
+      const tail = buf.trim().split("\n").slice(-5).join("\n");
+      reject(new ExportError(tail ? `${msg}. Chrome stderr:
+${tail}` : msg));
+    };
+    const timer = setTimeout(() => fail(`Chrome did not start in time (${timeoutMs / 1e3} s)`), timeoutMs);
+    chrome.on("error", (e) => fail(`Cannot start Chrome: ${e.message}`));
+    chrome.on("close", (code, signal) => fail(`Chrome exited (${code ?? signal}) before it started`));
+    chrome.stderr.on("data", (d) => {
+      buf += d;
+      const m = buf.match(/DevTools listening on (ws:\/\/\S+)/);
+      if (m) {
+        clearTimeout(timer);
+        resolve6(m[1]);
+      }
+    });
+  });
+}
+function connect(url) {
+  return new Promise((resolve6, reject) => {
+    const ws = new WebSocket(url);
+    const pending = /* @__PURE__ */ new Map();
+    const waiters = /* @__PURE__ */ new Map();
+    let id = 0;
+    ws.addEventListener("error", () => reject(new ExportError("Cannot connect to Chrome DevTools")));
+    ws.addEventListener("message", (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.id && pending.has(msg.id)) {
+        const { ok, fail } = pending.get(msg.id);
+        pending.delete(msg.id);
+        if (msg.error) fail(new ExportError(`CDP ${msg.error.message}`));
+        else ok(msg.result);
+      } else if (msg.method && waiters.has(msg.method)) {
+        waiters.get(msg.method)(msg.params);
+        waiters.delete(msg.method);
+      }
+    });
+    ws.addEventListener("open", () => resolve6({
+      send(method, params = {}, sessionId) {
+        return new Promise((ok, fail) => {
+          const msgId = ++id;
+          const timer = setTimeout(() => {
+            pending.delete(msgId);
+            fail(new ExportError(`Chrome is not responding (${method} took more than ${CDP_TIMEOUT_MS / 1e3} seconds)`));
+          }, CDP_TIMEOUT_MS);
+          pending.set(msgId, { ok: (v) => {
+            clearTimeout(timer);
+            ok(v);
+          }, fail: (e) => {
+            clearTimeout(timer);
+            fail(e);
+          } });
+          ws.send(JSON.stringify({ id: msgId, method, params, ...sessionId ? { sessionId } : {} }));
+        });
+      },
+      once: (method) => new Promise((r) => waiters.set(method, r)),
+      close: () => ws.close()
+    }));
+  });
+}
+
+// src/housekeeping.js
+import { readdirSync as readdirSync2, lstatSync, rmSync as rmSync4 } from "node:fs";
+import { join as join7 } from "node:path";
+
+// src/state.js
+import { readFileSync as readFileSync6, writeFileSync as writeFileSync4, renameSync as renameSync2 } from "node:fs";
+import { join as join6 } from "node:path";
+
+// src/home.js
+import { mkdirSync as mkdirSync3, existsSync as existsSync5, statSync as statSync3, chmodSync } from "node:fs";
+import { homedir as homedir2 } from "node:os";
+import { join as join5 } from "node:path";
+var defaultHome = () => join5(homedir2(), ".answer-me-with-html");
+function ensureHome(home) {
+  const fresh = !existsSync5(home);
+  mkdirSync3(home, { recursive: true, mode: 448 });
+  if (process.platform === "win32" || !(fresh || home === defaultHome())) return;
+  if ((statSync3(home).mode & 511) !== 448) chmodSync(home, 448);
+}
+
+// src/state.js
+var DAY = 24 * 60 * 60 * 1e3;
+var statePath = (home) => join6(home, "state.json");
+function readState(home) {
+  try {
+    const data = JSON.parse(readFileSync6(statePath(home), "utf8"));
+    return data && typeof data === "object" && !Array.isArray(data) ? data : {};
+  } catch {
+    return {};
+  }
+}
+function writeState(home, patch) {
+  const next = { ...readState(home), ...patch };
+  ensureHome(home);
+  const tmp = `${statePath(home)}.${process.pid}.tmp`;
+  writeFileSync4(tmp, `${JSON.stringify(next, null, 2)}
+`);
+  renameSync2(tmp, statePath(home));
+  return next;
+}
+
+// src/update.js
+import { spawn as spawn4 } from "node:child_process";
+var UPDATE = Object.freeze({
+  checkEveryDays: 7,
+  hintEveryDays: 3,
+  timeoutMs: 5e3,
+  url: "https://raw.githubusercontent.com/QingYunA/answer-me-with-html/main/package.json"
+});
+var SEMVER = /^v?(\d+)\.(\d+)\.(\d+)$/;
+function parseVersion(v) {
+  const m = String(v).trim().match(SEMVER);
+  return m ? m.slice(1, 4).map(Number) : null;
+}
+function newer(a, b) {
+  const pa = parseVersion(a);
+  const pb = parseVersion(b);
+  if (!pa || !pb) return false;
+  const i = pa.findIndex((n, k2) => n !== pb[k2]);
+  return i !== -1 && pa[i] > pb[i];
+}
+function updateCommand(scriptPath = "") {
+  if (/[\\/]\.claude[\\/]plugins[\\/]/.test(scriptPath)) {
+    return "run claude plugin update answer-me-with-html@answer-me-with-html in a terminal (or click Update now on the Installed tab of /plugin), then /reload-plugins";
+  }
+  if (/[\\/]bin[\\/]am\.js$/.test(scriptPath)) {
+    return "run git pull && npm install in the answer-me-with-html repository";
+  }
+  return "run npx skills update answer-me-with-html -y";
+}
+var updateEnabled = (env, config) => !(config.update_check === false || env.CI || env.AM_NO_UPDATE_CHECK);
+var FORK = /-research\.\d+$/;
+function updateHint(state, current, scriptPath, now = Date.now()) {
+  const fork = FORK.test(current);
+  if (!newer(state.latestVersion, String(current).replace(FORK, ""))) return null;
+  if (state.lastUpdateHint && now - state.lastUpdateHint < UPDATE.hintEveryDays * DAY) return null;
+  if (fork) return `! Update hint: upstream Answer me with HTML ${state.latestVersion} is available (this research fork is based on ${current.replace(FORK, "")}). Ask the user whether to sync the fork with upstream as dev/README.md in the skill directory describes; do not run npx skills update, it would replace the fork.`;
+  return `! Update hint: Answer me with HTML ${state.latestVersion} is available (current ${current}). Ask the user whether to update: ${updateCommand(scriptPath)}.`;
+}
+function shouldCheckUpdate(state, env, config, now = Date.now()) {
+  if (!updateEnabled(env, config)) return false;
+  return !state.lastUpdateCheck || now - state.lastUpdateCheck >= UPDATE.checkEveryDays * DAY;
+}
+function spawnUpdateCheck(home, scriptPath) {
+  writeState(home, { lastUpdateCheck: Date.now() });
+  try {
+    spawn4(process.execPath, [scriptPath, "__update-check"], { detached: true, stdio: "ignore", env: { ...process.env, AM_HOME: home } }).on("error", () => {
+    }).unref();
+  } catch {
+  }
+}
+async function runUpdateCheck(home, fetchImpl = fetch) {
+  try {
+    const res = await fetchImpl(UPDATE.url, { signal: AbortSignal.timeout(UPDATE.timeoutMs) });
+    if (!res.ok) return null;
+    const { version } = await res.json();
+    if (!parseVersion(version)) return null;
+    writeState(home, { latestVersion: version.trim(), lastUpdateCheck: Date.now() });
+    return version.trim();
+  } catch {
+    return null;
+  }
+}
+
+// src/housekeeping.js
+var CLEAN = Object.freeze({
+  days: 30,
+  // am clean deletes pages and videos older than 30 days by default
+  bigBytes: 200 * 2 ** 20,
+  // notify at once above 200 MB
+  staleDays: 30,
+  // more than 30 days since the last cleanup…
+  staleBytes: 20 * 2 ** 20,
+  // …and above 20 MB: notify
+  hintEveryDays: 7
+  // the same notice at most once every 7 days
+});
+var DIRS3 = ["pages", "videos", "cache"];
+function walk(dir) {
+  let entries;
+  try {
+    if (!lstatSync(dir).isDirectory()) return [];
+    entries = readdirSync2(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries.flatMap((e) => {
+    const p = join7(dir, e.name);
+    if (e.isDirectory()) return walk(p);
+    try {
+      const s = lstatSync(p);
+      return s.isFile() ? [{ path: p, bytes: s.size, mtime: s.mtimeMs }] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+var sum = (files) => files.reduce((n, f2) => n + f2.bytes, 0);
+function usage(home) {
+  const parts = Object.fromEntries(DIRS3.map((d) => {
+    const files = walk(join7(home, d));
+    return [d, { count: files.length, bytes: sum(files) }];
+  }));
+  return { ...parts, total: DIRS3.reduce((n, d) => n + parts[d].bytes, 0) };
+}
+function clean2(home, { days = CLEAN.days, all = false, dryRun = false, now = Date.now() } = {}) {
+  const cutoff = now - days * DAY;
+  const victims = [
+    ...["pages", "videos"].flatMap((d) => walk(join7(home, d)).filter((f2) => all || f2.mtime < cutoff)),
+    ...walk(join7(home, "cache"))
+  ];
+  if (!dryRun) {
+    for (const f2 of victims) rmSync4(f2.path, { force: true });
+    writeState(home, { lastClean: now, lastCleanHint: null });
+  }
+  return { files: victims.length, bytes: sum(victims) };
+}
+var mb = (bytes) => bytes < 2 ** 20 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 2 ** 20).toFixed(bytes < 10 * 2 ** 20 ? 1 : 0)} MB`;
+function cleanHint(state, use, now = Date.now()) {
+  if (state.lastCleanHint && now - state.lastCleanHint < CLEAN.hintEveryDays * DAY) return null;
+  const since = state.lastClean ?? state.firstSeen ?? now;
+  const days = Math.floor((now - since) / DAY);
+  const big = use.total >= CLEAN.bigBytes;
+  const stale = days >= CLEAN.staleDays && use.total >= CLEAN.staleBytes;
+  if (!big && !stale) return null;
+  const pages = `${use.pages.count} page${use.pages.count === 1 ? "" : "s"}`;
+  const parts = `${pages} ${mb(use.pages.bytes)}, videos ${mb(use.videos.bytes)}, voice-over cache ${mb(use.cache.bytes)}`;
+  const when = state.lastClean ? `last cleaned ${days} days ago` : "never cleaned";
+  return `! Cleanup hint: the data directory uses ${mb(use.total)} (${parts}), ${when}. Ask the user whether to run am clean (deletes pages and videos older than ${CLEAN.days} days and empties the voice-over cache; am clean --all deletes everything).`;
+}
+function afterRender({ home, env, config, current, scriptPath, background, now = Date.now() }) {
+  let state = readState(home);
+  if (!state.firstSeen) state = writeState(home, { firstSeen: now });
+  const hints = [];
+  const c = cleanHint(state, usage(home), now);
+  if (c) {
+    hints.push(c);
+    state = writeState(home, { lastCleanHint: now });
+  }
+  const u = updateEnabled(env, config) ? updateHint(state, current, scriptPath, now) : null;
+  if (u) {
+    hints.push(u);
+    writeState(home, { lastUpdateHint: now });
+  }
+  if (background && scriptPath && shouldCheckUpdate(state, env, config, now)) spawnUpdateCheck(home, scriptPath);
+  return hints;
 }
 
 // src/config.js
-import { readFileSync as readFileSync2, writeFileSync as writeFileSync2, mkdirSync as mkdirSync2, rmSync as rmSync2, existsSync as existsSync2 } from "node:fs";
-import { homedir } from "node:os";
-import { join as join2, dirname } from "node:path";
+import { readFileSync as readFileSync7, writeFileSync as writeFileSync5, rmSync as rmSync5, existsSync as existsSync6 } from "node:fs";
+import { join as join8, dirname } from "node:path";
 var ConfigError = class extends Error {
   constructor(message) {
     super(message);
@@ -5358,131 +9890,567 @@ var ConfigError = class extends Error {
   }
 };
 var CONFIG_KEYS = Object.freeze({
-  open: { type: "bool", default: true, label: "\u751F\u6210\u540E\u81EA\u52A8\u7528\u6D4F\u89C8\u5668\u6253\u5F00\u9875\u9762" },
-  always: { type: "bool", default: true, label: "\u9AD8\u9891\u6A21\u5F0F\uFF1A\u7ED9\u7ED3\u8BBA\u65F6\u90FD\u9644\u4E00\u9875\uFF08\u9700\u5B89\u88C5 answer-me-with-html-always \u63D2\u4EF6\uFF09" },
-  theme: { type: "enum", choices: CHOICES.theme, default: "blueprint", label: "\u9ED8\u8BA4\u4E3B\u9898" },
-  mode: { type: "enum", choices: CHOICES.mode, default: "auto", label: "\u9ED8\u8BA4\u660E\u6697\u6A21\u5F0F" },
-  style: { type: "enum", choices: CHOICES.style, default: "80", label: "STE \u5199\u4F5C\u68C0\u67E5\u4E25\u683C\u5EA6" },
-  bake: { type: "bool", default: true, label: "\u542B excalidraw / uml \u56FE\u65F6\uFF0C\u7528\u672C\u673A Chrome \u70D8\u7119\u6210\u79BB\u7EBF\u5355\u6587\u4EF6" }
+  open: { type: "bool", default: true, label: "Open the page in the browser after it is made" },
+  theme: { type: "enum", choices: CHOICES.theme, default: AUTO, label: "Default theme (auto: paper for long text, blueprint for diagrams)" },
+  mode: { type: "enum", choices: CHOICES.mode, default: "auto", label: "Default light/dark mode" },
+  style: { type: "enum", choices: CHOICES.style, default: "80", label: "STE writing-check strictness" },
+  update_check: { type: "bool", default: true, label: "Check for a new version once a week in the background and tell you (never updates by itself)" },
+  voice: { type: "enum", choices: VOICES, default: "auto", label: "Video narration voice-over (auto: ElevenLabs if ELEVENLABS_API_KEY is set, otherwise system TTS; local: the local service at AM_TTS_URL)" },
+  // Research fork: bake excalidraw / uml figures into the page with the local Chrome.
+  bake: { type: "bool", default: true, label: "Bake excalidraw / uml diagrams into an offline single-file page with the local Chrome" }
 });
 var TRUE = /* @__PURE__ */ new Set(["on", "true", "yes", "1", "\u5F00", "\u5F00\u542F", "\u6253\u5F00"]);
 var FALSE = /* @__PURE__ */ new Set(["off", "false", "no", "0", "\u5173", "\u5173\u95ED"]);
 function amHome(env = process.env) {
-  return env.AM_HOME || join2(homedir(), ".answer-me-with-html");
+  return env.AM_HOME || defaultHome();
 }
 function configPath(env = process.env) {
-  return join2(amHome(env), "config.json");
+  return join8(amHome(env), "config.json");
 }
 var defaults = () => Object.fromEntries(Object.entries(CONFIG_KEYS).map(([k2, s]) => [k2, s.default]));
-function coerce2(key, raw) {
+function configChoices(key, themes2) {
+  return key === "theme" ? [AUTO, ...themes2.names("page")] : CONFIG_KEYS[key].choices;
+}
+function coerce2(key, raw, themes2) {
   const spec = CONFIG_KEYS[key];
-  if (!spec) throw new ConfigError(`\u6CA1\u6709\u914D\u7F6E\u9879 "${key}"\u3002\u53EF\u7528\uFF1A${Object.keys(CONFIG_KEYS).join(" | ")}`);
+  if (!spec) throw new ConfigError(`No setting named "${key}". Available: ${Object.keys(CONFIG_KEYS).join(" | ")}`);
   if (spec.type === "bool") {
     if (typeof raw === "boolean") return raw;
     const v2 = String(raw).trim().toLowerCase();
     if (TRUE.has(v2)) return true;
     if (FALSE.has(v2)) return false;
-    throw new ConfigError(`${key} \u53EA\u63A5\u53D7 on / off`);
+    throw new ConfigError(`${key} accepts only on / off`);
   }
   const v = String(raw).trim();
-  if (!spec.choices.includes(v)) throw new ConfigError(`${key} \u7684\u503C "${v}" \u65E0\u6548\uFF0C\u53EF\u9009\uFF1A${spec.choices.join(" | ")}`);
+  const choices = configChoices(key, themes2);
+  if (!choices.includes(v)) throw new ConfigError(`Invalid ${key} value "${v}". Choose one of: ${choices.join(" | ")}`);
   return v;
 }
 function readStored(env) {
   const file = configPath(env);
-  if (!existsSync2(file)) return { stored: {} };
+  if (!existsSync6(file)) return { stored: {} };
   try {
-    const data = JSON.parse(readFileSync2(file, "utf8"));
+    const data = JSON.parse(readFileSync7(file, "utf8"));
     return { stored: data && typeof data === "object" && !Array.isArray(data) ? data : {} };
   } catch (e) {
-    return { stored: {}, warning: `${file} \u65E0\u6CD5\u89E3\u6790\uFF0C\u5DF2\u4F7F\u7528\u9ED8\u8BA4\u914D\u7F6E\uFF08${e.message}\uFF09` };
+    return { stored: {}, warning: `Cannot parse ${file}; using the default settings (${e.message})` };
   }
 }
-function readConfig(env = process.env) {
+function readConfig(env = process.env, themes2 = loadThemes(amHome(env))) {
   const { stored, warning } = readStored(env);
   const values = defaults();
+  const warnings = [warning];
   for (const [k2, v] of Object.entries(stored)) {
     if (!CONFIG_KEYS[k2]) continue;
     try {
-      values[k2] = coerce2(k2, v);
+      values[k2] = coerce2(k2, v, themes2);
     } catch {
+      if (k2 === "theme") warnings.push(`The default theme "${v}" cannot be used (${themes2.problem(String(v), "page")}); using ${values.theme}`);
     }
   }
-  return { values, stored, warning, path: configPath(env) };
+  return { values, stored, warning: warnings.filter(Boolean).join("; ") || void 0, path: configPath(env) };
 }
 function writeStored(stored, env) {
   const file = configPath(env);
   if (!Object.keys(stored).length) {
-    rmSync2(file, { force: true });
+    rmSync5(file, { force: true });
     return;
   }
-  mkdirSync2(dirname(file), { recursive: true });
-  writeFileSync2(file, `${JSON.stringify(stored, null, 2)}
+  ensureHome(dirname(file));
+  writeFileSync5(file, `${JSON.stringify(stored, null, 2)}
 `);
 }
-function setConfig(key, raw, env = process.env) {
-  const value = coerce2(key, raw);
+function setConfig(key, raw, env = process.env, themes2 = loadThemes(amHome(env))) {
+  const value = coerce2(key, raw, themes2);
   const { stored } = readStored(env);
   writeStored({ ...stored, [key]: value }, env);
   return value;
 }
 function resetConfig(key, env = process.env) {
-  if (key !== void 0 && !CONFIG_KEYS[key]) coerce2(key, "");
+  if (key !== void 0 && !CONFIG_KEYS[key]) coerce2(key, "", null);
   const { stored } = readStored(env);
   const next = key === void 0 ? {} : Object.fromEntries(Object.entries(stored).filter(([k2]) => k2 !== key));
   writeStored(next, env);
 }
 
+// src/patch.js
+var ATTR_BLOCK2 = /\s*\{([^{}]*)\}\s*$/;
+var PatchError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PatchError";
+  }
+};
+function normalizePanelQuery(query) {
+  let q3 = String(query ?? "").trim();
+  if (q3.startsWith("##")) q3 = q3.replace(/^##\s*/, "");
+  q3 = q3.replace(ATTR_BLOCK2, "").trim();
+  return q3;
+}
+function panelKeys(panel) {
+  const title = panel.title.trim();
+  const id = String(panel.id || "").trim();
+  const keys = /* @__PURE__ */ new Set([title]);
+  if (id) {
+    keys.add(id);
+    if (title) keys.add(`${id} ${title}`);
+  }
+  return keys;
+}
+function findPanel(doc2, query) {
+  const q3 = normalizePanelQuery(query);
+  if (!q3) throw new PatchError("Missing the --panel title");
+  const matches = doc2.panels.filter((p) => panelKeys(p).has(q3));
+  if (matches.length === 0) throw new PatchError(`No panel titled "${query}"`);
+  if (matches.length > 1) throw new PatchError(`The title "${query}" matches more than one panel`);
+  return matches[0];
+}
+function asSinglePanelMarkdown(replacement) {
+  const text = String(replacement).replace(/\r\n?/g, "\n");
+  if (!text.trim()) throw new PatchError("The new panel draft is empty");
+  const looksLikeHeading = /^\s*##\s+/.test(text);
+  const doc2 = parseDoc(looksLikeHeading ? text : `## _
+${text}`);
+  if (doc2.panels.length !== 1) throw new PatchError("The new panel draft must contain exactly one ## panel");
+  return { text, looksLikeHeading };
+}
+function replacePanel(source, query, replacement) {
+  const doc2 = parseDoc(source);
+  const panel = findPanel(doc2, query);
+  const idx = doc2.panels.indexOf(panel);
+  const lines = String(source).replace(/\r\n?/g, "\n").split("\n");
+  const start = panel.line - 1;
+  const end = doc2.panels[idx + 1] ? doc2.panels[idx + 1].line - 1 : lines.length;
+  const { text, looksLikeHeading } = asSinglePanelMarkdown(replacement);
+  const section = looksLikeHeading ? text : `${lines[start]}
+${text.replace(/^\n+/, "")}`;
+  const newLines = section.replace(/\n$/, "").split("\n");
+  return [...lines.slice(0, start), ...newLines, ...lines.slice(end)].join("\n");
+}
+
+// src/serve.js
+import { createServer } from "node:http";
+import { connect as connect2, isIP } from "node:net";
+import { networkInterfaces, uptime } from "node:os";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { readFileSync as readFileSync8, writeFileSync as writeFileSync6, renameSync as renameSync3, rmSync as rmSync6 } from "node:fs";
+import { lstat, realpath, readFile } from "node:fs/promises";
+import { join as join9, resolve as resolve4, dirname as dirname2, basename as basename4, sep as sep2 } from "node:path";
+var DEFAULT_PORT = 8765;
+var HOST = "127.0.0.1";
+var LAN_BIND = "0.0.0.0";
+var TOKEN_LENGTH = 22;
+var PREFIX2 = Object.freeze({ p: "pages", v: "videos" });
+var PREFIX_OF = Object.freeze({ pages: "p", videos: "v" });
+var LOOPBACK_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?$/i;
+function lanRank(address) {
+  const [a, b] = address.split(".").map(Number);
+  if (a === 192 && b === 168) return 0;
+  if (a === 10) return 1;
+  if (a === 172 && b >= 16 && b <= 31) return 2;
+  return 3;
+}
+var compareOctets = (x2, y2) => {
+  const [p, q3] = [x2, y2].map((address) => address.split(".").map(Number));
+  const i = p.findIndex((n, k2) => n !== q3[k2]);
+  return i === -1 ? 0 : p[i] - q3[i];
+};
+function lanIPv4Addresses(interfaces = networkInterfaces()) {
+  return [...new Set(Object.values(interfaces).flatMap((entries) => entries ?? []).filter(({ address, family, internal }) => (family === "IPv4" || family === 4) && !internal && isIP(address) === 4 && address !== LAN_BIND && !address.startsWith("127.") && !address.startsWith("169.254.")).map(({ address }) => address))].sort((x2, y2) => lanRank(x2) - lanRank(y2) || compareOctets(x2, y2));
+}
+function publicUrlOrigin(input) {
+  const error = () => new ServeError("--public-url must be an http:// or https:// origin without a path, credentials, query or fragment");
+  if (typeof input !== "string" || !/^https?:\/\/[^\s/?#]+\/?$/i.test(input)) throw error();
+  let url;
+  try {
+    url = new URL(input);
+  } catch {
+    throw error();
+  }
+  if (url.username || url.password || url.pathname !== "/" || url.search || url.hash || !url.hostname || url.hostname === LAN_BIND) throw error();
+  return url.origin;
+}
+function hostAllowed(host, additional) {
+  if (LOOPBACK_HOST.test(host ?? "")) return true;
+  if (typeof host !== "string") return false;
+  const value = host.toLowerCase();
+  return additional.some((allowed) => {
+    if (value === allowed.toLowerCase()) return true;
+    if (isIP(allowed) !== 4 || !value.startsWith(allowed + ":")) return false;
+    const port = value.slice(allowed.length + 1);
+    return /^[1-9][0-9]{0,4}$/.test(port) && Number(port) <= 65535;
+  });
+}
+var SANDBOX = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads";
+var HEADERS = Object.freeze({
+  "Content-Security-Policy": `frame-ancestors 'none'; ${SANDBOX}`,
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "no-referrer",
+  "Cache-Control": "no-store",
+  "Cross-Origin-Resource-Policy": "same-origin"
+});
+var ServeError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ServeError";
+  }
+};
+var infoPath = (home) => join9(home, "serve.json");
+function pageToken(secret, dir, file) {
+  return createHmac("sha256", secret).update(`${dir}/${file}`).digest("base64url").slice(0, TOKEN_LENGTH);
+}
+function pageLink({ port, secret, baseUrl }, dir, file) {
+  const origin = baseUrl ?? `http://${HOST}:${port}`;
+  return `${origin}/${PREFIX_OF[dir]}/${pageToken(secret, dir, file)}/${encodeURIComponent(file)}`;
+}
+function validFileName(name) {
+  return typeof name === "string" && name.length > 0 && name.endsWith(".html") && !/[/\\\0]/.test(name) && !name.includes("..");
+}
+function tokenMatches(secret, dir, file, token) {
+  const expected = Buffer.from(pageToken(secret, dir, file));
+  const given = Buffer.from(token);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+function alive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+var BOOT_SLACK_MS = 5e3;
+var bootedBefore = (startedAt) => startedAt < Date.now() - uptime() * 1e3 - BOOT_SLACK_MS;
+function readServeInfo(home) {
+  try {
+    const info = JSON.parse(readFileSync8(infoPath(home), "utf8"));
+    const validBase = info?.baseUrl === void 0 || typeof info.baseUrl === "string" && publicUrlOrigin(info.baseUrl) === info.baseUrl;
+    const ok = info && Number.isInteger(info.port) && typeof info.secret === "string" && info.secret.length > 0 && Number.isFinite(info.startedAt) && !bootedBefore(info.startedAt) && alive(info.pid) && validBase;
+    return ok ? { pid: info.pid, port: info.port, secret: info.secret, baseUrl: info.baseUrl } : null;
+  } catch {
+    return null;
+  }
+}
+function serveLink(home, file) {
+  try {
+    const info = readServeInfo(home);
+    if (!info) return null;
+    const path = resolve4(file);
+    const dir = ["pages", "videos"].find((d) => dirname2(path) === resolve4(home, d));
+    const name = basename4(path);
+    return dir && validFileName(name) ? pageLink(info, dir, name) : null;
+  } catch {
+    return null;
+  }
+}
+function writeInfo(home, info) {
+  ensureHome(home);
+  const tmp = `${infoPath(home)}.${process.pid}.tmp`;
+  try {
+    rmSync6(tmp, { force: true });
+    writeFileSync6(tmp, `${JSON.stringify(info)}
+`, { mode: 384, flag: "wx" });
+    renameSync3(tmp, infoPath(home));
+  } finally {
+    rmSync6(tmp, { force: true });
+  }
+}
+function removeInfo(home, secret) {
+  try {
+    if (JSON.parse(readFileSync8(infoPath(home), "utf8")).secret === secret) rmSync6(infoPath(home), { force: true });
+  } catch {
+  }
+}
+function reply(req, res, status, type, body = "") {
+  res.writeHead(status, { ...HEADERS, "Content-Type": type, "Content-Length": Buffer.byteLength(body) });
+  res.end(req.method === "HEAD" ? void 0 : body);
+}
+var notFound = (req, res) => reply(req, res, 404, "text/plain; charset=utf-8", "Not found\n");
+async function resolvePage(home, dir, file) {
+  try {
+    const root = await realpath(join9(home, dir));
+    const path = join9(root, file);
+    if (!(await lstat(path)).isFile()) return null;
+    const real = await realpath(path);
+    return real.startsWith(root + sep2) ? real : null;
+  } catch {
+    return null;
+  }
+}
+function handler(home, secret, allowedHosts) {
+  return async (req, res) => {
+    try {
+      if (!hostAllowed(req.headers.host, allowedHosts)) return notFound(req, res);
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        res.setHeader("Allow", "GET, HEAD");
+        return reply(req, res, 405, "text/plain; charset=utf-8", "Method not allowed\n");
+      }
+      const parts = req.url.split(/[?#]/)[0].split("/");
+      if (parts.length !== 4 || parts[0] !== "") return notFound(req, res);
+      const [, prefix, token, raw] = parts;
+      const dir = Object.hasOwn(PREFIX2, prefix) ? PREFIX2[prefix] : void 0;
+      if (!dir || !token || !raw) return notFound(req, res);
+      let file;
+      try {
+        file = decodeURIComponent(raw);
+      } catch {
+        return notFound(req, res);
+      }
+      if (!validFileName(file) || !tokenMatches(secret, dir, file, token)) return notFound(req, res);
+      const dest = req.headers["sec-fetch-dest"];
+      if (dest !== void 0 && dest !== "document") return notFound(req, res);
+      const real = await resolvePage(home, dir, file);
+      if (!real) return notFound(req, res);
+      return reply(req, res, 200, "text/html; charset=utf-8", await readFile(real));
+    } catch {
+      return notFound(req, res);
+    }
+  };
+}
+function listening(port, timeout = 500) {
+  return new Promise((done) => {
+    const socket = connect2({ host: HOST, port });
+    const end = (up) => {
+      socket.destroy();
+      done(up);
+    };
+    socket.setTimeout(timeout, () => end(false));
+    socket.once("connect", () => end(true));
+    socket.once("error", () => end(false));
+  });
+}
+async function startServer({ home, port = DEFAULT_PORT, lan = false, publicUrl, lanAddresses }) {
+  const addresses = lan ? lanAddresses ?? lanIPv4Addresses() : [];
+  if (lan && (!addresses.length || addresses.some((address) => isIP(address) !== 4 || address === LAN_BIND || address.startsWith("127.")))) {
+    throw new ServeError("--lan needs at least one active non-loopback IPv4 interface");
+  }
+  const publicOrigin = publicUrl === void 0 ? null : publicUrlOrigin(publicUrl);
+  const allowedHosts = [...addresses, ...publicOrigin ? [new URL(publicOrigin).host] : []];
+  const running = readServeInfo(home);
+  if (running && await listening(running.port)) throw new ServeError(`am serve is already running on ${running.baseUrl ?? `http://${HOST}:${running.port}`} (pid ${running.pid}); stop it first`);
+  const secret = randomBytes(32).toString("hex");
+  const server = createServer(handler(home, secret, allowedHosts));
+  await new Promise((done, fail) => {
+    server.once("error", (e) => fail(e.code === "EADDRINUSE" ? new ServeError(`Port ${port} is already in use; pick another with am serve --port <n>`) : e));
+    server.listen(port, lan ? LAN_BIND : HOST, done);
+  });
+  const actual = server.address().port;
+  const baseUrl = publicOrigin ?? `http://${lan ? addresses[0] : HOST}:${actual}`;
+  try {
+    writeInfo(home, { pid: process.pid, port: actual, secret, startedAt: Date.now(), baseUrl });
+  } catch (e) {
+    server.closeAllConnections();
+    await new Promise((done) => server.close(done));
+    throw new ServeError(`Cannot save serve.json; server stopped: ${e.message}`);
+  }
+  let closed;
+  const close = () => {
+    closed ??= new Promise((done) => {
+      removeInfo(home, secret);
+      server.close(() => done());
+      server.closeAllConnections();
+    });
+    return closed;
+  };
+  return { port: actual, secret, close, baseUrl, addresses, lan };
+}
+async function runServe({ home, port, lan = false, publicUrl, print, fail }) {
+  let srv;
+  try {
+    srv = await startServer({ home, port, lan, publicUrl });
+  } catch (e) {
+    if (!(e instanceof ServeError)) throw e;
+    fail(`\u2717 ${e.message}`);
+    return 1;
+  }
+  return new Promise((done) => {
+    const stop = () => srv.close().then(() => done(0));
+    process.once("SIGINT", stop);
+    process.once("SIGTERM", stop);
+    process.once("SIGHUP", stop);
+    process.once("exit", () => removeInfo(home, srv.secret));
+    if (lan) {
+      print(`Serving pages on ${LAN_BIND}:${srv.port} (Ctrl-C to stop). am render prints a link for each page.`);
+      print("WARNING: --lan exposes this port on every IPv4 interface, without built-in TLS. A page link is a secret: use a trusted LAN or an HTTPS reverse proxy.");
+      for (const address of srv.addresses) print(`LAN address: http://${address}:${srv.port}`);
+    } else {
+      print(`Serving pages on http://${HOST}:${srv.port} (Ctrl-C to stop). am render prints a link for each page.`);
+      if (!publicUrl) print(`Reaching it from another computer: run ssh -L ${srv.port}:${HOST}:${srv.port} user@host there, then open the links in its browser.`);
+    }
+    if (publicUrl) {
+      print(`Public link origin: ${srv.baseUrl}`);
+      if (srv.baseUrl.startsWith("http://")) print("WARNING: --public-url uses HTTP; links and their capability tokens are not encrypted in transit.");
+    }
+  });
+}
+
 // src/cli.js
 var MAX_LISTED_WARNINGS = 20;
-var USAGE = `Answer me with HTML ${VERSION} \u2014 \u628A Markdown \u5185\u5BB9\u7A3F\u6E32\u67D3\u6210\u5355\u6587\u4EF6 HTML \u89E3\u91CA\u9875
+var USAGE = `Answer me with HTML ${VERSION} \u2014 renders a Markdown draft into a single-file HTML explainer page
 
-\u7528\u6CD5:
-  am render <file|->  [-o \u8F93\u51FA\u8DEF\u5F84] [--no-open] [--no-bake] [--theme blueprint|shadcn]
+Usage:
+  am render <file|->  [-o <path>] [--replace <page>] [--no-open] [--no-bake] [--theme ${["auto", ...themeNames("page")].join("|")}]
                       [--template sheet|doc|research] [--style off|80|strict] [--mode auto|light|dark]
-  am lint   <file|->  [--style off|80|strict]     \u53EA\u505A STE \u53D7\u63A7\u5199\u4F5C\u68C0\u67E5
-  am bake   <page.html>                           \u7528\u672C\u673A Chrome \u628A excalidraw / uml \u56FE\u70D8\u7119\u8FDB\u9875\u9762\uFF08\u79BB\u7EBF\u5355\u6587\u4EF6\uFF09
-  am shot   <page.html> [-o \u76EE\u5F55] [--only A,fig-2] [--width 390]
-                                                  \u6309\u9762\u677F / \u56FE\u622A\u56FE\uFF0C\u9010\u5F20\u68C0\u67E5\u7248\u9762\uFF08--width 390 \u67E5\u624B\u673A\u7248\u5F0F\uFF09
-  am config [set <\u952E> <\u503C> | get <\u952E> | reset [\u952E]] \u67E5\u770B\u6216\u4FEE\u6539\u914D\u7F6E
-  am list                                         \u5217\u51FA\u6A21\u677F\u3001\u4E3B\u9898\u3001\u7EC4\u4EF6
-  am help [\u7EC4\u4EF6\u540D|format]                          \u67E5\u770B\u7EC4\u4EF6\u8BED\u6CD5 / \u7A3F\u4EF6\u683C\u5F0F
+  am patch  <html> --panel <title> [file|-] [--from file] [--theme \u2026] [--no-open]
+                                                  replace one ## panel of an existing page and overwrite that HTML in place
+  am video  <file|->  [-o <path>] [--voice auto|elevenlabs|local|system|off] [--mp4] [--webm] [--no-open]
+                      [--theme ${["auto", ...themeNames("video")].join("|")}] [--mode light|dark]
+                                                  render a video draft into a 3b1b-style explainer video player page (--mp4 / --webm also save a video file)
+  am lint   <file|->  [--style off|80|strict]     run only the STE controlled-writing check
+  am bake   <page.html>                           bake the excalidraw / uml figures into the page with the local Chrome (offline single file)
+  am shot   <page.html> [-o <dir>] [--only A,fig-2] [--width 390]
+                                                  screenshot each panel / figure to review the layout (--width 390 checks the phone layout)
+  am config [set <key> <value> | get <key> | reset [key]]  show or change settings
+  am serve  [--port 8765] [--lan] [--public-url <origin>]  serve pages over http on 127.0.0.1 (--lan: on the local network); am render then prints a link:
+  am clean  [--days 30] [--all] [--dry-run]       delete old pages, old videos and the voice-over cache
+  am theme check <name|file.json> [--no-open]     check a theme's colors and contrast, and render specimen pages
+  am list                                         list templates, themes and components
+  am help [component|format|code|image|video|patch|theme]  show component syntax / page draft format / code block / image syntax / video draft format / patch / theme usage
 
-- \u6587\u4EF6\u53C2\u6570\u5199 - \u8868\u793A\u4ECE stdin \u8BFB\u53D6\uFF08\u9002\u5408 heredoc\uFF1Aam render - <<'EOF' ... EOF\uFF09\u3002
-- \u9ED8\u8BA4\u8F93\u51FA\u5230 ~/.answer-me-with-html/pages/\uFF08\u53EF\u7528\u73AF\u5883\u53D8\u91CF AM_HOME \u4FEE\u6539\uFF09\u3002
-- \u662F\u5426\u81EA\u52A8\u6253\u5F00\u6D4F\u89C8\u5668\u3001\u9ED8\u8BA4\u4E3B\u9898\u7B49\u7528 am config \u8BBE\u7F6E\uFF1B--open / --no-open \u53EA\u5F71\u54CD\u8FD9\u4E00\u6B21\u3002
-- \u542B excalidraw / uml \u56FE\u65F6\uFF0Crender \u4F1A\u81EA\u52A8\u70D8\u7119\uFF08\u9700\u8981 Chrome \u4E0E Node 22+\uFF09\uFF1B\u5931\u8D25\u65F6\u9875\u9762\u4ECD\u53EF\u8054\u7F51\u67E5\u770B\u3002`;
-var FORMAT = `\u7A3F\u4EF6\u683C\u5F0F\uFF08\u6269\u5C55 Markdown\uFF09
+- A file argument of - reads from stdin (good for heredoc: am render - <<'EOF' ... EOF).
+- Output goes to ~/.answer-me-with-html/pages/ by default (change it with the AM_HOME environment variable).
+- A page with STE or code warnings does not open. Fix the draft and render again with --replace <page>: the earlier page is deleted once the new one is written.
+- Set auto-open, the default theme and more with am config; --open / --no-open apply to this run only.
+- am patch reads the source draft from the page's hidden #am-source, changes only the ## section that --panel names, and writes the page back to the same path.
+- A page with excalidraw / uml figures is baked after render and patch (needs Chrome and Node 22+; --no-bake or am config set bake off skips it).
+  When baking is not possible the page still shows the figures online.`;
+var FORMAT = `Draft format (extended Markdown)
 
 ---
-template: sheet        # sheet \u56FE\u7EB8\u677F\uFF08\u9ED8\u8BA4\uFF09| doc \u7EBF\u6027\u8BB2\u89E3\uFF08\u5355\u680F + \u76EE\u5F55\uFF09| research \u7814\u7A76\u89E3\u91CA\u9875\uFF08\u603B\u89C8\u56FE\u7EB8 + \u6B63\u6587 + \u9605\u8BFB\u8DEF\u5F84\uFF09
-theme: blueprint       # blueprint \u56FE\u7EB8\u98CE\uFF08\u9ED8\u8BA4\uFF09| shadcn \u5361\u7247\u98CE\uFF1B\u9875\u9762\u5185\u53EF\u5207\u6362
-title: \u9875\u9762\u6807\u9898         # \u4E5F\u53EF\u4EE5\u7528\u6B63\u6587\u7B2C\u4E00\u884C "# \u6807\u9898" \u4EE3\u66FF
-subtitle: \u526F\u6807\u9898        # \u53EF\u9009
-cols: 3                # sheet \u7F51\u683C\u5217\u6570\uFF0C\u9ED8\u8BA4 3
-style: 80              # STE \u68C0\u67E5\u4E25\u683C\u5EA6\uFF1Aoff | 80\uFF08\u9ED8\u8BA4\uFF0C\u53EA\u8B66\u544A\uFF09| strict\uFF08\u4E0D\u8FBE\u6807\u4E0D\u751F\u6210\uFF09
-mode: auto             # auto \u8DDF\u968F\u7CFB\u7EDF | light | dark
-source: asd-ste100.org # \u5176\u4ED6\u4EFB\u610F\u952E\u4F1A\u663E\u793A\u5728\u9875\u5934\u5143\u4FE1\u606F\u884C
+template: sheet        # sheet: blueprint board (default, multi-panel grid) | doc: linear explainer (one column + contents)
+                       # | research: research explainer (overview sheet + body + contents + reading paths)
+theme: auto            # auto (default): paper for the doc template or text only, blueprint with diagrams | blueprint | shadcn | paper; switchable in the page
+title: Page title      # or use "# Title" as the first line of the body
+subtitle: Subtitle     # optional
+cols: 3                # number of sheet grid columns, default 3
+style: 80              # STE check strictness: off | 80 (default, warn only) | strict (no page if it fails)
+mode: auto             # auto follows the system | light | dark
+source: asd-ste100.org # any other key shows in the page header meta line
 ---
-\u5BFC\u8BED\uFF08\u53EF\u9009\uFF0C\u663E\u793A\u5728\u6807\u9898\u4E0B\u65B9\uFF09
+Intro (optional, shown below the title)
 
-## A \u9762\u677F\u6807\u9898 {span=2 meta="\u53F3\u4E0A\u89D2\u8BF4\u660E"}
-\u666E\u901A Markdown\uFF1A\u6BB5\u843D\u3001\u5217\u8868\u3001\u8868\u683C\u3001\u5F15\u7528\u3001\u884C\u5185\u4EE3\u7801\u2026\u2026
-\u8868\u683C\u5355\u5143\u683C\u5199 ok / no / warn\uFF08\u53EF\u8DDF\u6587\u5B57\uFF0C\u5982 "ok \u5DF2\u6279\u51C6"\uFF09\u4F1A\u6E32\u67D3\u6210 \u2713 / \u2717 / ! \u5FBD\u7AE0\u3002
+## A Panel title {span=2 meta="top-right note"}
+Plain Markdown: paragraphs, lists, tables, quotes, inline code...
+Write ok / no / warn in a table cell (text may follow, e.g. "ok approved") to get a \u2713 / \u2717 / ! badge.
 
-\`\`\`flow LR          \u2190 \u56F4\u680F\u5757\u8BED\u8A00\u540D = \u7EC4\u4EF6\u540D\uFF0C\u540E\u9762\u662F\u7EC4\u4EF6\u53C2\u6570
+\`\`\`flow LR          \u2190 fence language = component name, followed by component arguments
 A -> B
 \`\`\`
 
-\`\`\`html             \u2190 html / svg \u56F4\u680F\u5757\u539F\u6837\u5D4C\u5165\uFF08\u9003\u751F\u53E3\uFF09
-<div>\u4EFB\u610F\u5185\u5BB9</div>
+\`\`\`html             \u2190 html / svg fences are embedded as-is (escape hatch)
+<div>any content</div>
 \`\`\`
 
-- "## " \u5F00\u542F\u4E00\u4E2A\u9762\u677F\uFF1B\u5B57\u6BCD ID \u53EF\u7701\u7565\uFF08\u81EA\u52A8\u5206\u914D A\u3001B\u3001C\u2026\uFF09\u3002span \u8BA9\u9762\u677F\u8DE8\u5217\u3002
-- research \u6A21\u677F\uFF1A\u9762\u677F\u52A0 {sheet} \u8FDB\u5165\u9876\u90E8\u603B\u89C8\u56FE\u7EB8\uFF1B\u6B63\u6587\u9762\u677F\u7528 {depth=1|2|3} \u6807\u9605\u8BFB\u6DF1\u5EA6
-  \uFF081 = 5 \u5206\u949F\u8DEF\u5F84\uFF0C2 = 30 \u5206\u949F\uFF0C3 = \u5B8C\u6574\uFF0C\u9ED8\u8BA4 2\uFF09\u3002
-- \u6B63\u6587\u91CC [[\u672F\u8BED]] \u94FE\u63A5\u5230 glossary \u6761\u76EE\uFF08\u60AC\u505C\u663E\u793A\u5B9A\u4E49\uFF09\uFF1B[F1](#F1) \u94FE\u63A5\u5230\u53D1\u73B0\u5361\u7247\u3002
-- \u7EC4\u4EF6\u5217\u8868\u89C1 am list\uFF1B\u5355\u4E2A\u7EC4\u4EF6\u8BED\u6CD5\u89C1 am help <\u7EC4\u4EF6\u540D>\u3002`;
+- "## " starts a panel; the letter ID is optional (A, B, C... are assigned automatically). span is a hint: the page sizes panels to fit their content, so wide tables and diagrams need no span. Write span only for a panel that must stand out.
+- An image on its own line, ![what it shows](path), becomes a captioned figure and is embedded in the page; see am help image.
+- A placeholder such as <host> is shown as text. Inside a sentence only text-level tags stay (b, i, kbd, sup, a, span, br, img ...), and tags that break the page (script, style, iframe ...) are shown as text too. Put raw markup in an html or svg fence and code in backticks.
+- Any other fence language is a code block; \`\`\`ts src=path lines=18-30 quotes real code from a file; see am help code.
+- research template: {sheet} puts a panel in the overview sheet at the top; {depth=1|2|3} sets a body panel's reading depth
+  (1 = 5-minute path, 2 = 30 minutes, 3 = everything; default 2).
+- [[term]] in the text links to a glossary entry (the definition shows on hover); [F1](#F1) links to a finding card.
+- For the component list see am list; for one component's syntax see am help <component>.`;
+var IMAGE_HELP = `Images: a screenshot, photo or render that already exists as a file
+
+![What the picture shows](/absolute/path/to/screenshot.png)
+
+- Put the image alone on its line; the alt text becomes its caption, so write what the picture shows (the STE check reads it).
+- Use the absolute path. A relative path is read from the draft file's folder, or from the current folder when the draft comes from stdin. A space in the path is fine.
+- PNG, JPG, GIF, WebP, AVIF and SVG files up to 5 MB. The file is embedded in the page, which stays one file that opens offline.
+- http(s) URLs and data: URIs are left as they are. A URL needs the network when the page is opened.
+- The page keeps the path of each image. am patch embeds the image again from the file, or from the page when the file is gone.
+- Images are for things a diagram cannot show, such as a real screen. Do not generate or invent images.`;
+var CODE_HELP = `Code blocks: real code from a file, or code you type
+
+\`\`\`ts src=server/routes.ts lines=18-30 hl=22
+\`\`\`
+
+\`\`\`ts title="limits.ts \xB7 sketch"
+export const LIMIT = 50
+\`\`\`
+
+- A fence whose language is not a component is a code block. Each block gets a header and a Copy button.
+- src= quotes a file: the CLI reads the lines, so you do not type them, and the code is the real code. Leave the block empty.
+  The path is read from the current folder, and only files inside it are quoted. lines=18-30 (or lines=18) picks the lines; without it the whole file is quoted.
+- The header shows path:lines, or title= when you set it. Write "sketch" in the title of code that does not exist yet.
+- hl=22 or hl=20-22,25 highlights lines by their shown number. start=38 numbers a typed block from 38.
+- A diff: a fence with the language diff holds a unified diff you paste, and the CLI draws it (see below).
+- 10 to ${LONG_CODE_LINES} lines make the point best: a longer block gets a warning, and more than ${MAX_CODE_LINES} lines is an error.
+- Files that hold keys by convention (.env, *.pem, id_rsa, .ssh/, .git/ \u2026) and files with anything that looks like a key or a token are refused.
+- The render lists every embedded file. The page keeps the path; am patch reads the file again, or keeps the page's copy when the file has moved.
+
+Diff blocks: show a change
+
+\`\`\`diff file=src/code.js
+@@ -60,3 +60,3 @@
+ export function parseCodeArgs(args) {
+-  const attrs = parseAttrs(args);
++  const attrs = parseAttrs(args, { diff: true });
+   const opts = {};
+\`\`\`
+
+- Paste the unified diff. Each line starts with + (added, green), - (removed, red) or a space (context); a line with nothing on it counts as context.
+- @@ -60,3 +60,3 @@ starts a hunk: the CLI shows it as a thin row and numbers the lines from it, with two gutters, old and new. Without @@, start=N numbers from N; with neither, the block has no numbers.
+- file= names the file in the header, and the language label comes from its extension. A +++ b/path line names it when file= is missing; title= wins over both.
+- The header shows a stat after the title: +1 \u22121. Copy copies the diff as written.
+- hl= uses new-side numbers and needs numbers (@@ or start=).
+- diff --git, index, ---, +++ and "\\ No newline at end of file" lines are accepted and not drawn.
+- Cut lines (a line with only ... or \u2026) are an error: the gutter cannot know how many lines were skipped. Split the diff into two hunks, each with its own @@ header.
+- A hunk whose line counts do not match its @@ header is a warning. src= is not supported for a diff yet: paste the diff.
+- The limits are the same as for other code blocks: a warning above ${LONG_CODE_LINES} lines, an error above ${MAX_CODE_LINES}, and the key and token check.`;
+var RAW_HELP = `LANG \u2014 embed as-is (escape hatch)
+
+When the fence language is LANG, the content goes into the page unprocessed. Use it only when no component can show the content;
+use theme variables for colors (such as var(--ink), var(--accent)) so the content stays readable across themes and light/dark modes.
+
+Example:
+\`\`\`LANG
+<div style="color: var(--accent)">any content</div>
+\`\`\``;
+var VIDEO_FORMAT = `Video draft format (am video)
+
+---
+title: TCP three-way handshake
+subtitle: Why three steps      # optional, subtitle on the title card
+theme: blueprint               # blueprint: drawing style (auto picks it; follows the theme in am config) | shadcn: cards | 3b1b: dark
+mode: light                    # light | dark (blueprint + dark is a dark-blue drawing)
+---
+> Title-card narration (optional; without it the title card stays for 2.4 seconds)
+
+## Both ends are waiting
+\`\`\`sequence
+Client -> Server: SYN
+Server -> Client: SYN-ACK
+Client -> Server: ACK
+\`\`\`
+> The client sends SYN first to ask for a connection.
+> [Server] replies with SYN-ACK.
+> The client sends ACK, and the connection is open.
+
+- "## " starts a scene; a scene holds components or Markdown (the picture), and lines that start with > are narration (one beat per line).
+- When narration line N plays, step N of the picture appears: in flow / er / sequence / tree each source line is one step;
+  timeline, limits, table rows, list items and paragraphs step item by item. With more steps than narration lines, the steps are spread across the lines;
+  with more narration lines than steps, the extra first lines act as an opening and show nothing new.
+- Write [name] in narration: the camera zooms in on the element with that name and highlights it, and the word turns yellow in the caption.
+- Nodes / participants with the same name in adjacent scenes move smoothly from the old position to the new one (cross-scene morph).
+- Voice-over: --voice auto (default: ElevenLabs if ELEVENLABS_API_KEY is set, otherwise system TTS) | elevenlabs | local | system | off.
+  The system voice is picked for each line from the languages installed on the machine: macOS say takes the installed voice of
+  the line's language (a Taiwan voice for Traditional Chinese), Linux takes the espeak-ng voice for it.
+  A line whose language has no installed voice keeps its caption without narration, and the run says which language that was.
+  Set the ElevenLabs voice with ELEVENLABS_VOICE_ID and the model with ELEVENLABS_MODEL_ID (default eleven_v4_turbo).
+  local calls a local OpenAI-compatible speech service (POST /v1/audio/speech, returns 16-bit PCM WAV):
+  AM_TTS_URL (required, service base URL), AM_TTS_MODEL, AM_TTS_VOICE (required when the service has no default),
+  AM_TTS_API_KEY is sent as a Bearer token when set; AM_TTS_EXTRA holds model-specific parameters (a JSON object); AM_TTS_MODEL / AM_TTS_VOICE override the same fields in it,
+  and am always sets input, response_format and stream. A line whose duration is clearly wrong is synthesized again,
+  up to AM_TTS_ATTEMPTS times per line (default 3; set 1 to turn this off).
+  Example: AM_TTS_URL=http://127.0.0.1:8000 AM_TTS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-4bit       AM_TTS_VOICE=vivian am video draft.md --voice local
+- Output goes to ~/.answer-me-with-html/videos/. The player carries a chapter strip (a chip jumps into that scene), a
+  speed button (0.5x to 2x) and an export button that saves the same video through the browser, without a terminal.
+- --mp4 also saves a 1080p .mp4 next to the page (H.264 + AAC; needs ffmpeg; about 1.3 times the video length).
+  --webm saves a 1080p .webm that the page encodes itself (VP9 + Opus; no ffmpeg; the time follows how much of the page moves).
+  Both need Chrome and Node 22+; give both to save both. The export button needs a secure context (a local file or
+  localhost): WebCodecs is not available to a page served over plain HTTP.`;
 async function main(argv, io = {}) {
   const out = io.stdout ?? process.stdout;
   const err = io.stderr ?? process.stderr;
@@ -5498,6 +10466,7 @@ async function main(argv, io = {}) {
       allowPositionals: true,
       options: {
         out: { type: "string", short: "o" },
+        replace: { type: "string" },
         "no-open": { type: "boolean" },
         "no-bake": { type: "boolean" },
         only: { type: "string" },
@@ -5507,6 +10476,17 @@ async function main(argv, io = {}) {
         template: { type: "string" },
         style: { type: "string" },
         mode: { type: "string" },
+        voice: { type: "string" },
+        mp4: { type: "boolean" },
+        webm: { type: "boolean" },
+        panel: { type: "string" },
+        from: { type: "string" },
+        days: { type: "string" },
+        port: { type: "string" },
+        lan: { type: "boolean" },
+        "public-url": { type: "string" },
+        all: { type: "boolean" },
+        "dry-run": { type: "boolean" },
         help: { type: "boolean", short: "h" },
         version: { type: "boolean", short: "v" }
       }
@@ -5520,23 +10500,37 @@ ${USAGE}`);
   const { values: opts, positionals: [cmd, arg, ...rest] } = parsed;
   if (opts.version) return print(VERSION), 0;
   if (opts.help || !cmd) return print(USAGE), 0;
+  const themes2 = loadThemes(amHome(env));
+  const ctx = { print, fail, env, io, themes: themes2 };
   switch (cmd) {
     case "render":
-      return withSource(arg, io, fail, (src) => cmdRender(src, opts, { print, fail, env, cwd: io.cwd }));
+      return withSource(arg, io, fail, (src, baseDir) => cmdRender(src, opts, ctx, baseDir));
+    case "patch":
+      return cmdPatch(arg, rest[0], opts, ctx);
+    case "video":
+      return withSource(arg, io, fail, (src) => cmdVideo(src, opts, ctx));
     case "lint":
       return withSource(arg, io, fail, (src) => cmdLint(src, opts, { print, fail }));
     case "bake":
-      return cmdBake(arg, { print, fail, env, cwd: io.cwd });
+      return cmdBake(arg, ctx);
     case "shot":
-      return cmdShot(arg, opts, { print, fail, env, cwd: io.cwd });
+      return cmdShot(arg, opts, ctx);
     case "config":
-      return cmdConfig([arg, ...rest].filter((x2) => x2 !== void 0), { print, fail, env });
+      return cmdConfig([arg, ...rest].filter((x2) => x2 !== void 0), ctx);
+    case "theme":
+      return cmdTheme(arg, rest[0], opts, ctx);
+    case "clean":
+      return cmdClean(opts, { print, fail, env });
+    case "serve":
+      return cmdServe(opts, { print, fail, env });
+    case "__update-check":
+      return await runUpdateCheck(amHome(env)) ? 0 : 1;
     case "list":
-      return cmdList(print), 0;
+      return cmdList(ctx), 0;
     case "help":
       return cmdHelp(arg, { print, fail });
     default:
-      fail(`\u2717 \u672A\u77E5\u547D\u4EE4 "${cmd}"
+      fail(`\u2717 Unknown command "${cmd}"
 
 ${USAGE}`);
       return 2;
@@ -5544,21 +10538,22 @@ ${USAGE}`);
 }
 async function withSource(arg, io, fail, fn3) {
   if (!arg) {
-    fail("\u2717 \u7F3A\u5C11\u7A3F\u4EF6\u53C2\u6570\uFF1A\u4F20\u5165\u6587\u4EF6\u8DEF\u5F84\uFF0C\u6216\u7528 - \u4ECE stdin \u8BFB\u53D6");
+    fail("\u2717 Missing the draft argument: pass a file path, or - to read from stdin");
     return 2;
   }
+  const cwd = io.cwd ?? process.cwd();
   let src;
   try {
-    src = arg === "-" ? await readStream(io.stdin ?? process.stdin) : readFileSync3(resolve2(io.cwd ?? process.cwd(), arg), "utf8");
+    src = arg === "-" ? await readStream(io.stdin ?? process.stdin) : readFileSync9(resolve5(cwd, arg), "utf8");
   } catch (e) {
-    fail(`\u2717 \u65E0\u6CD5\u8BFB\u53D6\u7A3F\u4EF6\uFF1A${e.message}`);
+    fail(`\u2717 Cannot read the draft: ${e.message}`);
     return 2;
   }
   if (!src.trim()) {
-    fail("\u2717 \u7A3F\u4EF6\u4E3A\u7A7A");
+    fail("\u2717 The draft is empty");
     return 2;
   }
-  return fn3(src);
+  return fn3(src, arg === "-" ? cwd : dirname3(resolve5(cwd, arg)));
 }
 async function readStream(stream) {
   const chunks = [];
@@ -5572,30 +10567,38 @@ function shouldOpen(opts, env, config) {
   if (env.CI) return false;
   return config.open !== false;
 }
-async function cmdRender(src, opts, { print, fail, env, cwd }) {
-  const config = readConfig(env);
-  if (config.warning) fail(`! ${config.warning}`);
+async function cmdRender(src, opts, ctx, baseDir) {
+  const { fail, print } = ctx;
+  const replaced = opts.replace === void 0 ? null : pagePath(opts.replace, ctx);
+  if (replaced === false) {
+    fail(`\u2717 --replace takes a page that am render wrote (a .html file in ${join10(amHome(ctx.env), "pages")})`);
+    return 2;
+  }
+  const config = loadConfig(ctx);
   const { theme, mode, style } = config.values;
   let result;
   try {
-    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style });
+    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style }, { themes: ctx.themes, baseDir, codeDir: ctx.io.cwd ?? process.cwd() });
   } catch (e) {
     return reportError(e, fail);
   }
-  const file = opts.out ? resolve2(cwd ?? process.cwd(), opts.out) : join3(amHome(env), "pages", `${slug(result.meta.title)}-${stamp()}.html`);
-  mkdirSync3(dirname2(file), { recursive: true });
-  writeFileSync3(file, result.html);
-  const comps = Object.entries(result.stats.components).map(([k2, v]) => `${k2}\xD7${v}`).join(" ");
-  print(`\u2713 ${file}`);
-  print(`  ${result.meta.template} \xB7 ${result.meta.theme} \xB7 ${result.stats.panels} \u9762\u677F${comps ? ` \xB7 ${comps}` : ""}`);
-  printWarnings(result.warnings, print, result.meta.style);
-  let code = 0;
-  if (result.live.length) {
-    const skip = opts["no-bake"] || env.AM_NO_BAKE && env.AM_NO_BAKE !== "0" || config.values.bake === false || result.meta.bake === "off";
-    code = skip ? (print("  \u672A\u70D8\u7119\uFF08\u5DF2\u5173\u95ED\uFF09\uFF1Aexcalidraw / uml \u56FE\u9700\u8054\u7F51\u67E5\u770B\uFF1B\u7A0D\u540E\u53EF\u8FD0\u884C am bake <\u9875\u9762>"), 0) : await runBake(file, src, { print, fail, env });
+  const file = outputPath("pages", result.meta.title, opts, ctx);
+  emit(result, file, ctx);
+  if (replaced && replaced !== resolve5(file)) rmSync7(replaced, { force: true });
+  const baked = await bakeLive(result, file, src, opts, config, ctx);
+  const held = !opts.open && (hasRetryWarnings(result) || baked !== 0) && shouldOpen(opts, ctx.env, config.values);
+  if (held) print(`  Not opened because of the ${baked !== 0 ? "figure errors" : "warnings"}; to render again, add --replace ${file}`);
+  return finish(file, held ? { ...opts, "no-open": true } : opts, config, ctx) || baked;
+}
+async function bakeLive(result, file, src, opts, config, ctx) {
+  if (!result.live?.length) return 0;
+  const { env, print } = ctx;
+  const skip = opts["no-bake"] || env.AM_NO_BAKE && env.AM_NO_BAKE !== "0" || config.values.bake === false || result.meta.bake === "off";
+  if (skip) {
+    print("  Not baked (turned off): the excalidraw / uml figures need the network to show; run am bake <page> later");
+    return 0;
   }
-  if (shouldOpen(opts, env, config.values)) openFile(file);
-  return code;
+  return runBake(file, src, ctx);
 }
 async function runBake(file, src, { print, fail, env }) {
   let r;
@@ -5603,57 +10606,337 @@ async function runBake(file, src, { print, fail, env }) {
     r = await bakeFile(file, { env });
   } catch (e) {
     if (!(e instanceof BakeUnavailable)) throw e;
-    print(`  ! \u672A\u70D8\u7119\uFF1A${e.message}\u3002excalidraw / uml \u56FE\u9700\u8054\u7F51\u67E5\u770B\u3002`);
+    print(`  ! Not baked: ${e.message}. The excalidraw / uml figures need the network to show.`);
     return 0;
   }
   if (r.baked) {
-    print(`  \u70D8\u7119 \u2713 ${r.figures} \u5F20\u56FE\uFF08${(r.ms / 1e3).toFixed(1)}s\uFF09\uFF0C\u9875\u9762\u5DF2\u662F\u79BB\u7EBF\u5355\u6587\u4EF6`);
+    print(`  Baked \u2713 ${count(r.figures, "figure")} (${(r.ms / 1e3).toFixed(1)}s); the page is an offline single file`);
     return 0;
   }
   if (r.state === "timeout") {
-    fail(`\u2717 \u70D8\u7119\u8D85\u65F6\uFF08\u5361\u5728 ${r.stage || "\u542F\u52A8"}\uFF09\uFF1A\u68C0\u67E5\u7F51\u7EDC\u80FD\u5426\u8BBF\u95EE cdn.jsdelivr.net / esm.sh\uFF0C\u7136\u540E\u8FD0\u884C am bake ${file}`);
+    fail(`\u2717 Baking timed out (stuck at ${r.stage || "start"}): check that cdn.jsdelivr.net / esm.sh are reachable, then run am bake ${file}`);
     return 1;
   }
   for (const e of r.errors) {
     fail(`\u2717 ${src && e.line ? `L${e.line} ` : ""}[${e.kind}] ${e.fig}: ${e.message}`);
     const comp = COMPONENTS.get(e.kind);
-    if (comp) fail(`  \u5B8C\u6574\u8BED\u6CD5\uFF1Aam help ${comp.name}`);
+    if (comp) fail(`  Full syntax: am help ${comp.name}`);
   }
-  for (const x2 of r.exceptions) fail(`\u2717 JS \u5F02\u5E38\uFF1A${String(x2).split("\n")[0]}`);
+  for (const x2 of r.exceptions) fail(`\u2717 JS exception: ${String(x2).split("\n")[0]}`);
   return 1;
 }
-async function cmdBake(arg, { print, fail, env, cwd }) {
-  if (!arg) return fail("\u2717 \u7528\u6CD5\uFF1Aam bake <\u9875\u9762.html>"), 2;
-  const file = resolve2(cwd ?? process.cwd(), arg);
-  if (!existsSync3(file)) return fail(`\u2717 \u627E\u4E0D\u5230 ${file}`), 2;
-  if (!needsBake(file)) return print(`\u2713 ${file} \u5DF2\u662F\u79BB\u7EBF\u5355\u6587\u4EF6\uFF08\u65E0\u9700\u70D8\u7119\uFF09`), 0;
-  print(`\u2026 \u70D8\u7119 ${file}`);
-  return runBake(file, null, { print, fail, env });
+async function cmdBake(arg, ctx) {
+  const { print, fail, io } = ctx;
+  if (!arg) return fail("\u2717 Usage: am bake <page.html>"), 2;
+  const file = resolve5(io.cwd ?? process.cwd(), arg);
+  if (!existsSync7(file)) return fail(`\u2717 Cannot find ${file}`), 2;
+  if (!needsBake(file)) return print(`\u2713 ${file} is already an offline single file (nothing to bake)`), 0;
+  print(`\u2026 baking ${file}`);
+  return runBake(file, null, ctx);
 }
-async function cmdShot(arg, opts, { print, fail, env, cwd }) {
-  if (!arg) return fail("\u2717 \u7528\u6CD5\uFF1Aam shot <\u9875\u9762.html> [-o \u76EE\u5F55] [--only A,fig-2]"), 2;
-  const file = resolve2(cwd ?? process.cwd(), arg);
-  if (!existsSync3(file)) return fail(`\u2717 \u627E\u4E0D\u5230 ${file}`), 2;
+async function cmdShot(arg, opts, { print, fail, env, io }) {
+  if (!arg) return fail("\u2717 Usage: am shot <page.html> [-o <dir>] [--only A,fig-2] [--width 390]"), 2;
+  const cwd = io.cwd ?? process.cwd();
+  const file = resolve5(cwd, arg);
+  if (!existsSync7(file)) return fail(`\u2717 Cannot find ${file}`), 2;
+  const width = opts.width ? Number(opts.width) : void 0;
+  if (opts.width && !(width >= 280 && width <= 3840)) return fail("\u2717 --width takes a pixel value from 280 to 3840"), 2;
   let r;
   try {
-    const width = opts.width ? Number(opts.width) : void 0;
-    if (opts.width && !(width >= 280 && width <= 3840)) return fail("\u2717 --width \u5E94\u4E3A 280\u20133840 \u4E4B\u95F4\u7684\u50CF\u7D20\u503C"), 2;
-    r = await shotFile(file, { outDir: opts.out && resolve2(cwd ?? process.cwd(), opts.out), only: opts.only?.split(",").map((s) => s.trim()), width, env });
+    r = await shotFile(file, { outDir: opts.out && resolve5(cwd, opts.out), only: opts.only?.split(",").map((s) => s.trim()), width, env });
   } catch (e) {
     if (!(e instanceof BakeUnavailable)) throw e;
-    return fail(`\u2717 \u65E0\u6CD5\u622A\u56FE\uFF1A${e.message}`), 2;
+    return fail(`\u2717 Cannot take screenshots: ${e.message}`), 2;
   }
   print(`\u2713 ${r.dir}`);
   print(`  ${r.shots.join(" ")}`);
   const { docW, viewW, items } = r.layout;
-  if (items.body) print(`  \u89C6\u53E3 ${viewW}px \xB7 \u6B63\u6587\u5BBD ${items.body[2]}px`);
-  if (docW > viewW + 1) fail(`! \u6A2A\u5411\u6EA2\u51FA\uFF1A\u9875\u9762\u5BBD ${docW}px > \u89C6\u53E3 ${viewW}px\uFF0C\u6709\u5143\u7D20\u6491\u7834\u4E86\u5E03\u5C40`);
+  if (items.body) print(`  viewport ${viewW}px \xB7 body width ${items.body[2]}px`);
+  if (docW > viewW + 1) fail(`! Horizontal overflow: the page is ${docW}px wide in a ${viewW}px viewport; an element breaks the layout`);
   const bad = r.state === "error" || r.state === "timeout" || r.exceptions.length;
-  if (r.state === "timeout") fail(`\u2717 \u9875\u9762\u6E32\u67D3\u8D85\u65F6\uFF08\u5361\u5728 ${r.stage}\uFF09`);
+  if (r.state === "timeout") fail(`\u2717 The page timed out while drawing (stuck at ${r.stage})`);
   for (const e of r.errors) fail(`\u2717 L${e.line} [${e.kind}] ${e.fig}: ${e.message}`);
-  for (const x2 of r.exceptions) fail(`\u2717 JS \u5F02\u5E38\uFF1A${String(x2).split("\n")[0]}`);
-  print("  \u9010\u5F20\u67E5\u770B\uFF1A\u91CD\u53E0\u3001\u622A\u65AD\u3001\u6587\u5B57\u8FC7\u5C0F\u3001\u7A7A\u56FE\u3001\u5927\u6BB5\u6587\u5B57\u5899\u3002");
+  for (const x2 of r.exceptions) fail(`\u2717 JS exception: ${String(x2).split("\n")[0]}`);
+  print("  Look at each one: overlaps, cut-off text, text too small, empty figures, walls of text.");
   return bad ? 1 : 0;
+}
+var hasRetryWarnings = (result) => result.warnings.length > 0 || (result.stats.codeWarnings ?? []).length > 0;
+function pagePath(arg, { env, io }) {
+  const path = resolve5(io.cwd ?? process.cwd(), arg);
+  return dirname3(path) === resolve5(amHome(env), "pages") && basename5(path).endsWith(".html") ? path : false;
+}
+var PATCH_HELP = `Replace one panel of a rendered page in place
+
+Usage:
+  am patch <html-file> --panel <title> < new-panel.md
+  am patch <html-file> --panel <title> --from new-panel.md
+  am patch <html-file> --panel <title> -
+
+- Reads the source draft from the hidden <textarea id="am-source"> in <html-file>.
+- --panel matches a ## section's title, its letter ID, or "ID title".
+- The new draft comes from stdin or from --from / a second file argument: it may include the ## heading or only the panel body.
+- Renders again with the current renderer and overwrites the same HTML path; it writes no new timestamped file.
+- Keeps the page's template, theme, light/dark mode and STE style (recorded on the page's root tag when it was made). Later config changes do not apply to patched pages; to change them add --theme / --mode / --style.
+- If the panel is not found, or the page has no #am-source, the exit code is non-zero and the file is not changed.`;
+var THEME_HELP = `Your own theme: one JSON file per theme in ~/.answer-me-with-html/themes/ (AM_HOME moves it)
+
+The file name is the theme name: themes/notes.json is theme "notes" (lowercase letters, digits and -; not a built-in name).
+Pick it like a built-in theme: theme: notes in the draft, --theme notes, or am config set theme notes. The draft does not change.
+
+{
+  "label": "Notes",
+  "tokens": {
+    "common": { "--radius": "6px", "--font-sans": "\\"IBM Plex Sans\\", \\"Noto Sans CJK SC\\"" },
+    "light": { "--bg": "#f7f5ef", "--paper": "#fffdf8", "--ink": "#1f1d1a", ... },
+    "dark": { "--bg": "#14130f", "--paper": "#1c1b17", "--ink": "#eeeae0", ... }
+  },
+  "css": "& .am-panel-head { letter-spacing: 0.01em; }",
+  "video": { "tokens": { "light": { "--v-stage": "#fffdf8" } }, "css": "& .amv-title { font-weight: 500; }" }
+}
+
+- label: the name on the page's theme button: a string, or an object with ${languageIds().join(" / ")} strings.
+- tokens: light and dark must each set every color: ${COLOR_TOKENS.join(" ")}.
+  common holds values shared by both; --radius --shadow --bw --head-font --font-sans --font-mono are optional.
+- Fonts: name installed fonts only; the default font stack is added as the fallback. No font files are embedded.
+- css (optional): start every selector with &, which stands for the theme's root, so the rules apply only under this theme.
+- video (optional): video-only variables (--v-stage, --v-title-font, --v-cap-fg, --v-cap-bg, --v-glow) and & css for am video.
+- A page carries the built-in themes plus its own theme, so it opens anywhere; readers without your fonts see the fallback.
+- A file with problems is skipped with a warning; am theme check <name|file.json> tells you why.
+
+am theme check <name|file.json> [--no-open]
+- Reports invalid colors, missing variables and contrast below WCAG AA in light and dark (text 4.5:1; status badges 3:1, warning below 4.5:1).
+- Exits with 1 when there is an error. Without errors it renders two specimen pages (light, dark) with every component.`;
+async function cmdPatch(htmlArg, fromArg, opts, ctx) {
+  const { fail, io } = ctx;
+  if (!htmlArg || htmlArg === "-") {
+    fail(htmlArg ? "\u2717 patch needs the path of an existing HTML file; it cannot read the page from stdin" : "\u2717 Missing the HTML file path");
+    return 2;
+  }
+  if (!opts.panel || !String(opts.panel).trim()) {
+    fail("\u2717 Missing --panel <title>");
+    return 2;
+  }
+  const cwd = io.cwd ?? process.cwd();
+  const file = resolve5(cwd, htmlArg);
+  let html;
+  try {
+    html = readFileSync9(file, "utf8");
+  } catch (e) {
+    fail(`\u2717 Cannot read the HTML: ${e.message}`);
+    return 2;
+  }
+  const page = readPage(html);
+  const { source, video } = page;
+  if (source == null) {
+    fail("\u2717 The page has no #am-source, so the source draft cannot be recovered");
+    return 1;
+  }
+  const from = opts.from ?? fromArg;
+  let replacement;
+  try {
+    replacement = !from || from === "-" ? await readStream(io.stdin ?? process.stdin) : readFileSync9(resolve5(cwd, from), "utf8");
+  } catch (e) {
+    fail(`\u2717 Cannot read the new panel draft: ${e.message}`);
+    return 2;
+  }
+  let patched;
+  try {
+    patched = replacePanel(source, opts.panel, replacement);
+  } catch (e) {
+    if (!(e instanceof PatchError)) return reportError(e, fail);
+    fail(`\u2717 ${e.message}`);
+    return 1;
+  }
+  const problem = ctx.themes.problem(page.theme, video ? "video" : "page");
+  if (problem && !opts.theme) {
+    fail(`\u2717 The page uses theme "${page.theme}", which is not installed or cannot be used (${problem}); add --theme <name> to pick another`);
+    return 1;
+  }
+  const config = loadConfig(ctx);
+  const { theme, mode, style } = config.values;
+  const overrides = {
+    template: video ? void 0 : opts.template ?? page.template,
+    theme: opts.theme ?? page.theme,
+    mode: opts.mode ?? page.mode,
+    style: opts.style ?? page.style
+  };
+  let result;
+  try {
+    if (video) {
+      const voice = opts.voice ?? (page.voiced ? page.voice ?? config.values.voice : "off");
+      if (!validVoice(voice, fail)) return 2;
+      result = await buildVideo(patched, voice, { ...opts, theme: overrides.theme, mode: overrides.mode, style: overrides.style, previousLanguage: page.lang }, config, ctx);
+    } else {
+      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html) });
+    }
+  } catch (e) {
+    if (e instanceof TtsError) {
+      fail(`\u2717 Voice-over failed: ${e.message}. Add --voice off for captions only`);
+      return 1;
+    }
+    return reportError(e, fail);
+  }
+  emit(result, file, ctx, video ? " (an MP4 or WebM with the same name is not updated; run am video --mp4 or --webm again if you need it)" : "");
+  const baked = video ? 0 : await bakeLive(result, file, patched, opts, config, ctx);
+  return finish(file, opts, config, ctx) || baked;
+}
+async function cmdVideo(src, opts, ctx) {
+  const { fail } = ctx;
+  const config = loadConfig(ctx);
+  const voice = opts.voice ?? config.values.voice;
+  if (!validVoice(voice, fail)) return 2;
+  let result;
+  try {
+    result = await buildVideo(src, voice, opts, config, ctx);
+  } catch (e) {
+    if (!(e instanceof TtsError)) return reportError(e, fail);
+    fail(`\u2717 Voice-over failed: ${e.message}. Add --voice off for captions only`);
+    return 1;
+  }
+  const file = outputPath("videos", result.meta.title, opts, ctx);
+  emit(result, file, ctx);
+  for (const format of ["mp4", "webm"]) {
+    if (opts[format] && !await exportVideo(file, result.wav, format, ctx)) return 1;
+  }
+  return finish(file, opts, config, ctx);
+}
+function validVoice(voice, fail) {
+  if (VOICES.includes(voice)) return true;
+  fail(`\u2717 Invalid voice value "${voice}". Choose one of: ${VOICES.join(" | ")}`);
+  return false;
+}
+async function buildVideo(src, voice, opts, config, { fail, env, io, themes: themes2 }) {
+  const provider = io.ttsProvider !== void 0 ? io.ttsProvider : pickProvider(voice, env);
+  if (provider) ensureHome(amHome(env));
+  const result = await renderVideo(src, {
+    provider,
+    cacheDir: join10(amHome(env), "cache", "tts"),
+    defaults: { style: config.values.style, theme: config.values.theme, mode: config.values.mode },
+    overrides: { style: opts.style, theme: opts.theme, mode: opts.mode },
+    previousLanguage: opts.previousLanguage,
+    onProgress: (msg) => fail(`  ${msg}`),
+    themes: themes2
+  });
+  return { ...result, voiceName: voiceSummary(provider, result.captionsOnly) };
+}
+function voiceSummary(provider, captionsOnly = []) {
+  if (!provider) return "none (captions only)";
+  if (!captionsOnly.length) return provider.name;
+  return `${provider.name} (no ${captionsOnly.map((c) => c.language).join(", ")} voice installed: captions only for those lines)`;
+}
+async function exportVideo(file, wav2, format, { print, fail, env }) {
+  const out = `${file.replace(/\.html?$/i, "")}.${format}`;
+  const started = Date.now();
+  try {
+    if (format === "mp4") await exportMp4(file, out, { wav: wav2, env, onProgress: (i, n) => fail(`  Exporting MP4: frame ${i}/${n}`) });
+    else await exportWebm(file, out, { env, onProgress: (i, n) => fail(`  Exporting WebM: frame ${i}/${n}`) });
+  } catch (e) {
+    if (!(e instanceof ExportError)) throw e;
+    const hint = format === "mp4" && !hasCommand("ffmpeg") ? ". Or add --webm for a video file without ffmpeg" : "";
+    fail(`\u2717 Video export failed: ${e.message}${hint}. The player page was written and plays in a browser`);
+    return false;
+  }
+  print(`\u2713 ${out} (exported in ${((Date.now() - started) / 1e3).toFixed(0)}s)`);
+  return true;
+}
+function loadConfig({ fail, env, themes: themes2 }) {
+  themeWarnings({ fail, themes: themes2 });
+  const config = readConfig(env, themes2);
+  if (config.warning) fail(`! ${config.warning}`);
+  return config;
+}
+function themeWarnings({ fail, themes: themes2 }) {
+  themes2.warnings.forEach((w) => fail(`! ${w}`));
+}
+function outputPath(dir, title, opts, { env, io }) {
+  if (opts.out) return resolve5(io.cwd ?? process.cwd(), opts.out);
+  return join10(amHome(env), dir, `${slug(title)}-${stamp(new Date(io.now?.() ?? Date.now()))}.html`);
+}
+function writePage(file, html, env) {
+  const home = resolve5(amHome(env));
+  if (resolve5(file).startsWith(home + sep3)) ensureHome(home);
+  mkdirSync4(dirname3(file), { recursive: true });
+  writeFileSync7(file, html);
+}
+function emit(result, file, { print, env }, note2 = "") {
+  writePage(file, result.html, env);
+  print(`\u2713 ${file}`);
+  const link = serveLink(amHome(env), file);
+  if (link) print(`  link: ${link}`);
+  print(`  ${summaryLine(result)}${note2}`);
+  if (result.stats.code?.length) print(`  code embedded from: ${result.stats.code.join(", ")}`);
+  const long = result.stats.codeWarnings ?? [];
+  if (long.length) {
+    print(`  code ${count(long.length, "warning")} (trim the block and run again, or keep it if every line matters):`);
+    long.forEach((w) => print(`  L${w.line} [${w.rule}] ${w.message}`));
+  }
+  printComponentWarnings(result.stats.componentWarnings, print);
+  printHtmlWarnings(result.stats.htmlWarnings, print);
+  printWarnings(result.warnings, print, result.meta.style);
+}
+function printComponentWarnings(notes = [], print) {
+  if (!notes.length) return;
+  print(`  diagram ${count(notes.length, "warning")} (the page is written; fix the draft if that is not what you meant):`);
+  notes.toSorted((a, b) => a.line - b.line).slice(0, MAX_LISTED_WARNINGS).forEach((w) => print(`  L${w.line} [${w.component}] ${w.message}`));
+  if (notes.length > MAX_LISTED_WARNINGS) print(`  \u2026 ${notes.length - MAX_LISTED_WARNINGS} more`);
+}
+function printHtmlWarnings(notes = [], print) {
+  const lines = [...new Set(notes.toSorted((a, b) => a.line - b.line).map((w) => `L${w.line} [html] ${w.message}`))];
+  if (!lines.length) return;
+  print(`  html ${count(lines.length, "warning")} (the page differs from the draft here; fix the draft if that is not what you meant):`);
+  lines.slice(0, MAX_LISTED_WARNINGS).forEach((l3) => print(`  ${l3}`));
+  if (lines.length > MAX_LISTED_WARNINGS) print(`  \u2026 ${lines.length - MAX_LISTED_WARNINGS} more`);
+}
+function summaryLine(result) {
+  const { meta, stats } = result;
+  if (result.beats !== void 0) {
+    return `video \xB7 ${meta.theme} \xB7 ${count(stats.panels, "scene")} \xB7 ${count(result.beats, "beat")} \xB7 ${result.duration.toFixed(1)}s \xB7 voice: ${result.voiceName}`;
+  }
+  const comps = Object.entries(stats.components).map(([k2, v]) => `${k2}\xD7${v}`).join(" ");
+  return `${meta.template} \xB7 ${meta.theme} \xB7 ${count(stats.panels, "panel")}${comps ? ` \xB7 ${comps}` : ""}`;
+}
+var count = (n, noun) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+function finish(file, opts, config, ctx) {
+  printHints(config, ctx);
+  if (shouldOpen(opts, ctx.env, config.values)) (ctx.io.open ?? openFile)(file);
+  return 0;
+}
+function printHints(config, { env, io, print }) {
+  try {
+    const hints = afterRender({
+      home: amHome(env),
+      env,
+      config: config.values,
+      current: VERSION,
+      scriptPath: io.scriptPath,
+      background: Boolean(io.background)
+    });
+    hints.forEach((h2) => print(h2));
+  } catch {
+  }
+}
+function cmdClean(opts, { print, fail, env }) {
+  if (opts.days !== void 0 && !/^\d+$/.test(opts.days.trim())) {
+    fail("\u2717 --days needs a non-negative integer");
+    return 2;
+  }
+  const days = opts.days === void 0 ? CLEAN.days : Number(opts.days);
+  const home = amHome(env);
+  const before = usage(home);
+  const dry = Boolean(opts["dry-run"]);
+  const r = clean2(home, { days, all: Boolean(opts.all), dryRun: dry });
+  const scope = opts.all ? "all pages and videos" : `pages and videos older than ${count(days, "day")}`;
+  print(`Data directory: ${home} (${mb(before.total)} in total: ${count(before.pages.count, "page")}, ${count(before.videos.count, "video")}, ${mb(before.cache.bytes)} voice-over cache)`);
+  print(dry ? `Would delete ${count(r.files, "file")}, freeing ${mb(r.bytes)} (${scope} + voice-over cache). Run without --dry-run to delete.` : `\u2713 Deleted ${count(r.files, "file")}, freeing ${mb(r.bytes)} (${scope} + voice-over cache). Settings were kept.`);
+  return 0;
+}
+function cmdServe(opts, { print, fail, env }) {
+  if (opts.port !== void 0 && !(/^\d+$/.test(opts.port.trim()) && Number(opts.port) <= 65535)) {
+    fail("\u2717 --port needs a number from 0 to 65535 (0 picks a free port)");
+    return 2;
+  }
+  const port = opts.port === void 0 ? DEFAULT_PORT : Number(opts.port);
+  return runServe({ home: amHome(env), port, lan: !!opts.lan, publicUrl: opts["public-url"], print, fail });
 }
 function cmdLint(src, opts, { print, fail }) {
   let doc2;
@@ -5664,101 +10947,163 @@ function cmdLint(src, opts, { print, fail }) {
   }
   const style = opts.style ?? doc2.meta.style;
   if (!CHOICES.style.includes(style)) {
-    fail(`\u2717 style \u7684\u503C "${style}" \u65E0\u6548\uFF0C\u53EF\u9009\uFF1A${CHOICES.style.join(" | ")}`);
+    fail(`\u2717 Invalid style value "${style}". Choose one of: ${CHOICES.style.join(" | ")}`);
     return 2;
   }
-  const warnings = style === "off" ? [] : lintDoc(doc2);
+  const language = resolveLanguage({ declared: doc2.meta.lang, text: src });
+  const warnings = style === "off" ? [] : lintDoc(doc2, language);
   printWarnings(warnings, print, style);
   return style === "strict" && warnings.length ? 1 : 0;
 }
 function printWarnings(warnings, print, style) {
-  if (style === "off") return print("  STE \u68C0\u67E5\u5DF2\u5173\u95ED");
-  if (!warnings.length) return print("  STE \u2713 0 \u6761\u8B66\u544A");
-  print(`  STE ${warnings.length} \u6761\u8B66\u544A\uFF08\u4FEE\u6B63\u7A3F\u4EF6\u540E\u91CD\u65B0\u6267\u884C\uFF09\uFF1A`);
+  if (style === "off") return print("  STE check is off");
+  if (!warnings.length) return print("  STE \u2713 0 warnings");
+  print(`  STE ${count(warnings.length, "warning")} (fix the draft and run again):`);
   warnings.slice(0, MAX_LISTED_WARNINGS).forEach((w) => print(`  ${formatWarning(w)}`));
-  if (warnings.length > MAX_LISTED_WARNINGS) print(`  \u2026 \u53E6\u6709 ${warnings.length - MAX_LISTED_WARNINGS} \u6761\uFF0C\u7528 am lint \u67E5\u770B\u5168\u90E8`);
+  if (warnings.length > MAX_LISTED_WARNINGS) print(`  \u2026 ${warnings.length - MAX_LISTED_WARNINGS} more; run am lint to see all`);
 }
 function reportError(e, fail) {
   if (e instanceof RenderError) {
     fail(`\u2717 L${e.line} [${e.component}] ${e.message}`);
-    if (e.example) fail(`  \u6B63\u786E\u793A\u4F8B\uFF1A
+    if (e.example) fail(`  Correct example:
 ${e.example.replace(/^/gm, "    ")}`);
-    fail(`  \u5B8C\u6574\u8BED\u6CD5\uFF1Aam help ${e.component}`);
+    fail(`  Full syntax: am help ${e.component}`);
     return 1;
   }
   if (e instanceof ParseError) {
-    fail(`\u2717 ${e.line ? `L${e.line} ` : ""}\u7A3F\u4EF6\u89E3\u6790\u5931\u8D25\uFF1A${e.message}`);
+    fail(`\u2717 ${e.line ? `L${e.line} ` : ""}Cannot parse the draft: ${e.message}`);
     return 1;
   }
   if (e instanceof LintError) {
-    fail(`\u2717 ${e.message}\uFF0C\u672A\u751F\u6210\u9875\u9762\uFF1A`);
+    fail(`\u2717 ${e.message}; no page was written:`);
     e.warnings.forEach((w) => fail(`  ${formatWarning(w)}`));
     return 1;
   }
   throw e;
 }
 var showValue = (v) => typeof v === "boolean" ? v ? "on" : "off" : String(v);
-function cmdConfig(args, { print, fail, env }) {
+function cmdConfig(args, { print, fail, env, themes: themes2 }) {
   const [action, key, value] = args;
   try {
     if (action === "set") {
-      if (key === void 0 || value === void 0) throw new ConfigError("\u7528\u6CD5\uFF1Aam config set <\u952E> <\u503C>");
-      print(`\u2713 ${key} = ${showValue(setConfig(key, value, env))}`);
+      if (key === void 0 || value === void 0) throw new ConfigError("Usage: am config set <key> <value>");
+      print(`\u2713 ${key} = ${showValue(setConfig(key, value, env, themes2))}`);
       return 0;
     }
     if (action === "get") {
-      if (!CONFIG_KEYS[key]) throw new ConfigError(`\u6CA1\u6709\u914D\u7F6E\u9879 "${key}"\u3002\u53EF\u7528\uFF1A${Object.keys(CONFIG_KEYS).join(" | ")}`);
-      print(showValue(readConfig(env).values[key]));
+      if (!CONFIG_KEYS[key]) throw new ConfigError(`No setting named "${key}". Available: ${Object.keys(CONFIG_KEYS).join(" | ")}`);
+      print(showValue(readConfig(env, themes2).values[key]));
       return 0;
     }
     if (action === "reset") {
       resetConfig(key, env);
-      print(key ? `\u2713 ${key} \u5DF2\u6062\u590D\u9ED8\u8BA4` : "\u2713 \u5168\u90E8\u914D\u7F6E\u5DF2\u6062\u590D\u9ED8\u8BA4");
+      print(key ? `\u2713 ${key} reset to default` : "\u2713 All settings reset to default");
       return 0;
     }
-    if (action !== void 0) throw new ConfigError(`\u672A\u77E5\u64CD\u4F5C "${action}"\u3002\u7528\u6CD5\uFF1Aam config [set <\u952E> <\u503C> | get <\u952E> | reset [\u952E]]`);
+    if (action !== void 0) throw new ConfigError(`Unknown action "${action}". Usage: am config [set <key> <value> | get <key> | reset [key]]`);
   } catch (e) {
     if (!(e instanceof ConfigError)) throw e;
     fail(`\u2717 ${e.message}`);
     return 2;
   }
-  const { values, stored, warning, path } = readConfig(env);
+  themeWarnings({ fail, themes: themes2 });
+  const { values, stored, warning, path } = readConfig(env, themes2);
   if (warning) fail(`! ${warning}`);
-  print(`\u914D\u7F6E\u6587\u4EF6\uFF1A${path}`);
+  print(`Config file: ${path}`);
   for (const [k2, spec] of Object.entries(CONFIG_KEYS)) {
     const mark = k2 in stored ? "*" : " ";
-    const options = spec.type === "bool" ? "on | off" : spec.choices.join(" | ");
-    print(`${mark} ${k2.padEnd(7)}${showValue(values[k2]).padEnd(10)}${spec.label}\uFF08${options}\uFF09`);
+    const options = spec.type === "bool" ? "on | off" : configChoices(k2, themes2).join(" | ");
+    print(`${mark} ${k2.padEnd(13)}${showValue(values[k2]).padEnd(10)}${spec.label} (${options})`);
   }
-  if (env.AM_NO_OPEN && env.AM_NO_OPEN !== "0") print("\u6CE8\u610F\uFF1A\u73AF\u5883\u53D8\u91CF AM_NO_OPEN \u751F\u6548\u4E2D\uFF0C\u4F1A\u8986\u76D6 open \u914D\u7F6E\u3002");
-  print("* \u8868\u793A\u4F60\u6539\u8FC7\u7684\u503C\u3002\u4FEE\u6539\uFF1Aam config set <\u952E> <\u503C>\uFF1B\u6062\u590D\u9ED8\u8BA4\uFF1Aam config reset [\u952E]");
+  if (env.AM_NO_OPEN && env.AM_NO_OPEN !== "0") print("Note: the AM_NO_OPEN environment variable is set and overrides the open setting.");
+  print("* marks a value you changed. Change: am config set <key> <value>; reset to default: am config reset [key]");
   return 0;
 }
-function cmdList(print) {
-  print("\u6A21\u677F (template):");
-  print("  sheet     \u56FE\u7EB8\u677F\uFF1A\u5B57\u6BCD\u7F16\u53F7\u9762\u677F\u7F51\u683C\uFF0C\u9002\u5408\u4E00\u5C4F\u603B\u89C8\uFF08\u9ED8\u8BA4\uFF09");
-  print("  doc       \u7EBF\u6027\u8BB2\u89E3\uFF1A\u5355\u680F\u9605\u8BFB\uFF0C\u22653 \u4E2A\u9762\u677F\u65F6\u5E26\u76EE\u5F55");
-  print("  research  \u7814\u7A76\u89E3\u91CA\u9875\uFF1A\u56FE\u7EB8\u603B\u89C8 + \u6B63\u6587 + \u76EE\u5F55 + \u9605\u8BFB\u8DEF\u5F84\uFF085 / 30 / \u5B8C\u6574\uFF09");
-  print("\n\u4E3B\u9898 (theme):");
-  for (const [name, t] of Object.entries(THEMES)) print(`  ${name.padEnd(10)}${t.label}`);
-  print("\n\u7EC4\u4EF6\uFF08\u56F4\u680F\u5757\u8BED\u8A00\u540D\uFF09:");
-  for (const c of COMPONENTS.values()) print(`  ${c.name.padEnd(11)}${c.summary}${c.aliases ? `\uFF08\u522B\u540D ${c.aliases.join(", ")}\uFF09` : ""}`);
-  print("  html/svg  \u539F\u6837\u5D4C\u5165\uFF08\u9003\u751F\u53E3\uFF09");
-  print("\n\u8BED\u6CD5\uFF1Aam help <\u7EC4\u4EF6\u540D>\uFF1B\u7A3F\u4EF6\u683C\u5F0F\uFF1Aam help format");
+function cmdList({ print, fail, themes: themes2 }) {
+  themeWarnings({ fail, themes: themes2 });
+  print("Templates (template):");
+  print("  sheet   blueprint board: a grid of letter-numbered panels, for a one-screen overview (default)");
+  print("  doc     linear explainer: one-column reading, with contents when there are 3+ panels");
+  print("  research research explainer: overview sheet + body + contents + reading paths (5 / 30 min / everything)");
+  print("  video   explainer video: render with am video, see am help video");
+  print("\nThemes (theme):");
+  const note2 = (t) => t.user ? " (yours)" : t.scope.includes("page") ? "" : " (video only)";
+  for (const t of themes2.list("video")) print(`  ${t.name.padEnd(10)}${t.summary}${note2(t)}`);
+  print("\nComponents (fence language):");
+  for (const c of COMPONENTS.values()) print(`  ${c.name.padEnd(10)}${c.summary}${c.aliases ? ` (alias ${c.aliases.join(", ")})` : ""}`);
+  print("  html/svg  embed as-is (escape hatch)");
+  print("  <other>   code block; src=path lines=a-b quotes a file (am help code)");
+  print("\nSyntax: am help <component>; draft format: am help format");
+}
+function specimenDraft(name, mode) {
+  const sections = [...COMPONENTS.values()].map((c) => `## ${c.name}
+${c.example}`);
+  const table = "## table\n| Check | Status |\n|---|---|\n| Approved | ok passes |\n| Rejected | no fails |\n| Pending | warn needs a look |";
+  return `---
+title: Theme ${name} (${mode})
+lang: en
+---
+${[...sections, table].join("\n\n")}
+`;
+}
+function cmdTheme(action, target, opts, ctx) {
+  const { print, fail, env, io } = ctx;
+  if (action !== "check" || !target) {
+    fail("\u2717 Usage: am theme check <name|file.json>");
+    return 2;
+  }
+  const isFile = /\.json$/i.test(target) || /[\\/]/.test(target);
+  const path = isFile ? resolve5(io.cwd ?? process.cwd(), target) : join10(amHome(env), "themes", `${target}.json`);
+  const name = isFile ? basename5(path).replace(/\.json$/i, "") : target;
+  let theme;
+  let errors = [];
+  if (!isFile && getTheme(name)) {
+    theme = getTheme(name);
+  } else if (existsSync7(path)) {
+    ({ theme, errors } = readThemeFile(path, themeNames("video")));
+  } else {
+    fail(`\u2717 No theme named "${target}": ${path} does not exist`);
+    return 2;
+  }
+  const tokens = theme?.tokens ?? theme?.video?.tokens;
+  const colors = tokens ? checkColors({ tokens }) : { errors: [], warnings: [] };
+  const all = [...errors, ...colors.errors];
+  all.forEach((e) => print(`\u2717 ${e}`));
+  colors.warnings.forEach((w) => print(`! ${w}`));
+  print(`${name}: ${all.length} error${all.length === 1 ? "" : "s"}, ${colors.warnings.length} warning${colors.warnings.length === 1 ? "" : "s"}`);
+  if (all.length) return 1;
+  if (!theme.scope.includes("page")) return 0;
+  const themes2 = isFile ? loadThemes(amHome(env), { extra: path }) : ctx.themes;
+  const files = ["light", "dark"].map((mode) => {
+    const result = renderDoc(specimenDraft(name, mode), { theme: name, mode, style: "off" }, {}, { themes: themes2 });
+    const file = outputPath("pages", `theme-${name}-${mode}`, {}, ctx);
+    writePage(file, result.html, env);
+    print(`\u2713 ${file}`);
+    return file;
+  });
+  const config = readConfig(env, themes2);
+  if (shouldOpen(opts, env, config.values)) files.forEach((f2) => (io.open ?? openFile)(f2));
+  return 0;
 }
 function cmdHelp(name, { print, fail }) {
   if (!name) return print(USAGE), 0;
   if (name === "format") return print(FORMAT), 0;
-  const comp = COMPONENTS.get(ALIASES.get(name) ?? name);
+  if (name === "image") return print(IMAGE_HELP), 0;
+  if (name === "code") return print(CODE_HELP), 0;
+  if (name === "video") return print(VIDEO_FORMAT), 0;
+  if (name === "patch") return print(PATCH_HELP), 0;
+  if (name === "theme") return print(THEME_HELP), 0;
+  if (name === "html" || name === "svg") return print(RAW_HELP.replace(/LANG/g, name)), 0;
+  const comp = resolveComponent(name);
   if (!comp) {
-    fail(`\u2717 \u6CA1\u6709\u7EC4\u4EF6 "${name}"\u3002\u53EF\u7528\uFF1A${[...COMPONENTS.keys()].join(", ")}, format`);
+    fail(`\u2717 No component named "${name}". Available: ${[...COMPONENTS.keys()].join(", ")}, html, svg, format, code, image, video, patch, theme`);
     return 2;
   }
   print(`${comp.name} \u2014 ${comp.summary}
 
 ${comp.syntax}
 
-\u793A\u4F8B\uFF1A
+Example:
 ${comp.example}`);
   return 0;
 }
@@ -5766,26 +11111,26 @@ function slug(title) {
   const s = String(title || "page").trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 40);
   return s || "page";
 }
-function stamp(d = /* @__PURE__ */ new Date()) {
+function stamp(d) {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 function openFile(file) {
   const [cmd, args] = process.platform === "darwin" ? ["open", [file]] : process.platform === "win32" ? ["cmd", ["/c", "start", "", file]] : ["xdg-open", [file]];
   try {
-    spawn2(cmd, args, { detached: true, stdio: "ignore" }).on("error", () => {
+    spawn5(cmd, args, { detached: true, stdio: "ignore" }).on("error", () => {
     }).unref();
   } catch {
   }
 }
 
 // bin/am.js
-main(process.argv.slice(2)).then(
+main(process.argv.slice(2), { background: true, scriptPath: process.argv[1] }).then(
   (code) => {
     process.exitCode = code;
   },
   (err) => {
-    process.stderr.write(`\u2717 \u5185\u90E8\u9519\u8BEF\uFF1A${err.stack || err}
+    process.stderr.write(`\u2717 Internal error: ${err.stack || err}
 `);
     process.exitCode = 1;
   }

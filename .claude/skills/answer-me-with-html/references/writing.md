@@ -1,64 +1,66 @@
-# 写作：STE-80 与受控中文（研究页细则）
+# Writing: STE-80 and controlled Chinese (rules for research pages)
 
-SKILL.md 第 5 节是每页都要遵守的规则，`am lint` 会自动检查其中能机器检查的部分。本文补充研究页需要的细则。
+Section 6 of SKILL.md holds the rules for every page; `am lint` checks the parts a machine can check. This file adds what research pages need.
 
-ASD-STE100（Simplified Technical English）是为航空维修手册设计的受控语言。Karpathy 让 LLM 按它写，或者写到"80% 的 STE"。本文定义面向开发者研究写作的那 80%。本文是工作摘要，不是官方规范；官方规范（含约 900 词的词典）可在 <https://www.asd-ste100.org> 免费获取。
+ASD-STE100 (Simplified Technical English) is a controlled language designed for aircraft maintenance manuals. Karpathy asks the LLM to write in it, or to "80% STE". This file defines that 80% for developer research writing. It is a working summary, not the official specification; the specification (with a dictionary of about 900 words) is free at <https://www.asd-ste100.org>.
 
-## 1. 硬规则（始终遵守）
+## 1. Hard rules (always)
 
-| # | 规则 | 自动检查 |
+| # | Rule | Checked automatically |
 |---|---|---|
-| H1 | 一句一事。在"和""以及""，同时"处断句 | 句长 |
-| H2 | 一词一义，一义一词。选定一个术语后，全文都用它，不要在 worker / node / instance 之间来回换 | — |
-| H3 | 指令用主动语态和祈使句："运行 `make test`。" | 英文被动 |
-| H4 | 关键信息放前面。段落第一句给结论 | — |
-| H5 | 条件放在命令前面："如果构建失败，删除 `node_modules`。" | — |
-| H6 | 一步只做一件事（同时发生的动作除外） | 步骤句长 |
-| H7 | 名词簇最多 3 个词。"GPU 显存带宽瓶颈分析"改成"分析 GPU 显存带宽的瓶颈" | "的"字连用 |
-| H8 | 3 项以上平行内容用列表 | 段长 |
-| H9 | 一段一个主题，最多 6 句（中文 5 句） | 段长 |
-| H10 | 指代明确："这 / 其 / 该"后面跟名词：写"该缓存"，不写单独的"这" | — |
-| H11 | 用数字代替形容词："p50 快 3.2 倍"，不写"快很多" | 套话 / 空话词表 |
+| H1 | One sentence, one thing. Break the sentence at "and", "as well as", ", while" | sentence length |
+| H2 | One word, one meaning; one meaning, one word. Once you pick a term, use it on the whole page; do not switch between worker / node / instance | — |
+| H3 | Instructions use the active voice and the imperative: "Run `make test`." | English passive |
+| H4 | Key information first. The first sentence of a paragraph gives the conclusion | — |
+| H5 | The condition comes before the command: "If the build fails, delete `node_modules`." | — |
+| H6 | One step does one thing (except actions that happen together) | step length |
+| H7 | Noun clusters have at most 3 words. "GPU memory bandwidth bottleneck analysis" becomes "analyse the GPU memory bandwidth bottleneck" | chained `的` in Chinese |
+| H8 | 3 or more parallel items go in a list | paragraph length |
+| H9 | One topic per paragraph, at most 6 sentences (5 in Chinese) | paragraph length |
+| H10 | Clear references: "this / its / that" is followed by a noun: write "this cache", not a bare "this" | — |
+| H11 | Numbers instead of adjectives: "3.2× faster at p50", not "much faster" | cliché / empty-word lists |
 
-## 2. 软规则（80% 的部分：有理由才打破）
+## 2. Soft rules (the 80%: break them only for a reason)
 
-| STE 原规则 | STE-80 |
+| STE rule | STE-80 |
 |---|---|
-| 步骤 ≤ 20 词，描述 ≤ 25 词 | 目标不变。中文：步骤 ≤ 35 字，描述 ≤ 45 字。最多 10% 的句子超标 |
-| 只用词典词 | 用常见、具体的词，避开空话词表 |
-| 不用 -ing | 描述性文字里最清楚时可以用（caching、streaming） |
-| 描述里少用被动 | 施动者未知或无关紧要时可以用："文件在退出时写入。" |
-| 不用完成时 | 描述"至今为止的结果"可以用："We have not reproduced F3." |
-| 不用分号 | 保持：拆成两句 |
+| Steps ≤ 20 words, descriptions ≤ 25 words | Same target. Chinese: steps ≤ 35 characters, descriptions ≤ 45 characters. At most 10% of sentences go over |
+| Only dictionary words | Use common, concrete words; avoid the empty-word list |
+| No -ing forms | Allowed in descriptions when clearest (caching, streaming) |
+| Little passive in descriptions | Allowed when the actor is unknown or does not matter: "The file is written on exit." |
+| No perfect tenses | Allowed for "results so far": "We have not reproduced F3." |
+| No semicolons | Keep: split into two sentences |
 
-## 3. 技术名词豁免（开发者版）
+## 3. The technical-name exemption (developer version)
 
-STE 允许词典之外的**技术名称**和**技术动词**。在开发文档里，它们包括：
+STE allows **technical names** and **technical verbs** outside the dictionary. In developer documents they are:
 
-- **技术名称**：代码标识符、API、CLI 参数、文件路径、产品名、领域术语。标识符放在反引号里，lint 会跳过它。
-- **技术动词**：deploy、rebase、serialize、shard、cache、tokenize、quantize 等。
+- **Technical names**: code identifiers, APIs, CLI flags, file paths, product names, domain terms. Put identifiers in backticks; the lint skips them.
+- **Technical verbs**: deploy, rebase, serialize, shard, cache, tokenize, quantize and so on.
 
-规则：不在读者基线里的技术名称或技术动词，必须有 glossary 条目或 prereq 卡片。正文第一次出现时写 `[[术语]]`。
+Rule: a technical name or verb that is not in the reader baseline must have a glossary entry or a prereq card. Write its first use in the text as `[[term]]`.
 
-## 4. 安全提示的开发语义
+## 4. Safety notices in developer terms
 
-STE 的安全提示先写命令，再写风险。下表把 STE 的类别对应到开发风险和 callout：
+An STE safety notice gives the command first, then the risk. This table maps the STE categories to developer risks and callouts:
 
-| 写法 | STE 含义 | 开发含义 | 示例 |
+| Write | STE meaning | Developer meaning | Example |
 |---|---|---|---|
-| `callout err WARNING` | 人身伤亡风险 | 数据丢失、安全漏洞、生产环境结果错误 | "不要在主库上跑这个迁移。它会锁住 `orders` 表约 40 分钟。" |
-| `callout warn CAUTION` | 设备损坏风险 | 浪费时间、性能下降、结果不稳定、成本上升 | "固定 CUDA 版本。其他版本的 kernel 耗时不同。" |
-| `callout info` | 说明，不是指令 | 有用的背景信息 | callout info 里不写指令 |
+| `callout err WARNING` | risk of injury or death | data loss, a security hole, wrong results in production | "Do not run this migration on the primary. It locks `orders` for about 40 minutes." |
+| `callout warn CAUTION` | risk of damage to equipment | lost time, slower performance, unstable results, higher cost | "Pin the CUDA version. Other versions have different kernel timings." |
+| `callout info` | a note, not an instruction | useful background | no instructions in a callout info |
 
-## 5. 改写示例
+## 5. Rewrite examples
 
-中文，描述：
+Chinese, a description (before, then after):
 
-> ~~通过对调度策略进行相关优化，在一定程度上实现了显存利用率的提升，从而打通了长上下文场景下的性能瓶颈。~~
->
-> 我们修改了调度策略：按块分配显存，不再按序列预留。显存利用率从 38% 升到 91%。因此，长上下文请求不再因显存不足被拒绝。
+```text
+~~通过对调度策略进行相关优化，在一定程度上实现了显存利用率的提升，从而打通了长上下文场景下的性能瓶颈。~~
 
-英文，步骤：
+我们修改了调度策略：按块分配显存，不再按序列预留。显存利用率从 38% 升到 91%。因此，长上下文请求不再因显存不足被拒绝。
+```
+
+English, steps:
 
 > ~~Before commencing the benchmark, you should ensure the GPU clocks have been locked, and also the warmup should be run.~~
 >
@@ -66,12 +68,12 @@ STE 的安全提示先写命令，再写风险。下表把 STE 的类别对应�
 > 2. Run the warmup: `make warmup`.
 > 3. Start the benchmark.
 
-（反例用 `~~删除线~~` 包起来，lint 会跳过它。）
+(Wrap a counter-example in `~~strikethrough~~`; the lint skips it.)
 
-## 6. 自查（在 render 之前做）
+## 6. Self-check (before the render)
 
-1. 只读每段第一句。只看这些句子，能不能讲完整个故事？不能就把关键句移到段首（H4）。
-2. 列出页面上所有技术词。每个词是否都满足三者之一：在基线里、有卡片、有术语条目？
-3. 找出同一个东西的两个叫法（H2），例如"请求 / 调用 / query"。
-4. 读每个 `takeaway=`：它说出的内容，是不是图本身没有直接说出的？
-5. render 之后，先改最长的句子。它们最容易被误读。
+1. Read only the first sentence of each paragraph. Do those sentences alone tell the whole story? If not, move the key sentence to the start (H4).
+2. List every technical word on the page. Is each one in the baseline, on a card, or in the glossary?
+3. Find two names for the same thing (H2), for example "request / call / query".
+4. Read every `takeaway=`: does it say something the figure itself does not say directly?
+5. After the render, fix the longest sentences first. They are the easiest to misread.

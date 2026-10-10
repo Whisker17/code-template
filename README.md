@@ -104,7 +104,7 @@ per-project.
 >   orchestration document
 > - `orchestrate/` — first-party, not vendored; do not add it to `skills-lock.json`
 > - `ponytail/` — first-party, not vendored; do not add it to `skills-lock.json`
-> - `answer-me-with-html/` — local fork of `QingYunA/answer-me-with-html` v0.2.2 (adds
+> - `answer-me-with-html/` — local fork of `QingYunA/answer-me-with-html` v0.5.0 (adds
 >   Excalidraw / UML diagrams baked via local Chrome, the `research` template, prereq /
 >   finding / glossary). Not in `skills-lock.json`; source, tests and the change list live in
 >   its `dev/` (`dev/README.md`). Rebuild `scripts/am.mjs` with `npm run build` after edits

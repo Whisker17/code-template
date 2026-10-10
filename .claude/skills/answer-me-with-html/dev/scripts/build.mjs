@@ -1,26 +1,8 @@
-// 把 CLI 打包成单文件 <skill>/scripts/am.mjs（本目录 dev/ 的上一级就是 skill 根目录）。
-// 产物随 skill 目录分发：用 npx skills add / 插件市场安装后无需 npm install，有 Node 即可运行。
+// Bundle the CLI into the single file <skill>/scripts/am.mjs (the parent of this dev/ directory is the skill root).
+// The bundle ships with the skill directory and runs with Node alone, no npm install.
 import { build } from 'esbuild';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-
-const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
-
-// 用内联字符串替换 src/assets.js，去掉运行时对磁盘文件的依赖。
-const inlineAssets = {
-  name: 'inline-assets',
-  setup(b) {
-    b.onLoad({ filter: /src[\\/]assets\.js$/ }, () => ({
-      loader: 'js',
-      contents: [
-        `export const VERSION = ${JSON.stringify(JSON.parse(read('../package.json')).version)};`,
-        `export const BASE_CSS = ${JSON.stringify(read('../src/themes/base.css'))};`,
-        `export const RUNTIME_JS = ${JSON.stringify(read('../src/runtime/page.js'))};`,
-        `export const DIAGRAM_JS = ${JSON.stringify(read('../src/runtime/diagrams.js'))};`,
-      ].join('\n'),
-    }));
-  },
-};
+import { inlineAssets } from './inline-assets.mjs';
 
 await build({
   entryPoints: [fileURLToPath(new URL('../bin/am.js', import.meta.url))],

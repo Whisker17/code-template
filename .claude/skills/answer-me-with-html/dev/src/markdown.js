@@ -1,8 +1,30 @@
-// Markdown → HTML（GFM）。附加两项装饰：表格包一层可横向滚动容器；单元格里的状态词渲染为徽章。
+// Markdown → HTML (GFM). Four extras: tables get a horizontally scrolling wrapper; status words in cells render as badges; an image on its own line becomes a captioned figure;
+// raw HTML is filtered (see raw-html.js): a placeholder such as <host> shows as text, tags that break the page are escaped, event handlers and javascript: links are removed.
 
 import { Marked } from 'marked';
+import { filterBlocks, filterInline } from './raw-html.js';
+
+// What the raw-HTML filter changed while collectHtmlNotes is running. Rendering is synchronous, so nothing leaks between calls.
+let sink = null;
+const note = (at, message) => sink?.push({ at, message });
+
+// Runs render() and returns its result with the notes about the raw HTML it changed: [{ at, message }], at being the tag as the draft wrote it.
+export function collectHtmlNotes(render) {
+  const outer = sink;
+  const notes = [];
+  sink = notes;
+  try {
+    return { result: render(), notes };
+  } finally {
+    sink = outer;
+  }
+}
 
 const marked = new Marked({ gfm: true });
+// parseInline reads one run of inline text and hands the hook inline tokens, so it gets its own parser.
+const inline = new Marked({ gfm: true });
+marked.use({ hooks: { processAllTokens: (tokens) => filterBlocks(tokens, { lex: (source) => marked.lexer(source), note }) } });
+inline.use({ hooks: { processAllTokens: (tokens) => filterInline(tokens, note) } });
 
 const STATUS = {
   ok: { cls: 'ok', icon: '✓' },
@@ -18,17 +40,35 @@ export function statusHtml(word, label = '') {
   return `<span class="am-status am-status--${kind.cls}"><span class="am-status-icon" aria-hidden="true">${kind.icon}</span>${text}</span>`;
 }
 
-const CELL_STATUS = /<td([^>]*)>\s*(ok|no|warn|✓|✔|✗|✘|⚠)(?:\s+([^<]*?))?\s*<\/td>/g;
+// A paragraph that holds only an image becomes a figure; the alt text is its caption.
+const IMAGE_ONLY = /<p>\s*(<img\b[^>]*>)\s*<\/p>/g;
+
+// The status word must open the cell; the label after it may hold inline HTML (code, em, strong, a) but never crosses a cell boundary.
+const CELL_STATUS = /<td([^>]*)>\s*(ok|no|warn|✓|✔|✗|✘|⚠)(?:\s+((?:(?!<\/?td\b)[\s\S])*?))?\s*<\/td>/g;
+
+function figure(img) {
+  const alt = img.match(/\salt="([^"]*)"/)?.[1];
+  return `<figure class="am-figure">${img}${alt ? `<figcaption>${alt}</figcaption>` : ''}</figure>`;
+}
 
 function decorate(html) {
   return html
     .replace(/<table>/g, '<div class="am-table-wrap"><table>')
     .replace(/<\/table>/g, '</table></div>')
+    .replace(IMAGE_ONLY, (_, img) => figure(img))
     .replace(CELL_STATUS, (_, attrs, word, label = '') => `<td${attrs}>${statusHtml(word, label)}</td>`);
 }
 
-// 术语链接：[[术语]] 或 [[显示文字|术语]] → 指向 glossary 条目的链接，悬停显示定义。
-// 渲染期间由 render.js 用 withTerms() 注入当前页面的术语表；未定义的术语记入 missing，渲染结束后统一报错。
+// CommonMark takes a space in a link destination only inside <…>, so marked would leave ![alt](a b.png) as text. Wrap such a destination; code spans are skipped.
+// A destination may hold balanced (…) such as "Screenshot (1).png".
+const SPACED_IMAGE = /(`[^`\n]*`)|(!\[[^\]\n]*\]\()\s*((?:[^()<>"\n]|\([^()<>"\n]*\))*?)(\s+"[^"\n]*")?\s*\)/g;
+
+function wrapSpacedImages(text) {
+  return text.replace(SPACED_IMAGE, (whole, code, head, dest, title = '') => (code || !/\s/.test(dest) ? whole : `${head}<${dest}>${title})`));
+}
+
+// Research fork — term links: [[term]] or [[shown text|term]] → a link to the glossary entry that shows the definition on hover.
+// While a page renders, render.js installs the page's glossary with withTerms(); an undefined term is collected in missing and reported after the render.
 const TERM = /\[\[([^\[\]|]+?)(?:\|([^\[\]]+?))?\]\]/g;
 let terms = null;
 
@@ -51,8 +91,8 @@ const escAttr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').
 
 function linkTerms(text) {
   if (!terms) return text;
-  // 代码（围栏块与行内代码）里的 [[...]] 是代码本身，不当作术语。
-  return String(text ?? '').split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/).map((part, i) => (i % 2 ? part : part.replace(TERM, (_, a, b) => {
+  // [[...]] inside code (fenced blocks and inline code) is the code itself, not a term.
+  return text.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/).map((part, i) => (i % 2 ? part : part.replace(TERM, (_, a, b) => {
     const shown = a.trim();
     const key = (b ?? a).trim();
     const entry = terms.map.get(key.toLowerCase());
@@ -65,9 +105,9 @@ function linkTerms(text) {
 }
 
 export function md(text) {
-  return decorate(marked.parse(linkTerms(String(text ?? ''))));
+  return decorate(marked.parse(linkTerms(wrapSpacedImages(String(text ?? '')))));
 }
 
 export function mdInline(text) {
-  return marked.parseInline(linkTerms(String(text ?? '')));
+  return inline.parseInline(linkTerms(wrapSpacedImages(String(text ?? ''))));
 }

@@ -1,5 +1,7 @@
-// 稿件解析：frontmatter → meta；`## ` 标题 → 面板（slot）；面板体 → markdown 块与围栏块。
-// 只做结构切分，不渲染。所有行号均为 1 起算的源文件行号，供错误提示与 STE lint 使用。
+// Draft parsing: frontmatter → meta; `## ` headings → panels (slots); panel bodies → markdown blocks and fenced blocks.
+// Structure splitting only, no rendering. All line numbers are 1-based source-file lines, for error messages and the STE lint.
+
+import { themeNames, AUTO } from './themes/registry.js';
 
 export class ParseError extends Error {
   constructor(message, line) {
@@ -10,15 +12,29 @@ export class ParseError extends Error {
 }
 
 export const CHOICES = Object.freeze({
-  template: ['sheet', 'doc', 'research'],
-  theme: ['blueprint', 'shadcn'],
+  template: ['sheet', 'doc', 'research', 'video'],
+  theme: [AUTO, ...themeNames('page')],
   style: ['off', '80', 'strict'],
   mode: ['auto', 'light', 'dark'],
 });
 
+// Command-line arguments override draft and config settings: validates values, returns a new meta without changing the original. Keys with undefined values are ignored.
+export function applyOverrides(meta, overrides, choices = CHOICES) {
+  const set = Object.entries(overrides).filter(([, v]) => v !== undefined);
+  for (const [key, value] of set) {
+    if (choices[key] && !choices[key].includes(String(value))) {
+      throw new ParseError(`Invalid ${key} value "${value}". Choose one of: ${choices[key].join(' | ')}`, 0);
+    }
+  }
+  return { ...meta, ...Object.fromEntries(set) };
+}
+
+// Allowed voice-over values for video narration (shared by config voice and am video --voice).
+export const VOICES = Object.freeze(['auto', 'elevenlabs', 'local', 'system', 'off']);
+
 const DEFAULT_META = Object.freeze({
   template: 'sheet',
-  theme: 'blueprint',
+  theme: AUTO,
   style: '80',
   mode: 'auto',
   cols: 3,
@@ -32,36 +48,39 @@ const ATTR_BLOCK = /\s*\{([^{}]*)\}\s*$/;
 const PANEL_ID = /^([A-Z][0-9]?)\s+(.+)$/;
 const ATTR_TOKEN = /([\w-]+)(?:=("[^"]*"|'[^']*'|\S+))?/g;
 
-// defaults：用户配置提供的默认值（如 theme / mode / style），稿件 frontmatter 显式写的值优先。
-export function parseDoc(source, { defaults = {} } = {}) {
+// defaults: default values from the user config (e.g. theme / mode / style); values set explicitly in the draft frontmatter win.
+// choices can widen the allowed values of individual keys (video drafts also allow theme: 3b1b).
+export function parseDoc(source, { defaults = {}, choices = {} } = {}) {
   const lines = String(source).replace(/\r\n?/g, '\n').split('\n');
-  const { meta, bodyStart } = parseFrontmatter(lines, { ...DEFAULT_META, ...defaults });
+  const { meta, bodyStart } = parseFrontmatter(lines, { ...DEFAULT_META, ...defaults }, { ...CHOICES, ...choices });
   const sections = splitSections(lines, bodyStart);
   const intro = extractTitle(sections.intro, meta);
   const panels = assignIds(sections.panels);
   return { meta, intro, panels };
 }
 
-function parseFrontmatter(lines, base) {
+function parseFrontmatter(lines, base, allowed) {
   if (lines[0]?.trim() !== '---') return { meta: { ...base }, bodyStart: 0 };
   const end = lines.findIndex((l, i) => i > 0 && l.trim() === '---');
-  if (end === -1) throw new ParseError('frontmatter 未闭合：缺少结束行 ---', 1);
+  if (end === -1) throw new ParseError('frontmatter is not closed: missing the closing --- line', 1);
 
   const entries = {};
   for (let i = 1; i < end; i++) {
-    const raw = lines[i].replace(/\s+#.*$/, '').trim();
+    const raw = stripLineComment(lines[i]).trim();
     if (!raw || raw.startsWith('#')) continue;
-    const m = raw.match(/^([\w-]+)\s*:\s*(.*)$/);
-    if (!m) throw new ParseError(`frontmatter 无法解析："${lines[i]}"，应为 key: value`, i + 1);
+    // A key is letters of any script (a Hebrew or Chinese key such as `עודכן` shows in the meta row as written), digits, _ and -,
+    // and may hold single spaces between words.
+    const m = raw.match(/^([\p{L}\p{M}\p{N}_-]+(?: [\p{L}\p{M}\p{N}_-]+)*)\s*:\s*(.*)$/u);
+    if (!m) throw new ParseError(`Cannot parse frontmatter line "${lines[i]}"; expected key: value`, i + 1);
     entries[m[1]] = { value: coerce(m[1], unquote(m[2])), line: i + 1 };
   }
 
   const meta = { ...base };
   for (const [key, { value, line }] of Object.entries(entries)) {
-    if (CHOICES[key] && !CHOICES[key].includes(String(value))) {
-      throw new ParseError(`${key} 的值 "${value}" 无效，可选：${CHOICES[key].join(' | ')}`, line);
+    if (allowed[key] && !allowed[key].includes(String(value))) {
+      throw new ParseError(`Invalid ${key} value "${value}". Choose one of: ${allowed[key].join(' | ')}`, line);
     }
-    meta[key] = CHOICES[key] ? String(value) : value;
+    meta[key] = allowed[key] ? String(value) : value;
   }
   return { meta, bodyStart: end + 1 };
 }
@@ -84,11 +103,13 @@ function splitSections(lines, start) {
     if (fence) {
       flushMd();
       const close = findFenceClose(lines, i, fence[1]);
-      if (close === -1) throw new ParseError(`围栏块 ${fence[1]}${fence[2]} 未闭合`, i + 1);
+      if (close === -1) throw new ParseError(`fenced block ${fence[1]}${fence[2]} is not closed`, i + 1);
+      // A fence with settings but no language (```src=a.ts) has no language; its first word is a setting.
+      const bare = fence[2].includes('=');
       current.blocks.push({
         type: 'fence',
-        lang: fence[2].toLowerCase(),
-        args: fence[3].trim(),
+        lang: bare ? '' : fence[2].toLowerCase(),
+        args: (bare ? `${fence[2]} ${fence[3]}` : fence[3]).trim(),
         text: lines.slice(i + 1, close).join('\n'),
         line: i + 1,
       });
@@ -168,6 +189,24 @@ function assignIds(panels) {
 function unquote(v) {
   const s = v.trim();
   return /^(["']).*\1$/.test(s) ? s.slice(1, -1) : s;
+}
+
+// Strip an unquoted trailing # comment; a # inside quotes is kept (title: "Issue #123").
+function stripLineComment(line) {
+  let quote = '';
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (quote) {
+      if (c === quote) quote = '';
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      quote = c;
+      continue;
+    }
+    if (c === '#' && (i === 0 || /\s/.test(line[i - 1]))) return line.slice(0, i);
+  }
+  return line;
 }
 
 function coerce(key, value) {
