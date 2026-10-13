@@ -2,6 +2,7 @@
 // so the bundle skills/answer-me-with-html/scripts/am.mjs depends on no external files.
 import { readFileSync } from 'node:fs';
 import { composeRuntime, composeRtlRuntime, unexport } from './runtime/compose.js';
+import { composeMathCss } from './themes/math-css.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
@@ -12,9 +13,12 @@ export const RTL_JS = composeRtlRuntime((file) => read(`./runtime/${file}`));
 export const DIFF_CSS = read('./themes/diff.css');
 export const DELTA_CSS = read('./themes/delta.css');
 export const RTL_CSS = read('./themes/rtl.css');
+export const MATH_CSS = composeMathCss(read('./themes/math.css'));
 export const DELTA_JS = read('./runtime/delta.js');
 // Research fork: the browser runtime that draws excalidraw / uml figures (removed again when am bake inlines the SVG).
 export const DIAGRAM_JS = read('./runtime/diagrams.js');
+export const UPDATE_CSS = read('./themes/update.css');
+export const UPDATE_JS = read('./runtime/update.js');
 export const VIDEO_CSS = read('./themes/video.css');
 export const VIDEO_JS = read('./runtime/video.js');
 export const VIDEO_EXPORT_JS = read('./runtime/video-export.js');

@@ -447,7 +447,7 @@ code, pre, kbd { font-family: var(--font-mono); }
   /* Research fork: a fixed toolbar keeps covering the text on a phone, so it stays at the top of the page instead. */
   .am-toolbar { position: absolute; }
 }
-.am-colophon { text-align: center; padding: 0 0 28px; font: 11px var(--font-mono); color: var(--ink-3); }
+.am-colophon { margin: 0 0 8px; font: 11px var(--font-mono); color: var(--ink-3); }
 .am-colophon a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 @media print {

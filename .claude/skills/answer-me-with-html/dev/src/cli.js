@@ -19,11 +19,13 @@ import { renderVideo } from './video/render.js';
 import { pickProvider, TtsError } from './video/tts.js';
 import { exportMp4, exportWebm, ExportError } from './video/export.js';
 import { afterRender, clean, usage, mb, CLEAN } from './housekeeping.js';
-import { runUpdateCheck } from './update.js';
+import { runUpdateCheck, pageUpdate } from './update.js';
 import { amHome, readConfig, setConfig, resetConfig, configChoices, CONFIG_KEYS, ConfigError } from './config.js';
 import { ensureHome } from './home.js';
 import { hasCommand } from './sys.js';
+import { loadMath } from './math-load.js';
 import { replacePanel, PatchError } from './patch.js';
+import { readState } from './state.js';
 import { readPage } from './page.js';
 import { readEmbeddedImages } from './images.js';
 import { readEmbeddedCode, MAX_CODE_LINES, LONG_CODE_LINES } from './code.js';
@@ -88,8 +90,13 @@ A -> B
 <div>any content</div>
 \`\`\`
 
-- "## " starts a panel; the letter ID is optional (A, B, C... are assigned automatically). span is a hint: the page sizes panels to fit their content, so wide tables and diagrams need no span. Write span only for a panel that must stand out.
+- "## " starts a panel; the letter ID is optional (A, B, C... are assigned automatically). A capital letter and a space before a capitalized word is read as the ID: write "## B A Miss Goes Unseen" to keep the word "A". span is a hint: the page sizes panels to fit their content, so wide tables and diagrams need no span. Write span only for a panel that must stand out.
 - An image on its own line, ![what it shows](path), becomes a captioned figure and is embedded in the page; see am help image.
+- Math in text: $x^2$ is inline; a block is a line with only $$, the TeX, and a line with only $$ (or one line: $$ E = mc^2 $$). Put a long formula in a block: a block scrolls
+  inside its panel, and an inline formula may wrap after = or +. \\$ writes a dollar sign. The TeX is typeset when the page is made (Temml): no script, no network.
+  $5 and $10 stay text (a closing $ has no space before it and no digit after it), and so does $PATH:$HOME (a closing $ with a letter or _ after it does not close; write $n$-th, not $n$th).
+  Code, diagrams and video take no math. In a table cell write \\vert x \\vert, not |x|. \\ref, \\eqref and \\label are not supported (they give a warning; \\tag{1} works in a block).
+  TeX that cannot be read stays as raw TeX in red, with a warning and its line: fix it and render again with --replace.
 - A placeholder such as <host> is shown as text. Inside a sentence only text-level tags stay (b, i, kbd, sup, a, span, br, img ...), and tags that break the page (script, style, iframe ...) are shown as text too. Put raw markup in an html or svg fence and code in backticks.
 - Any other fence language is a code block; \`\`\`ts src=path lines=18-30 quotes real code from a file; see am help code.
 - research template: {sheet} puts a panel in the overview sheet at the top; {depth=1|2|3} sets a body panel's reading depth
@@ -318,9 +325,10 @@ async function cmdRender(src, opts, ctx, baseDir) {
   }
   const config = loadConfig(ctx);
   const { theme, mode, style } = config.values;
+  await loadMath(src);
   let result;
   try {
-    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style }, { themes: ctx.themes, baseDir, codeDir: ctx.io.cwd ?? process.cwd() });
+    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style }, { themes: ctx.themes, baseDir, codeDir: ctx.io.cwd ?? process.cwd(), update: updateFor(config, ctx) });
   } catch (e) {
     return reportError(e, fail);
   }
@@ -329,7 +337,7 @@ async function cmdRender(src, opts, ctx, baseDir) {
   // Delete the earlier attempt only now: a render that fails above keeps it.
   if (replaced && replaced !== resolve(file)) rmSync(replaced, { force: true });
   const baked = await bakeLive(result, file, src, opts, config, ctx);
-  // A page with STE or code warnings, or a figure that failed to draw, is likely to be rendered again, so it opens only when --open asks for it.
+  // A page with STE, code or math warnings, or a figure that failed to draw, is likely to be rendered again, so it opens only when --open asks for it.
   const held = !opts.open && (hasRetryWarnings(result) || baked !== 0) && shouldOpen(opts, ctx.env, config.values);
   if (held) print(`  Not opened because of the ${baked !== 0 ? 'figure errors' : 'warnings'}; to render again, add --replace ${file}`);
   return finish(file, held ? { ...opts, 'no-open': true } : opts, config, ctx) || baked;
@@ -412,7 +420,10 @@ async function cmdShot(arg, opts, { print, fail, env, io }) {
   return bad ? 1 : 0;
 }
 
-const hasRetryWarnings = (result) => result.warnings.length > 0 || (result.stats.codeWarnings ?? []).length > 0;
+// The new-version button for the page, from the version the background check last saw (src/update.js).
+const updateFor = (config, { env, io }) => pageUpdate(readState(amHome(env)), VERSION, io.scriptPath, env, config.values);
+
+const hasRetryWarnings = (result) => result.warnings.length > 0 || (result.stats.codeWarnings ?? []).length > 0 || (result.stats.mathWarnings ?? []).length > 0;
 
 // The absolute path of a page, or false when arg does not name a .html file directly inside pages/. The file may be gone.
 function pagePath(arg, { env, io }) {
@@ -520,6 +531,7 @@ async function cmdPatch(htmlArg, fromArg, opts, ctx) {
     mode: opts.mode ?? page.mode,
     style: opts.style ?? page.style,
   };
+  if (!video) await loadMath(patched);
   let result;
   try {
     if (video) {
@@ -530,7 +542,7 @@ async function cmdPatch(htmlArg, fromArg, opts, ctx) {
       // Video pages also keep the original page's theme, mode and STE strictness (e.g. 3b1b / --style off); this command's arguments win.
       result = await buildVideo(patched, voice, { ...opts, theme: overrides.theme, mode: overrides.mode, style: overrides.style, previousLanguage: page.lang }, config, ctx);
     } else {
-      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html) });
+      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html), update: updateFor(config, ctx) });
     }
   } catch (e) {
     if (e instanceof TtsError) {
@@ -655,6 +667,7 @@ function emit(result, file, { print, env }, note = '') {
   }
   printComponentWarnings(result.stats.componentWarnings, print);
   printHtmlWarnings(result.stats.htmlWarnings, print);
+  printMathWarnings(result.stats.mathWarnings, print);
   printWarnings(result.warnings, print, result.meta.style);
 }
 
@@ -673,6 +686,14 @@ function printHtmlWarnings(notes = [], print) {
   print(`  html ${count(lines.length, 'warning')} (the page differs from the draft here; fix the draft if that is not what you meant):`);
   lines.slice(0, MAX_LISTED_WARNINGS).forEach((l) => print(`  ${l}`));
   if (lines.length > MAX_LISTED_WARNINGS) print(`  … ${lines.length - MAX_LISTED_WARNINGS} more`);
+}
+
+// A formula Temml could not read (shown as raw TeX) or one that uses \ref, \eqref or \label. The page is written, but it is not what the draft meant, so it does not open.
+function printMathWarnings(notes = [], print) {
+  if (!notes.length) return;
+  print(`  math ${count(notes.length, 'warning')} (the page is written; fix the TeX and render again):`);
+  notes.toSorted((a, b) => a.line - b.line).slice(0, MAX_LISTED_WARNINGS).forEach((w) => print(`  L${w.line} [math] ${w.message}`));
+  if (notes.length > MAX_LISTED_WARNINGS) print(`  … ${notes.length - MAX_LISTED_WARNINGS} more`);
 }
 
 function summaryLine(result) {

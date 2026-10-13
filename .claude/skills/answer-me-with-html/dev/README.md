@@ -3,7 +3,7 @@
 This directory is the source of the skill. At run time the skill needs only the parent directory's `SKILL.md`, `references/`, `examples/` and `scripts/am.mjs` (the bundle).
 
 - Upstream: <https://github.com/QingYunA/answer-me-with-html>, MIT (see `LICENSE`).
-- Fork version `X.Y.Z-research.N`: based on upstream `X.Y.Z`. Current base: **upstream v0.5.0** (`b275eba`, synced at `533c39f`).
+- Fork version `X.Y.Z-research.N`: based on upstream `X.Y.Z`. Current base: **upstream v0.5.2** (`adf633b`).
 - `dev/` mirrors the upstream repository root for `src/`, `test/`, `bin/`, `scripts/build.mjs`, `scripts/inline-assets.mjs`, `package.json` and `examples/` (`dev/examples/` is used by the tests only; the agent-facing examples are in `../examples/`). Upstream's `skills/answer-me-with-html/` is the parent directory.
 - Not carried over: the plugin manifests and commands, the website (`site/`), bench, docs and demo, and the release / snapshot / smoke-install scripts.
 - Upstream's `am video` code stays in `src/` (it is wired into themes, languages, page and patch), but `SKILL.md` does not document it and `references/video.md` is not shipped.
