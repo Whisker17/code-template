@@ -591,10 +591,11 @@ a.am-term:hover::after, a.am-term:focus::after {
   .am-research .am-toc { position: static; }
   .am-paths { margin: 0 0 16px; }
   .am-finding > header { flex-wrap: wrap; }
-  .am-finding dl { grid-template-columns: minmax(0, 1fr); }
+  .am-finding dl { grid-template-columns: minmax(0, 1fr); font-size: 14px; }
   .am-finding dt { padding-top: 6px; }
-  .am-glossary { grid-template-columns: minmax(0, 1fr); }
+  .am-glossary { grid-template-columns: minmax(0, 1fr); font-size: 14px; }
   .am-glossary dt { border-bottom: 0; padding-bottom: 0; }
+  .am-prereq dl { font-size: 14px; }
   a.am-term:hover::after, a.am-term:focus::after { max-width: min(320px, 80vw); }
   /* Figures: the question gets its own line; the drawing keeps a readable size (560px or more) and scrolls inside its canvas instead of shrinking. */
   .am-fig-q { flex-wrap: wrap; }
