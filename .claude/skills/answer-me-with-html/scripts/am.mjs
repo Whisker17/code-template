@@ -4439,21 +4439,25 @@ var EVIDENCE = new RegExp(`^\\{(${EV_ID}(?:\\s*,\\s*${EV_ID})*)\\}`);
 var EV_KINDS = /* @__PURE__ */ new Set(["observed", "inferred", "speculative"]);
 var evidence = null;
 function withEvidence(ledger, fn3) {
-  if (!ledger) return { value: fn3(), missing: [], used: null };
+  if (!ledger) return { value: fn3(), missing: [], used: null, where: /* @__PURE__ */ new Map() };
   const prev = evidence;
-  evidence = { map: ledger, missing: /* @__PURE__ */ new Set(), used: {} };
+  evidence = { map: ledger, missing: /* @__PURE__ */ new Set(), used: {}, where: /* @__PURE__ */ new Map(), block: null };
   try {
     const value = fn3();
-    return { value, missing: [...evidence.missing], used: evidence.used };
+    return { value, missing: [...evidence.missing], used: evidence.used, where: evidence.where };
   } finally {
     evidence = prev;
   }
+}
+function evidenceBlock(block2) {
+  if (evidence) evidence.block = block2;
 }
 function chips(ids) {
   return ids.map((id) => {
     const row = Object.hasOwn(evidence.map, id) ? evidence.map[id] : null;
     if (!row) {
       evidence.missing.add(id);
+      if (!evidence.where.has(id)) evidence.where.set(id, evidence.block);
       return "";
     }
     evidence.used[id] = row;
@@ -4470,7 +4474,9 @@ var evidenceExtension = {
       const i = src.indexOf("{");
       return i < 0 ? void 0 : i;
     },
+    // Text inside raw <code>, <pre> or <kbd> is code (marked marks it inRawBlock), not a citation.
     tokenizer(src) {
+      if (this.lexer.state.inRawBlock) return void 0;
       const m = evidence && EVIDENCE.exec(src);
       return m ? { type: "evidence", raw: m[0], ids: m[1].split(",").map((x2) => x2.trim()) } : void 0;
     },
@@ -9283,13 +9289,13 @@ function renderDoc(source, overrides = {}, defaults2 = {}, { themes: themes2 = B
   const loose = doc2.intro.find((b) => b.type === "fence" && COMPONENTS.get(b.lang)?.panelOnly);
   if (loose) throw new RenderError(`${loose.lang} belongs in a panel: put it under the ## heading of the panel the answer changes`, { line: loose.line, component: loose.lang, example: COMPONENTS.get(loose.lang).example });
   const glossary2 = collectGlossary(doc2);
-  const { value: { value: page, missing }, missing: missingEvidence, used: usedEvidence } = withEvidence(evidence2, () => withTerms(glossary2, () => {
+  const { value: { value: page, missing }, missing: missingEvidence, used: usedEvidence, where } = withEvidence(evidence2, () => withTerms(glossary2, () => {
     const introHtml = renderBlocks(doc2.intro, ctx);
     const panels = doc2.panels.map((p) => ({ ...p, html: renderBlocks(p.blocks, ctx) }));
     return TEMPLATES[doc2.meta.template]({ meta: doc2.meta, introHtml, panels, ui, language });
   }));
   if (missing.length) throw missingTerms(missing, source);
-  if (missingEvidence.length) throw missingIds(missingEvidence, source);
+  if (missingEvidence.length) throw missingIds(missingEvidence, where);
   const body = language.dir === "rtl" ? isolateLtrRuns(page) : page;
   const live = [...ctx.live];
   const embedded = doc2.meta.template === ARTICLE ? [getTheme(ARTICLE)] : themes2.embedFor(doc2.meta.theme, "page");
@@ -9320,25 +9326,14 @@ function collectGlossary(doc2) {
   return map;
 }
 var ARTICLE = "article";
-function missingIds(missing, source) {
+function missingIds(missing, where) {
   const [id, ...more] = missing;
-  const cite = new RegExp(`\\{[^{}]*(?<![\\w-])${id.replace(/[-]/g, "\\-")}(?![\\w-])[^{}]*\\}`);
-  let fence = null;
-  const idx = String(source).split("\n").findIndex((line) => {
-    const open2 = line.match(/^\s*(`{3,}|~{3,})\s*([\w-]*)/);
-    if (open2 && !fence) {
-      fence = { mark: open2[1], code: !COMPONENTS.has(ALIASES2.get(open2[2]) ?? open2[2]) };
-      return false;
-    }
-    if (fence && line.trim().startsWith(fence.mark)) {
-      fence = null;
-      return false;
-    }
-    if (fence?.code) return false;
-    return cite.test(line.replace(/`[^`]*`/g, "").replace(/\$[^$]*\$/g, ""));
-  });
+  const block2 = where.get(id);
+  const first = block2 ? block2.type === "md" ? block2.line : block2.line + 1 : 0;
+  const cite = new RegExp(`\\{[^{}]*(?<![\\w-])${id.replace(/-/g, "\\-")}(?![\\w-])[^{}]*\\}`);
+  const at3 = block2 ? block2.text.split("\n").findIndex((l3) => cite.test(l3.replace(/(`+)[^`]*?\1/g, ""))) : -1;
   return new RenderError(`evidence {${id}} is not in the claim ledger${more.length ? ` (also: ${more.join(", ")})` : ""}`, {
-    line: idx + 1,
+    line: first + Math.max(at3, 0),
     component: "evidence",
     example: "Add a ledger row with this ID (# column), or cite an existing one: the claim holds {K2}."
   });
@@ -9359,6 +9354,7 @@ function hasVisuals({ intro, panels }) {
 }
 function renderBlocks(blocks, ctx) {
   return blocks.map((b) => {
+    evidenceBlock(b);
     const { result, notes } = collectHtmlNotes(() => b.type === "md" ? `<div class="am-md">${md(b.text)}</div>` : renderFence(b, ctx), { math: !ctx.video });
     noteHtml(b, notes.filter((n) => !n.math), ctx);
     noteMath(b, notes.filter((n) => n.math), ctx);

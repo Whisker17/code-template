@@ -29,7 +29,7 @@ The real-time path is fast {K1, K2}. A guess {S1}.
 
 ### Block loop
 
-Code stays code: \`{K9}\`, \`\` {K9} \`\`, math $x_{K9}$, a [link](https://example.com/{K9}) and <span title="{K9}">html</span>.
+Code stays code: \`{K9}\`, \`\` {K9} \`\`, math $x_{K9}$, a [link](https://example.com/{K9}), <span title="{K9}">html</span> and <code>{K9}</code>.
 
     indented {K9}
 
@@ -97,6 +97,7 @@ test('evidence: {ID} becomes a chip of its kind, in text and in component fields
   assert.match(html, /href="https:\/\/example\.com\/%7BK9%7D"/);
   assert.match(html, /title="\{K9\}"/);
   assert.match(html, /<pre><code>indented \{K9\}/);
+  assert.match(html, /and <code>\{K9\}<\/code>\./);
   assert.doesNotMatch(html, /data-ev="K9"/);
 });
 
@@ -106,7 +107,7 @@ test('evidence: the page carries only the rows it cites', () => {
 });
 
 test('evidence: an ID the ledger lacks is a render error at the line that cites it (not at a code example)', () => {
-  const draft = DRAFT.replace('The page answers', 'Write \`{Q404}\` to cite. The page answers').replace('A guess {S1}.', 'A guess {S1}.\n\nMissing {Q404}.');
+  const draft = DRAFT.replace('The page answers', 'Write \`{Q404}\` or \`\` {Q404} \`\` to cite. The page answers').replace('A guess {S1}.', 'A guess {S1}.\n\nMissing {Q404}.');
   assert.throws(() => page(draft), (e) => e instanceof RenderError && /\{Q404\} is not in the claim ledger/.test(e.message) && e.line === draft.split('\n').findIndex((l) => l.startsWith('Missing {Q404}')) + 1);
 });
 

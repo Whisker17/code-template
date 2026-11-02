@@ -125,15 +125,20 @@ const EV_KINDS = new Set(['observed', 'inferred', 'speculative']);
 let evidence = null;
 
 export function withEvidence(ledger, fn) {
-  if (!ledger) return { value: fn(), missing: [], used: null };
+  if (!ledger) return { value: fn(), missing: [], used: null, where: new Map() };
   const prev = evidence;
-  evidence = { map: ledger, missing: new Set(), used: {} };
+  evidence = { map: ledger, missing: new Set(), used: {}, where: new Map(), block: null };
   try {
     const value = fn();
-    return { value, missing: [...evidence.missing], used: evidence.used };
+    return { value, missing: [...evidence.missing], used: evidence.used, where: evidence.where };
   } finally {
     evidence = prev;
   }
+}
+
+// The draft block being rendered, so an unknown ID can be reported at the block that cites it (render.js sets it per block).
+export function evidenceBlock(block) {
+  if (evidence) evidence.block = block;
 }
 
 function chips(ids) {
@@ -141,6 +146,7 @@ function chips(ids) {
     const row = Object.hasOwn(evidence.map, id) ? evidence.map[id] : null;
     if (!row) {
       evidence.missing.add(id);
+      if (!evidence.where.has(id)) evidence.where.set(id, evidence.block);
       return '';
     }
     evidence.used[id] = row;
@@ -158,7 +164,9 @@ const evidenceExtension = {
       const i = src.indexOf('{');
       return i < 0 ? undefined : i;
     },
+    // Text inside raw <code>, <pre> or <kbd> is code (marked marks it inRawBlock), not a citation.
     tokenizer(src) {
+      if (this.lexer.state.inRawBlock) return undefined;
       const m = evidence && EVIDENCE.exec(src);
       return m ? { type: 'evidence', raw: m[0], ids: m[1].split(',').map((x) => x.trim()) } : undefined;
     },

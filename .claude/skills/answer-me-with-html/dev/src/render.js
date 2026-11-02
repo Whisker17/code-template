@@ -2,7 +2,7 @@
 // Research fork: fence aliases (```mermaid), [[term]] glossary links, numbered figures, and the diagram runtime for excalidraw / uml (baked later by am bake).
 
 import { parseDoc, ParseError, applyOverrides, CHOICES } from './parse.js';
-import { md, collectHtmlNotes, withTerms, withEvidence } from './markdown.js';
+import { md, collectHtmlNotes, withTerms, withEvidence, evidenceBlock } from './markdown.js';
 import { COMPONENTS, ALIASES, LIVE, RAW_LANGS, ComponentError } from './components/index.js';
 import { parseGlossary } from './components/research.js';
 import { researchLabels } from './languages/research.js';
@@ -66,13 +66,13 @@ export function renderDoc(source, overrides = {}, defaults = {}, { themes = BUIL
   const loose = doc.intro.find((b) => b.type === 'fence' && COMPONENTS.get(b.lang)?.panelOnly);
   if (loose) throw new RenderError(`${loose.lang} belongs in a panel: put it under the ## heading of the panel the answer changes`, { line: loose.line, component: loose.lang, example: COMPONENTS.get(loose.lang).example });
   const glossary = collectGlossary(doc);
-  const { value: { value: page, missing }, missing: missingEvidence, used: usedEvidence } = withEvidence(evidence, () => withTerms(glossary, () => {
+  const { value: { value: page, missing }, missing: missingEvidence, used: usedEvidence, where } = withEvidence(evidence, () => withTerms(glossary, () => {
     const introHtml = renderBlocks(doc.intro, ctx);
     const panels = doc.panels.map((p) => ({ ...p, html: renderBlocks(p.blocks, ctx) }));
     return TEMPLATES[doc.meta.template]({ meta: doc.meta, introHtml, panels, ui, language });
   }));
   if (missing.length) throw missingTerms(missing, source);
-  if (missingEvidence.length) throw missingIds(missingEvidence, source);
+  if (missingEvidence.length) throw missingIds(missingEvidence, where);
   // A right-to-left page isolates each run of text with no right-to-left letter as left to right (src/bidi.js).
   const body = language.dir === 'rtl' ? isolateLtrRuns(page) : page;
   const live = [...ctx.live];
@@ -110,21 +110,16 @@ function collectGlossary(doc) {
 
 const ARTICLE = 'article';
 
-// Research fork: an {ID} that the claim ledger does not have. The line is the first citation of it in prose or in a component that reads
-// Markdown; code blocks, `code` and $math$ are skipped, as the renderer skips them.
-export function missingIds(missing, source) {
+// Research fork: an {ID} that the claim ledger does not have, reported in the draft block that cited it (where: id → block). Inside the
+// block the line is the first one that names the ID outside `code`; the block's first line when none does.
+export function missingIds(missing, where) {
   const [id, ...more] = missing;
-  const cite = new RegExp(`\\{[^{}]*(?<![\\w-])${id.replace(/[-]/g, '\\-')}(?![\\w-])[^{}]*\\}`);
-  let fence = null;
-  const idx = String(source).split('\n').findIndex((line) => {
-    const open = line.match(/^\s*(`{3,}|~{3,})\s*([\w-]*)/);
-    if (open && !fence) { fence = { mark: open[1], code: !COMPONENTS.has(ALIASES.get(open[2]) ?? open[2]) }; return false; }
-    if (fence && line.trim().startsWith(fence.mark)) { fence = null; return false; }
-    if (fence?.code) return false;
-    return cite.test(line.replace(/`[^`]*`/g, '').replace(/\$[^$]*\$/g, ''));
-  });
+  const block = where.get(id);
+  const first = block ? (block.type === 'md' ? block.line : block.line + 1) : 0;
+  const cite = new RegExp(`\\{[^{}]*(?<![\\w-])${id.replace(/-/g, '\\-')}(?![\\w-])[^{}]*\\}`);
+  const at = block ? block.text.split('\n').findIndex((l) => cite.test(l.replace(/(`+)[^`]*?\1/g, ''))) : -1;
   return new RenderError(`evidence {${id}} is not in the claim ledger${more.length ? ` (also: ${more.join(', ')})` : ''}`, {
-    line: idx + 1,
+    line: first + Math.max(at, 0),
     component: 'evidence',
     example: 'Add a ledger row with this ID (# column), or cite an existing one: the claim holds {K2}.',
   });
@@ -147,6 +142,7 @@ function hasVisuals({ intro, panels }) {
 
 export function renderBlocks(blocks, ctx) {
   return blocks.map((b) => {
+    evidenceBlock(b);
     const { result, notes } = collectHtmlNotes(() => (b.type === 'md' ? `<div class="am-md">${md(b.text)}</div>` : renderFence(b, ctx)), { math: !ctx.video });
     noteHtml(b, notes.filter((n) => !n.math), ctx);
     noteMath(b, notes.filter((n) => n.math), ctx);
