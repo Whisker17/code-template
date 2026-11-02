@@ -11,6 +11,10 @@ area starts from knowledge instead of rediscovery.
   unfixed (scope, risk, or priority). Record it here in the same PR that defers it.
 - **Reference it** before working on the affected area — check whether the thing you are
   about to "discover" is already logged, and whether a listed fix is now in scope.
+- **Pre-existing findings.** A `/code-review` finding that `git blame` shows the reviewed
+  range did not introduce (`pre-existing`) goes here, tagged with its finding id. It does not
+  block the review unless it is a security problem, which blocks like any blocking finding.
+  Only a finding from a review that actually completed belongs here.
 - **Close an entry** by moving it to *Resolved* (bottom) with the PR/commit that fixed
   it, rather than deleting — the history is useful.
 - Keep entries short. Link the originating tracker issue / PR and the code symbol so the
@@ -23,7 +27,7 @@ soon — anything touching {{HIGH_RISK_PATHS}} defaults to at least High), **Med
 ## Entry format
 
 ```markdown
-- **<one-line description of the defect>** (<Severity>, <issue-id>).
+- **<one-line description of the defect>** (<Severity>, <issue-id>[, pre-existing <finding-id>]).
   `<file>::<symbol>` — what's wrong, why it was deferred, and what the fix would be.
 ```
 

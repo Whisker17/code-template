@@ -39,6 +39,23 @@ baseline B, reviewed candidate H and the final review round. -->
 - Role / model / effort used:
 - New dependency or significant abstraction, and why it is needed (omit if none):
 
+## Testing
+
+<!-- Which E2E scenarios exercise the acceptance criteria, the exact commands run on the
+final HEAD (`scripts/e2e.sh --smoke` / `--full`, lint, type) and where their artifact is.
+What was NOT tested, and why. -->
+
+## Risk
+
+<!-- What could break and who is affected: touched high-risk paths, config or schema
+changes, migrations, anything a reviewer should look at first. "Low: docs only" is a valid
+answer when true. -->
+
+## How to revert
+
+<!-- The exact revert (`git revert <sha>` or the squash commit) plus anything it does not
+undo: data, config, generated files, a tag, a deployed version. -->
+
 ## Fan-out (any PR landing on `dev`)
 
 - [ ] After this merges, `dev` fans out into every live `release/v*` integration

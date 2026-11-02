@@ -34,12 +34,14 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
      **resolved base**: version-scoped → `release/v{version}`, governance → `dev`,
      hotfix → `main`, never a defaulted `dev`);
    - verifies and merges serially;
-   - then runs the release review loop: at most 3 complete reviews and 2 fix batches.
-     Version fixes stay in the original Release; governance-only fixes go through `dev`
-     with their own review and fan-out. No patch Release is created per round.
+   - then runs the release review loop (`/code-review` Standard or Deep: parallel bug
+     hunters per angle plus an independent verifier; only verified findings count): at
+     most 3 complete reviews and 2 fix batches. Version fixes stay in the original Release;
+     governance-only fixes go through `dev` with their own review and fan-out. No patch
+     Release is created per round.
 
-   Standalone `/implement` gets one independent PR review before it may merge. High-risk
-   paths, hotfixes and every promotion wait for a human.
+   Standalone `/implement`, governance and hotfix PRs get one independent Quick review
+   before they may merge. High-risk paths, hotfixes and every promotion wait for a human.
 6. Ship: once the integration branch has passed release review, it merges into `dev`
    (human gate). Cut a temporary `release/vX.Y.Z` from `dev` → PR into `main` (merge commit,
    human gate), tag, and deploy **from the tag**. If production breaks while `dev` holds
@@ -52,7 +54,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 | **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively) |
 | **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; shipped defaults SETUP re-verifies, optional `REVIEWER_FALLBACK`, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
 | **Skills** (9) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html + `skills-lock.json` |
-| **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
+| **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md` (what review counts as failure, output format, escapes), `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
 | **Git workflow** | See below |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
 
@@ -93,8 +95,9 @@ per-project.
 >
 > - `implement/SKILL.md` — v0.2 contract: ponytail, relevant checks, PR, handoff; merge
 >   authority from `docs/GIT_WORKFLOW.md`; no TDD mandate, no built-in review loop
-> - `code-review/SKILL.md` — one fresh-context `REVIEWER` covering every aspect; PR and
->   release-snapshot modes; blocking/suggestion finding format
+> - `code-review/SKILL.md` — Quick / Standard / Deep modes: fresh-context `REVIEWER` bug
+>   hunters per angle plus an independent verifier; `confirmed` / `refuted` / `unverified`
+>   dispositions; blocking/suggestion/pre-existing finding format; diff-only re-review
 > - `to-spec/SKILL.md` — fills the numbered `docs/DESIGN.md` skeleton in place (stable
 >   `§` references), free-form docs only under `docs/references/`; publishes only on
 >   instruction

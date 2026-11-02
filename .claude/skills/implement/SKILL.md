@@ -56,15 +56,18 @@ Implement one issue (or the bounded work the user describes) end to end. You are
 Authority comes only from `docs/GIT_WORKFLOW.md` § Merge authorization.
 
 - **Under `/orchestrate`:** stop at PR + handoff. The orchestrator verifies and merges.
-- **Standalone** (no release orchestration takes over): run one independent PR review with
-  `/code-review` in PR mode (`REVIEWER`, effort `high`, a real dispatch — not your own
-  context). Fix accepted blocking findings; a suggestion you consciously leave that is
-  worth remembering goes in `docs/DEFERRED_ISSUES.md` with its reason. If you changed anything after the review, the
+- **Standalone** (no release orchestration takes over), and governance and hotfix PRs: run
+  one independent **Quick** review with `/code-review` (`REVIEWER`, effort `high`, real
+  dispatches — not your own context). Its precondition is `scripts/e2e.sh --full` passed on
+  the final head; it never needs a release artifact. Fix accepted blocking findings; a
+  suggestion you consciously leave that is worth remembering goes in
+  `docs/DEFERRED_ISSUES.md` with its reason. If you changed anything after the review, the
   reviewer checks the final commit before merge. Then, unless a human-gated row applies:
   PR MERGEABLE/CLEAN, checks green on the final HEAD, `gh pr merge <N> --squash
   --delete-branch`, post-merge cleanup and fan-out per `docs/GIT_WORKFLOW.md`, tracker →
   `Done`.
 - **Human-gated** (high-risk paths, hotfix → `main`, `release/*` → `main`, finished
   `release/v*` → `dev`): stop at `In Review`.
-- `REVIEWER` unavailable or the dispatch failed: stay at `In Review` and say which role
-  was missing. Never substitute a self-review.
+- `REVIEWER` unavailable or a dispatch failed: follow `docs/agents/runtime.md` § Reviewer
+  unavailable (the fallback is eligible only as it defines). Otherwise stay at `In Review`
+  and say which role was missing. Never substitute a self-review.

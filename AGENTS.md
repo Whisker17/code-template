@@ -152,7 +152,7 @@ Skills live in `.claude/skills/<name>/SKILL.md`. Runtimes that auto-discover the
 | `/to-tickets` | Publish issues from `docs/agents/issue-template.md`, with complexity, scope and native dependencies |
 | `/implement` | One issue: worktree, ponytail, relevant checks, PR, handoff |
 | `/orchestrate` | A release: schedule, integrate, release review, bounded fixes |
-| `/code-review` | Independent review of a PR range or a release snapshot |
+| `/code-review` | Multi-angle adversarial review of a PR range or a release snapshot: parallel bug hunters plus a verifier (modes Quick, Standard, Deep) |
 | `/handoff` | Short handoff that points at durable evidence |
 | `/ponytail` | Write the least code that meets the spec |
 | `/answer-me-with-html` | Explain an answer or share research as a one-page HTML explainer (Excalidraw sketches, UML blueprints, prerequisite cards, findings); `research` template for dev onboarding |
@@ -168,7 +168,8 @@ Access, release binding and state ownership: `docs/agents/issue-tracker.md`. Tri
 ### Domain docs
 
 Spec of record: `docs/DESIGN.md`, plus `docs/adr/` for narrower later decisions
-(`docs/agents/domain.md`). Known, accepted debt: `docs/DEFERRED_ISSUES.md`. Project traps
+(`docs/agents/domain.md`). What review counts as failure, its output format and the record
+of escapes: `docs/REVIEW.md`. Known, accepted debt: `docs/DEFERRED_ISSUES.md`. Project traps
 worth knowing, read on demand: `docs/TRAPS.md`.
 
 ## Template feedback loop
