@@ -116,9 +116,10 @@ per-project.
 >   dispositions; blocking/suggestion/pre-existing finding format; diff-only re-review
 > - `to-spec/SKILL.md` — fills the numbered `docs/DESIGN.md` skeleton in place (stable
 >   `§` references), free-form docs only under `docs/references/`; publishes only on
->   instruction
+>   instruction; a `REVIEWER` design review (max 3 rounds) precedes any write
 > - `to-tickets/SKILL.md` — uses `docs/agents/issue-template.md` (complexity, scope,
->   native relations); no local-file fallback
+>   native relations); `REVIEWER` design review (max 3 rounds) before any Linear write;
+>   single-writer, query-before-retry, relations-last publishing; no local-file fallback
 > - `grill-me/SKILL.md` — self-contained (the separate `grilling` skill is gone)
 > - `handoff/SKILL.md` — fixed field list; durable state lives in the PR, issue and
 >   orchestration document
