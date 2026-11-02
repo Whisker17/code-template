@@ -1,0 +1,157 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev, "release/v*"]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: E2E mode to run on the selected ref
+        type: choice
+        options: [full, release]
+        default: full
+      version:
+        description: X.Y.Z (required when mode is release)
+        type: string
+        required: false
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          # Any error here fails the job; ci-ok then fails too. Never default to "docs only".
+          set -euo pipefail
+          case "$EVENT" in
+            pull_request) base="$PR_BASE" ;;
+            push) base="$PUSH_BEFORE" ;;
+            *) echo "code=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+          # A brand-new branch has no previous commit to diff against: treat it as code.
+          if [ "$base" = 0000000000000000000000000000000000000000 ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          files="$(git diff --name-only "$base" HEAD)"
+          code=false
+          while IFS= read -r f; do
+            case "$f" in
+              "") ;;
+              *.md | docs/*) ;;
+              *) code=true ;;
+            esac
+          done <<< "$files"
+          echo "changed files:"; echo "$files"
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - name: ruff + mypy
+        run: |
+          # An unfilled template has an invalid project name, so run without the project
+          # (same check as scripts/e2e.sh). The pattern is split so SETUP does not rewrite it.
+          if grep -q '\{\{PROJECT_NAME' pyproject.toml; then
+            uv run --no-project --with ruff ruff check .
+            uv run --no-project --with mypy mypy
+          else
+            uv run ruff check .
+            uv run mypy
+          fi
+
+  smoke-e2e:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: scripts/e2e.sh --smoke
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-smoke-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn
+
+  # The only required check. It directly needs every job it judges: a skipped lint/smoke-e2e is
+  # acceptable only when `changes` itself succeeded and reported a docs-only diff.
+  ci-ok:
+    if: always()
+    needs: [changes, lint, smoke-e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          LINT: ${{ needs.lint.result }}
+          SMOKE: ${{ needs.smoke-e2e.result }}
+        run: |
+          echo "changes=$CHANGES code=$CODE lint=$LINT smoke-e2e=$SMOKE"
+          [ "$CHANGES" = success ] || { echo "changes did not succeed"; exit 1; }
+          case "$CODE" in
+            true) ok="success" ;;
+            false) ok="success skipped" ;;
+            *) echo "changes reported no code=true|false"; exit 1 ;;
+          esac
+          for r in "$LINT" "$SMOKE"; do
+            case " $ok " in *" $r "*) ;; *) echo "job result '$r' not allowed (code=$CODE)"; exit 1 ;; esac
+          done
+
+  manual-e2e:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - name: scripts/e2e.sh
+        env:
+          MODE: ${{ inputs.mode }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$MODE" = release ]; then
+            scripts/e2e.sh --release "$VERSION"
+          else
+            scripts/e2e.sh --full
+          fi
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ inputs.mode }}-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn

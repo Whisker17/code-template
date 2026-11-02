@@ -34,6 +34,8 @@ baseline B, reviewed candidate H and the final review round. -->
 ## Evidence
 
 - Commit SHA verified:
+- CI unavailable: <reason, or omit this line> — then paste the same commands run locally on the
+  final SHA with real output (`docs/CI.md` § CI unavailable)
 - Commands and results (actual output or a link, not "tests pass"):
 - Artifacts (reports, logs, screenshots), if any:
 - Role / model / effort used:

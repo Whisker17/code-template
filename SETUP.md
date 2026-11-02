@@ -65,15 +65,17 @@ tracked files:
 Then verify (SETUP.md itself is exempt — it gets deleted in step 6):
 
 ```bash
-grep -rn '{{' --include='*.md' --include='*.toml' --include='*.yml' --include='*.py' \
-  --exclude=SETUP.md --exclude-dir=.git . \
-  | grep -v 'orchestrate/implementer-prompt.md'
+grep -rnE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|TEMPLATE_REPO_URL)\}\}' \
+  --include='*.md' --include='*.toml' --include='*.yml' --include='*.py' \
+  --exclude=SETUP.md --exclude-dir=.git .
 ```
 
-This must return nothing. **`.claude/` is deliberately in scope** — skills can carry
+This must return nothing. It names the markers instead of matching any `{{`, so the
+GitHub Actions `${{ … }}` expressions in `.github/workflows/ci.yml` pass. **`.claude/` is deliberately in scope** — skills can carry
 bootstrap markers too, and excluding that directory is how unported values survive
-bootstrap. One legitimate exception: `orchestrate/implementer-prompt.md`'s
-`{{PLACEHOLDER}}` launch-template slots, which are not bootstrap markers.
+bootstrap. `.github/workflows/` is in scope as well. `orchestrate/implementer-prompt.md`'s
+`{{PLACEHOLDER}}` launch-template slots are not bootstrap markers, so the named list
+never matches them.
 
 Also:
 
@@ -124,6 +126,10 @@ Also:
    (same section).
 6. Initial commit on `main`, then push both branches:
    `git push -u origin main dev`.
+7. Once `.github/workflows/ci.yml` has run on a PR, require the check **`ci-ok`** (and only
+   that one) on `main` and `dev` where branch protection is available. Never require `lint`
+   or `smoke-e2e` — they are skipped on docs-only PRs. If CI is unavailable, follow
+   `docs/CI.md` § CI unavailable.
 
 ## 4. Verify the skeleton
 

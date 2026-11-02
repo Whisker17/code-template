@@ -233,6 +233,11 @@ and never a guessed `dev`.
   6. **Long-run acceptance.** Only issues with `Verification cost: hours`. At most once per
      Release, scheduled by the owner; agents never re-run it during implementation or
      release mechanics.
+- **CI unavailable** (quota exhausted, Actions off): the required check is never disabled
+  or bypassed. The PR body carries a line `CI unavailable: <reason>` plus the same commands
+  CI would run (lint, type, `scripts/e2e.sh --smoke`) run locally on the final SHA, with
+  real output. The orchestrator or reviewer accepts that evidence in place of the check.
+  Disable Actions on forks you do not develop in. See `docs/CI.md`.
 - Never commit secrets, `.env`, large logs, or local data files
 
 ### 3. Open PR → the resolved base, enter review
