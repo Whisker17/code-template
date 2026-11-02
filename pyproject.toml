@@ -35,6 +35,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "strict"
+markers = ["smoke: fast E2E scenarios that need no model CLI or credentials (scripts/e2e.sh --smoke)"]
 # The template is a virtual project (nothing installed as a package), so tests import
 # from the repo root via pythonpath. Remove if the project later installs as a package.
 pythonpath = ["."]

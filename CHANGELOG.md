@@ -10,6 +10,199 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ## Unreleased — v0.3.0
 
+- **E2E replaces after-the-fact unit tests (WHI-2195).** `AGENTS.md` opens with
+  `## Testing (read first)` (never write unit tests after code; prefer E2E and end each run
+  with a verifiable, repeatable artifact; isolation tests only after listing the failure
+  modes). `scripts/e2e.sh` runs `--smoke` (marker `smoke` in `tests/e2e/`, no model CLI or
+  credentials), `--full` (all of `tests/e2e/` plus `tests/test_agent_dispatch.py`) and
+  `--release <X.Y.Z>` (same suites, refuses on a dirty tracked tree), and writes
+  `artifacts/e2e/<mode>/<version|local>/<full-sha>/manifest.json` plus raw logs
+  (`artifacts/` is gitignored). The four tiers are named the same in `AGENTS.md`,
+  `docs/GIT_WORKFLOW.md` § 2 and § 4, `/implement`, `/orchestrate`, the implementer prompt,
+  the issue template and the PR template: **smoke E2E**, **full E2E**, **release E2E**,
+  **long-run acceptance**. "Full suite" and the "leave a runnable check per branching
+  change" rule are gone. `docs/agents/issue-template.md` adds the required
+  `Verification cost: minutes | hours` and an optional `## Failure modes`; acceptance
+  criteria become E2E scenarios. `tests/test_smoke.py` moved to `tests/e2e/test_template_smoke.py`.
+  - **Downstream migration:** copy `scripts/e2e.sh` and `tests/e2e/`, map the project's own
+    E2E commands into `SUITES`/`INPUTS` in the script, add the `smoke` marker to
+    `pyproject.toml` and `artifacts/` to `.gitignore`, and port the doc and template edits.
+    Delete low-signal unit tests during the repo's next Release (owner decision D4), with
+    Ray Fernando's cleanup prompt (adopted from Ansh):
+    > This repo is full of low-signal unit tests. Delete every one that wouldn't catch a
+    > real bug our E2E tests miss. Fan the work out across parallel subagents.
+    >
+    > Then add these rules to AGENTS.md so future agents stop writing them. [the three
+    > rules of `AGENTS.md` § Testing]
+
+- **Default model roles and an optional reviewer fallback (WHI-2197).**
+  `config/agent-roles.conf` ships verified defaults on `pi` (each confirmed with a real
+  `DISPATCH-OK` call): `ORCHESTRATOR` `claude/claude-opus-5-5`, `IMPLEMENTER`
+  `claude/claude-sonnet-5-5`, `REVIEWER` `magpie/codex/gpt-6-astra`, `medium` and `high`
+  mapped as themselves. A new optional role `REVIEWER_FALLBACK` (empty by default) is validated
+  like any role (`agent-dispatch.sh REVIEWER_FALLBACK` → exit 3 when undeclared); `--probe`
+  reports it `unset` without failing and warns if it shares `IMPLEMENTER`'s model. It is
+  usable only after a real `REVIEWER` call failed (non-zero exit, empty output or transport
+  error), never for exit 2/3, at most once per review step, both outcomes recorded
+  (`docs/agents/runtime.md` § Reviewer unavailable); the dispatcher never selects it.
+  `AGENTS.md` carries the exception to "fails closed", `SETUP.md` 1.9 asks to keep or change
+  the defaults and §4 proves the fallback by a real call when declared.
+  - **Downstream migration:** copy `scripts/agent-dispatch.sh` and
+    `tests/test_agent_dispatch.py`, then merge the new keys into the project's
+    `config/agent-roles.conf` (keep its own model IDs; add `REVIEWER_FALLBACK_*`, empty),
+    re-run the real-call loop from `SETUP.md` §4, and port the `docs/agents/runtime.md`
+    and `AGENTS.md` wording. A project already setting `REVIEWER_EFFORT_HIGH="medium"`
+    (research-hub) should re-verify `high` before keeping it.
+
+- **Multi-angle adversarial release review with verification (WHI-2196).** `/code-review`
+  is rewritten: a review is **hunters + one verifier**, every one a fresh `REVIEWER`
+  dispatch at effort `high`. Three modes with the same names in `/code-review`,
+  `/orchestrate` § 3 and `/implement`: **Quick** (governance, standalone, hotfix: one hunter
+  over all six angles; needs `scripts/e2e.sh --full` on the final head, never a release
+  artifact), **Standard** (a release: one hunter per angle; needs the release E2E manifest
+  for H) and **Deep** (a release touching high-risk or human-approved paths: two hunters per
+  angle). The six angles are spec & acceptance, failure paths, security & trust
+  boundaries, cross-issue integration, verification validity and simplicity (suggestions
+  only). The verifier tries to refute each finding and marks it `confirmed`, `refuted` or
+  `unverified`; only `confirmed` findings are defects, and an `unverified` one touching an
+  acceptance criterion blocks until resolved. Findings are `R<round>-F<n>`, stable across
+  rounds; rounds 2-3 review only `H_prev..H_new`; `pre-existing` goes to
+  `docs/DEFERRED_ISSUES.md`; a failed or empty dispatch is not a review and consumes no
+  round. The 3 reviews / 2 fix batches budget is unchanged, and `/orchestrate` § 3 and
+  `/implement` now point at `docs/agents/runtime.md` § Reviewer unavailable instead of
+  restating the pre-fallback behaviour. New `docs/REVIEW.md`: what counts as failure, nit
+  limits, output format, an `## Escapes` table, the replay rule (replay the escapes when
+  `REVIEWER` or the skill changes and record recall here) and the recurring-class rule (a
+  second occurrence of a confirmed bug class needs a preventive change with an entry here,
+  with a worked example). The PR template gains `Testing`, `Risk` and `How to revert`.
+  - **Downstream migration:** copy `docs/REVIEW.md` and `.claude/skills/code-review/SKILL.md`,
+    port the `/orchestrate` § 3 and `/implement` Merge edits and the PR template sections,
+    add the pointer to `AGENTS.md`, and list the project's high-risk paths where Deep mode
+    is chosen. Seed `## Escapes` with the project's past hotfixes and post-release bugs and
+    replay them once (recall goes here). Project-specific ignored paths and nit limits go
+    in `docs/REVIEW.md`.
+
+- **Fast minimal CI and a CI-unavailable rule (WHI-2198).** `.github/workflows/ci.yml`:
+  `changes` (docs-only = every path `*.md` or `docs/**`; any error fails) → `lint` (ruff +
+  mypy) and `smoke-e2e` (`scripts/e2e.sh --smoke`, artifact uploaded), both skipped on
+  docs-only PRs; `ci-ok` directly needs all three and is the only required check (fails if
+  `changes` fails, is skipped or cancelled; passes docs-only). `workflow_dispatch` runs
+  `--full` or `--release <version>` as `manual-e2e`. PR runs cancel superseded runs.
+  `docs/CI.md` documents the design and a 10-step tuning checklist; `docs/GIT_WORKFLOW.md`
+  § 2 and the PR template add the `CI unavailable: <reason>` rule (same commands run locally
+  on the final SHA, never disable the required check). `SETUP.md` §2 now greps the eight named
+  bootstrap markers instead of any `{{` (so `${{ … }}` passes, `.github/workflows/` stays in
+  scope) and §3 requires `ci-ok`.
+  - **Downstream migration:** copy `.github/workflows/ci.yml` and `docs/CI.md`, port the
+    GIT_WORKFLOW/PR-template/README edits, replace the lint/type commands in `ci.yml` and the
+    `scripts/e2e.sh` suites with the project's own, replace the `SETUP`-style placeholder grep
+    in any local checklist with the named-marker form, and require `ci-ok` (not `lint` or
+    `smoke-e2e`) in branch protection once it has run once.
+
+- **No worktree left behind, with a safe cleanup script (WHI-2199).** Every worktree an
+  agent creates (including `.claude/worktrees/agent-*` and sub-agent worktrees) is deleted
+  with its local branch when its task ends: merged, or its uncommitted changes committed,
+  tagged `archive/<worktree-name>` and the tag pushed, only then `git worktree remove` +
+  `git branch -D`. The session that spawned it cleans it up; a worktree kept on purpose is
+  named in the final reply. Layout `../<repo>-wt/<issue-id>` and `<issue-id>-verify`.
+  `scripts/wt-gc.sh` (dry run by default) classifies every worktree and local branch:
+  `done` = `--select`ed or its PR merged/closed per a **successful** `gh` query; everything
+  else (including `gh` errors, no PR, an open PR, a branch equal to its base) is
+  `active-or-unknown`. Locked, conflicted, trunk-named (`main`, `dev`, `release/*`),
+  primary and current worktrees are never touched, a dirty one only with `--select`. `--apply`
+  removes a clean worktree contained in a merged PR; anything else is archived first (tag
+  pushed and verified on `origin`) and any failure keeps worktree and branch. Never
+  `--force`. `GIT_WORKFLOW.md` State mapping: `Done` **and** `Canceled` need the worktree
+  gone. Called from `/orchestrate` preflight and release close, the end of `/implement` and
+  `SETUP.md`. `.claude/worktrees/` is gitignored. E2E: `tests/e2e/test_wt_gc.py`.
+  - **Downstream migration:** copy `scripts/wt-gc.sh` and `tests/e2e/test_wt_gc.py`, add
+    `.claude/worktrees/` to `.gitignore`, port the `AGENTS.md`, `GIT_WORKFLOW.md` (Post-merge
+    cleanup, State mapping, worktree layout, Forbidden) and `/implement` and `/orchestrate`
+    edits, then run `scripts/wt-gc.sh` once and clear the existing leftovers (dry run first;
+    `gh` must be authenticated or everything is reported `active-or-unknown`).
+
+- **Unattended `/orchestrate` with a declared authorization scope (WHI-2200).**
+  `/orchestrate <Release> [--through tag]` runs the whole Release in the current session: a
+  session not on `ORCHESTRATOR_MODEL` warns once, records the actual model and continues (no
+  hand-off to another session); implementers are native sub-agents visible to the session when
+  they honour model/effort, else `agent-dispatch.sh` watched to completion, never an
+  unobserved background process. It decides what the rules allow, appends each decision to the
+  orchestration document's `Decision log`, and stops only for a missing release branch, an unmet
+  external dependency, an exhausted review budget, a mandatory human path, a failed real
+  dispatch with no usable fallback, or a human-gated step outside the declared scope. New
+  **mandatory human paths** (all lanes, whatever `HIGH_RISK_PATHS` says): `.github/workflows/**`
+  and the project's release/promotion scripts (new `RELEASE_SCRIPT_PATHS`, asked in `SETUP.md`
+  1.5); no waiver or `--through` scope covers them. Default = the v0.2 human gates;
+  `--through tag` covers, after a passed release review and release E2E on the current SHA,
+  only the merge into `dev`, the temporary cut and its merge into `main`, the annotated tag,
+  the GitHub Release with the release E2E artifact, the tracker Release `commitSha`/stage and
+  post-merge cleanup (`scripts/wt-gc.sh` at release close); never a mandatory human path or
+  high-risk path in the promotion diff, a script run, deploy, a hotfix, or a promotion result
+  that differs from H. The scope is recorded in the orchestration document's `Authorization
+  scope` before the first covered step. `AGENTS.md`: Releases stay small, notes in English.
+  - **Downstream migration:** port the `.claude/skills/orchestrate/SKILL.md`,
+    `docs/GIT_WORKFLOW.md` (§ 4 table, *Unattended promotion*, § Waiving an exception,
+    § Releasing to `main`, Agent constraints 6–7), `AGENTS.md`, PR template,
+    `docs/agents/runtime.md` (Orchestrator session) and `docs/agents/issue-tracker.md`
+    (orchestration document sections) edits; add `RELEASE_SCRIPT_PATHS` (the real paths of every
+    release/promotion script, or `none`) next to `HIGH_RISK_PATHS` in `AGENTS.md` and
+    `docs/GIT_WORKFLOW.md`, and add its marker to the placeholder grep. Existing open Releases
+    keep the default human gates unless the owner invokes `--through tag`.
+- **Design review before Linear writes, safe batch publishing (WHI-2201).** `/to-spec` and
+  `/to-tickets` dispatch `REVIEWER` (`scripts/agent-dispatch.sh`, effort high) on the draft
+  with the source discussion and repo docs, for at most 3 rounds; disputes go to "Open
+  questions" and, after round 3, to the owner; only then do they write. The consensus
+  (rounds, changes, open disagreements) is recorded in a Linear project document.
+  `docs/agents/issue-tracker.md` § Publishing ticket sets: one writer, one issue at a time
+  with its id recorded, query by title before retrying a timeout, relations wired after all
+  issues exist, an unconfirmed write is never reported as done.
+  - **Downstream migration:** copy the two skill edits and the § Publishing ticket sets
+    section; no config change.
+
+- **Adopt mode for existing repos and a template version stamp (WHI-2202).** `SETUP.md` opens
+  with a mode selection: `bootstrap` (the unchanged §§0–6) or `adopt`, which runs only the new
+  `§ A` and stops. Adopt copies the process layer (`.claude/skills/`, `docs/agents/`,
+  `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md`, `docs/CI.md`, `docs/TRAPS.md`,
+  `docs/DEFERRED_ISSUES.md`, `config/agent-roles.conf`, `scripts/`, `.githooks/`, `.github/`,
+  `tests/test_agent_dispatch.py`, `TEMPLATE_VERSION`) without overwriting anything: an existing
+  file that differs is listed for manual merge, `AGENTS.md` gets the missing sections merged in
+  and the line `Template version: 0.3.0`. It never touches business code, remotes, branches,
+  stack files or `.gitignore`, never sets `core.hooksPath`, and leaves its changes uncommitted.
+  The repo's own lint/type/smoke/full commands are mapped into `AGENTS.md` and into the one
+  marked block of `scripts/e2e.sh` (`# >>> E2E SUITES` … `# <<< E2E SUITES <<<`), with
+  `tests/test_agent_dispatch.py` as the process-only dispatch E2E; the template's `main.py`
+  smoke test is never installed (an empty smoke slot is reported as a gap). New
+  `TEMPLATE_VERSION` file (`0.3.0`); `scripts/e2e.sh` now builds the manifest with `python3` and
+  its `{{PROJECT_NAME}}` placeholder check is split (`[{][{]PROJECT_NAME`) so SETUP's marker
+  substitution no longer rewrites it. Optional UI line for UI projects: "Avoid unnecessary
+  secondary labels and descriptions. Let the layout do the explaining."
+  - **Downstream migration:** a repo that copied the workflow from another downstream repo
+    runs `SETUP.md` § A (adopt mode) from this template, merges the files it lists as
+    conflicts by hand, and adds `artifacts/` to its `.gitignore`. A repo already on
+    this template: add `TEMPLATE_VERSION` and the line `Template version: <version>` to the end
+    of the `Template feedback loop` section of `AGENTS.md`, and move the suite commands in
+    `scripts/e2e.sh` into the `E2E SUITES` block (change its placeholder check to
+    `[{][{]PROJECT_NAME` if it still carries the literal marker).
+
+- **Owner-requested quick-fix lane (WHI-2203).** When the owner says to just change something
+  and names an existing `dev` or `release/v*`, the change runs in a `quick/<short-topic>`
+  worktree off `origin/<named base>` and a `quick-fix` PR that quotes the request. It waives
+  only the tracker issue/Release binding and the pre-merge review; CI, smoke E2E, squash,
+  cleanup and the human gates stay. No named base, `main`, or a missing branch → refusal; a
+  high-risk or mandatory human path is never eligible. Quick-fix PRs merged into a `release/v*`
+  are listed in that Release's notes. Edits: `docs/GIT_WORKFLOW.md` (base table, § Quick-fix
+  lane, § 4, branch naming, merge strategy), `AGENTS.md`, `.github/pull_request_template.md`.
+  - **Downstream migration:** port those three files' quick-fix text; nothing else changes.
+    Not yet in `SETUP.md` or `/orchestrate`, whose wording on mandatory human paths still holds.
+
+- **Next-session prompt in `/handoff` (WHI-2204).** `.claude/skills/handoff/SKILL.md` ends every
+  handoff with a `## Next-session prompt` block: one fenced, self-contained prompt the owner pastes
+  into a fresh session, carrying repo path, Release and issue ids, state (commit SHAs, PR numbers),
+  the exact skill invocation, stop conditions and where the durable evidence lives.
+  - **Downstream migration:** copy the `## Next-session prompt` section of the skill.
+
+---
+
 - Content-output templates (WHI-2205): new `answer-me-with-html/references/research-post.md`
   (research-post writing contract, linked from `SKILL.md`) and a new project-level `slide`
   skill (`.claude/skills/slide/`: flow, English style guide, deck starter, Excalidraw

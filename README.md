@@ -7,7 +7,8 @@ and a small set of core skills**.
 
 **Runtime-neutral by design.** Skills name a *role* (`ORCHESTRATOR`, `IMPLEMENTER`,
 `REVIEWER`) and an effort (`medium` | `high`), never a model. `config/agent-roles.conf`
-maps each role to a runtime, an exact model ID and effort values, and
+ships verified defaults (Opus 5.5 / Sonnet 5.5 / GPT-6 Astra on pi) and an optional
+`REVIEWER_FALLBACK`, maps each role to a runtime, an exact model ID and effort values, and
 `scripts/agent-dispatch.sh` dispatches it. The same process runs under Claude Code, Codex,
 pi, or an agent that only has a terminal. See `docs/agents/runtime.md`.
 
@@ -24,35 +25,57 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
    - verifies the skeleton, the role config (with a real call per role) and that
      `AGENTS.md` actually loads;
    - deletes `SETUP.md`.
+
+   For an **existing repo**, say *"Read SETUP.md and execute it in adopt mode"* instead: only
+   `SETUP.md` § A runs. It copies the process layer (skills, `docs/agents/`, workflow docs,
+   `config/agent-roles.conf`, `scripts/`, `.githooks/`, `.github/`, the dispatch E2E) and merges
+   the `AGENTS.md` sections, maps the repo's own lint/type/smoke/full commands into
+   `scripts/e2e.sh`, and records the template version. It never overwrites an existing file
+   (conflicts are listed for manual merge), never touches business code, remotes or branches,
+   and leaves its changes uncommitted.
 3. Produce the spec of record: `/grill-me <your idea>` → `/to-spec` fills `docs/DESIGN.md`.
 4. Break it down: `/to-tickets` publishes Linear issues from `docs/agents/issue-template.md`,
    each with complexity (`medium` | `high`), expected scope and native blocking relations.
-5. Implement. Hand a Release to `/orchestrate`, which:
+5. Implement. Hand a Release to `/orchestrate <Release> [--through tag]`, which runs the whole
+   Release unattended in the current session (visible sub-agents, every decision logged in the
+   orchestration document; it stops only for a missing release branch, an unmet external
+   dependency, an exhausted review budget, a mandatory human path, a failed dispatch with no
+   usable fallback, or a human-gated step outside its declared scope):
    - schedules issues by real dependencies and shared-scope conflicts;
    - dispatches `/implement` per issue at the issue's effort (a worktree off the
      **resolved base**: version-scoped → `release/v{version}`, governance → `dev`,
      hotfix → `main`, never a defaulted `dev`);
    - verifies and merges serially;
-   - then runs the release review loop: at most 3 complete reviews and 2 fix batches.
-     Version fixes stay in the original Release; governance-only fixes go through `dev`
-     with their own review and fan-out. No patch Release is created per round.
+   - then runs the release review loop (`/code-review` Standard or Deep: parallel bug
+     hunters per angle plus an independent verifier; only verified findings count): at
+     most 3 complete reviews and 2 fix batches. Version fixes stay in the original Release;
+     governance-only fixes go through `dev` with their own review and fan-out. No patch
+     Release is created per round.
 
-   Standalone `/implement` gets one independent PR review before it may merge. High-risk
-   paths, hotfixes and every promotion wait for a human.
+   Standalone `/implement`, governance and hotfix PRs get one independent Quick review
+   before they may merge. High-risk paths, hotfixes and every promotion wait for a human,
+   and `.github/workflows/**` and the project's release/promotion scripts always do (all
+   lanes, no waiver or `--through tag` scope covers them) — except that
+   `--through tag`, the owner's declared scope for one Release, lets `/orchestrate` carry it
+   through promotion after a passed release review (see step 6).
 6. Ship: once the integration branch has passed release review, it merges into `dev`
    (human gate). Cut a temporary `release/vX.Y.Z` from `dev` → PR into `main` (merge commit,
-   human gate), tag, and deploy **from the tag**. If production breaks while `dev` holds
+   human gate), tag, and deploy **from the tag**. With `--through tag` the orchestrator does
+   the merge into `dev`, the cut and its merge into `main`, the annotated tag, the GitHub
+   Release (release E2E artifact attached), the tracker Release `commitSha`/stage and the
+   cleanup itself; deploy stays human. If production breaks while `dev` holds
    unshippable work, take the hotfix lane instead — `docs/GIT_WORKFLOW.md`.
 
 ## What's inside
 
 | Layer | Contents |
 |-------|----------|
-| **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively) |
-| **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; ships unconfigured, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
+| **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively); `TEMPLATE_VERSION` (the template version a repo follows, also recorded in its `AGENTS.md`) |
+| **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; shipped defaults SETUP re-verifies, optional `REVIEWER_FALLBACK`, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
+| **CI** | `.github/workflows/ci.yml` (fast lint/type + smoke E2E, docs-only PRs skip them, single required check `ci-ok`, manual full/release E2E), `docs/CI.md` (design, CI-unavailable rule, tuning checklist) |
 | **Skills** (10) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html, slide + `skills-lock.json` |
-| **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
-| **Git workflow** | See below |
+| **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md` (what review counts as failure, output format, escapes), `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
+| **Git workflow** | See below; `scripts/wt-gc.sh` (safe cleanup of leftover worktrees and branches) |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
 
 The Git workflow covers:
@@ -66,6 +89,9 @@ The Git workflow covers:
 - the release vs hotfix decision rule;
 - the version axis (tracker Release ↔ tag ↔ GitHub Release);
 - mandatory post-merge cleanup;
+- no worktree left behind: every worktree is removed (merged, or archived with a pushed
+  `archive/<name>` tag) when its task ends; `scripts/wt-gc.sh` reports leftovers and removes
+  only what it can prove finished;
 - Linear state lockstep;
 - the `.githooks/pre-push` guard.
 
@@ -90,19 +116,24 @@ per-project.
 > cannot detect these edits, and **re-vendoring from `mattpocock/skills` will silently
 > overwrite them.** Diff before accepting any skill upgrade to:
 >
-> - `implement/SKILL.md` — v0.2 contract: ponytail, relevant checks, PR, handoff; merge
->   authority from `docs/GIT_WORKFLOW.md`; no TDD mandate, no built-in review loop
-> - `code-review/SKILL.md` — one fresh-context `REVIEWER` covering every aspect; PR and
->   release-snapshot modes; blocking/suggestion finding format
+> - `implement/SKILL.md` — v0.2 contract: ponytail, relevant checks, PR, handoff, no worktree
+>   left behind; merge authority from `docs/GIT_WORKFLOW.md`; no TDD mandate, no built-in
+>   review loop
+> - `code-review/SKILL.md` — Quick / Standard / Deep modes: fresh-context `REVIEWER` bug
+>   hunters per angle plus an independent verifier; `confirmed` / `refuted` / `unverified`
+>   dispositions; blocking/suggestion/pre-existing finding format; diff-only re-review
 > - `to-spec/SKILL.md` — fills the numbered `docs/DESIGN.md` skeleton in place (stable
 >   `§` references), free-form docs only under `docs/references/`; publishes only on
->   instruction
+>   instruction; a `REVIEWER` design review (max 3 rounds) precedes any write
 > - `to-tickets/SKILL.md` — uses `docs/agents/issue-template.md` (complexity, scope,
->   native relations); no local-file fallback
+>   native relations); `REVIEWER` design review (max 3 rounds) before any Linear write;
+>   single-writer, query-before-retry, relations-last publishing; no local-file fallback
 > - `grill-me/SKILL.md` — self-contained (the separate `grilling` skill is gone)
 > - `handoff/SKILL.md` — fixed field list; durable state lives in the PR, issue and
 >   orchestration document
 > - `orchestrate/` — first-party, not vendored; do not add it to `skills-lock.json`
+>   (unattended in-session; `--through tag` scope and mandatory human paths must stay
+>   identical to `docs/GIT_WORKFLOW.md` § 4)
 > - `ponytail/` — first-party, not vendored; do not add it to `skills-lock.json`
 > - `answer-me-with-html/` — local fork of `QingYunA/answer-me-with-html` v0.5.0 (adds
 >   Excalidraw / UML diagrams baked via local Chrome, the `research` template, prereq /

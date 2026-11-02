@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # Dispatch a prompt to a named agent role, in a fresh context, from any runtime.
 #
-# Skills name a ROLE (ORCHESTRATOR, IMPLEMENTER, REVIEWER) and a semantic effort
-# (medium | high), never a model. The role -> runtime/model/effort mapping lives
+# Skills name a ROLE (ORCHESTRATOR, IMPLEMENTER, REVIEWER, REVIEWER_FALLBACK) and a
+# semantic effort (medium | high), never a model. The role -> runtime/model/effort mapping lives
 # only in config/agent-roles.conf; this script translates it into the runtime's
 # own flags. Contract: docs/agents/runtime.md.
 #
 # Usage:
 #   scripts/agent-dispatch.sh <ROLE> <prompt-file|-> --effort <medium|high>
 #   scripts/agent-dispatch.sh --probe [ROLE ...]
+#
+# REVIEWER_FALLBACK is an ordinary role with identical validation. This script never
+# selects it: using it is the caller's own second dispatch, allowed only by
+# docs/agents/runtime.md § Reviewer unavailable.
 #
 # The dispatched process inherits the caller's working directory; its result is
 # the runtime's stdout.
@@ -26,7 +30,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONF="${AGENT_ROLES_CONF:-$REPO_ROOT/config/agent-roles.conf}"
-ROLES="ORCHESTRATOR IMPLEMENTER REVIEWER"
+ROLES="ORCHESTRATOR IMPLEMENTER REVIEWER REVIEWER_FALLBACK"
 RUNTIMES="claude codex pi"
 USAGE="usage: agent-dispatch.sh <ROLE> <prompt-file|-> --effort <medium|high> | --probe [ROLE ...]"
 
@@ -104,6 +108,14 @@ check_role() {
     }
 }
 
+# The declared fallback is optional: empty in all four keys means "not declared".
+fallback_is_empty() {
+    local suffix
+    for suffix in RUNTIME MODEL EFFORT_MEDIUM EFFORT_HIGH; do
+        [ -z "$(var "REVIEWER_FALLBACK_$suffix")" ] || return 1
+    done
+}
+
 # --- probe mode: static configuration and PATH only --------------------------
 if [ "${1:-}" = "--probe" ]; then
     shift
@@ -111,6 +123,10 @@ if [ "${1:-}" = "--probe" ]; then
     for role in $targets; do known_role "$role"; done
     failed=0
     for role in $targets; do
+        if [ "$role" = "REVIEWER_FALLBACK" ] && fallback_is_empty; then
+            echo "unset     $role -- optional, not declared (dispatching it exits 3)"
+            continue
+        fi
         efforts=""
         for e in medium high; do
             if check_role "$role" "$e" 2>/dev/null; then efforts="$efforts $e"; fi
@@ -127,6 +143,11 @@ if [ "${1:-}" = "--probe" ]; then
        [ "$(var IMPLEMENTER_MODEL)" = "$(var REVIEWER_MODEL)" ]; then
         echo "note: IMPLEMENTER and REVIEWER use the same model -- a different" \
              "vendor catches more (docs/agents/runtime.md)."
+    fi
+    if [ -n "$(var IMPLEMENTER_MODEL)" ] && \
+       [ "$(var IMPLEMENTER_MODEL)" = "$(var REVIEWER_FALLBACK_MODEL)" ]; then
+        echo "warning: REVIEWER_FALLBACK uses IMPLEMENTER's model -- that is a" \
+             "self-review, not an independent one (docs/agents/runtime.md)."
     fi
     echo "static check only: not an authentication or real-call result" \
          "(docs/agents/runtime.md § Preflight)."

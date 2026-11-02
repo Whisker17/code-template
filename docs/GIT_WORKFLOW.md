@@ -26,6 +26,7 @@ verification, and fan-out merges.
 | `main` | **Equals production.** Always equals the last deployed tag. Only accepts merges from `release/*` and `hotfix/*`. | PR only |
 | `dev` | **Validated, shippable trunk.** Receives hotfix backmerges, repo-wide governance, and a finished version-integration branch. Not the integration point for unreleased version work — *except* before the first production tag exists, when it is also the integration branch for version-scoped work (see the [bootstrap clause](#before-the-first-production-tag-bootstrap)). | PR from governance / merge of a finished `release/v*` |
 | `feat/*` `fix/*` `chore/*` | Single-issue implementation branches (inside worktrees) | Short-lived |
+| `quick/*` | Owner-requested quick-fix branches, no tracker issue ([§ Quick-fix lane](#quick-fix-lane-owner-requested)) | Short-lived |
 | `hotfix/*` | Emergency production fixes (branched from `main`) | Sync back to `dev` after merging to `main`, then fan out |
 | `release/vX.Y.Z` | **Two lifecycles, same prefix** — see [below](#two-release-lifecycles) | Depends on lifecycle |
 
@@ -36,7 +37,8 @@ live. Treat `origin/main` as the definition of "the code currently running".
 ## Two `release/` lifecycles
 
 Same prefix, different job. The rule **never merge `release/*` → `main` without
-human approval** applies to both.
+human approval** applies to both (except what an owner-invoked `--through tag` covers,
+[§ 4](#unattended-promotion---through-tag)).
 
 | | Temporary cut | Long-lived version integration |
 |---|---|---|
@@ -44,7 +46,7 @@ human approval** applies to both.
 | Cut from | `dev`. A multi-commit hotfix *batch* may also cut from `main`. That is not the `hotfix/*` lane — a single `hotfix/*` PR still goes straight to `main` per [§ Hotfix](#hotfix). | `dev` |
 | Receives feature PRs? | **No** | **Yes** — this is the version's integration branch. It may hold work that has not passed release review yet, so it is **not releasable** until it does |
 | Lifetime | Until the `main` PR merges, then deleted | The whole version's development |
-| When done | PR → `main` (human gate), delete | Once the **current** SHA passed full acceptance and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
+| When done | PR → `main` (human gate), delete | Once the **current** SHA passed release E2E and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk — unless the owner invoked `--through tag`, [§ 4](#unattended-promotion---through-tag)). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
 
 Cutting a version-integration branch is a **deliberate act** (it comes with the
 merge-back decision above). An agent must not create `release/v*` as a side
@@ -63,9 +65,12 @@ base branch on the issue — derived values drift.
 | Hotfix | `hotfix` label | `origin/main` | `main` |
 | Repo-wide governance | touches **only** the carve-out file list | `origin/dev` | `dev` |
 | Version-scoped work | everything else; version from the title prefix, cross-checked against the tracker's release binding | `origin/release/v{version}` | `release/v{version}` |
+| Quick-fix | the owner's request says to just change it **and names an existing target base** (`dev` or a `release/v*`), see [§ Quick-fix lane](#quick-fix-lane-owner-requested) | `origin/<named base>` | `<named base>` |
 
 **If an issue does not fall cleanly into exactly one category, refuse to start
-and surface it.** Do not guess. Do not fall back to `dev`.
+and surface it.** Do not guess. Do not fall back to `dev`. A quick-fix is never
+inferred from the size of a change: only the owner's explicit request selects it, and a
+request that names no base, names a base that does not exist, or names `main` is refused.
 
 ### Before the first production tag (bootstrap)
 
@@ -97,6 +102,34 @@ hotfix branches run under stale rules:
 An issue that mixes this list with version-scoped code **must be split**: the
 governance part goes to `dev` and [fans out](#fan-out-dev-into-live-version-branches);
 the feature part goes to its release branch.
+
+### Quick-fix lane (owner-requested)
+
+When the owner explicitly says to just change something ("改代码，不用走 Linear"), the change
+still goes through one worktree, one PR and CI, without a tracker issue or release binding.
+
+- **Named base required.** The owner's request must name the target base, and
+  `git rev-parse --verify origin/<base>` must succeed. Only `dev` and an existing
+  `release/v*` qualify. **No named base → refuse and ask; never default, never infer it from
+  the title, the tracker or the current branch.** `main` is never a quick-fix base: a
+  production change is a [hotfix](#hotfix), a production entry is human-gated.
+- **Worktree and branch:** `git worktree add -b quick/<short-topic> <wt> origin/<base>`,
+  then the [base check](#base-check-mandatory-immediately-after-worktree-creation).
+  No tracker id in the name ([§ Branch naming](#branch-naming)).
+- **PR:** into `<base>`, type `quick-fix`, title `quick(<short-topic>): …`; the body quotes
+  the owner's request verbatim and states the resolved base. Without the quote the PR is not
+  a quick-fix.
+- **Waived only:** the tracker issue / Release binding and the pre-merge independent review.
+- **Kept:** required project checks (CI, or the `CI unavailable` evidence) and smoke E2E on
+  the final HEAD, MERGEABLE/CLEAN, the squash strategy, post-merge cleanup (and fan-out when
+  the base is `dev`), and every human gate of [§ 4](#4-merge-authorization).
+- **Never eligible:** a change touching `{{HIGH_RISK_PATHS}}` or a mandatory human path
+  (`.github/workflows/**`, the project's release/promotion scripts `{{RELEASE_SCRIPT_PATHS}}`).
+  Refuse a request that targets them; and before opening the PR and again before merging,
+  `git diff --name-only origin/<base>...HEAD` must list none of them, else stop: it is
+  not a quick-fix, and no owner wording turns it into one.
+- **Release notes:** a quick-fix PR merged into a `release/v*` is listed in that Release's
+  notes (the orchestrator picks it up from `git log origin/main..origin/release/v*`).
 
 ### Version determination (version-scoped row only)
 
@@ -210,18 +243,34 @@ and never a guessed `dev`.
 
 - **One worktree / one branch / one issue / one PR** (never bundle unrelated issues)
 - Small commits (`feat:` `fix:` `chore:` `docs:` `refactor:` `test:`)
-- Verification has three tiers. Every result must come from the final HEAD; an
-  earlier HEAD's result does not carry over:
+- Testing is E2E-first (`AGENTS.md` § Testing): write or extend E2E scenarios for the
+  acceptance criteria, never unit tests after the code. A system is tested in isolation
+  only when the issue lists its `## Failure modes` first. Every E2E run is
+  `scripts/e2e.sh`, which writes a manifest artifact
+  (`artifacts/e2e/<mode>/<version|local>/<full-sha>/`).
+- Verification: two always-on checks plus four E2E tiers, named the same everywhere. Every
+  result must come from the final HEAD; an earlier HEAD's result does not carry over:
   1. **Required project checks.** CI required checks, plus any check the project declares
-     for every merge in `AGENTS.md` § Build, test, run. These always pass before any
-     merge. Nothing in this workflow overrides or skips them.
-  2. **Relevant issue checks.** The affected tests, lint/type checks and targeted E2E that
-     can catch a failure in what changed. Run them for every PR.
-  3. **Full suite.** The project's complete test suite and lint, including any full E2E,
-     plus every acceptance criterion in scope. Run it at each release candidate and after
-     each fix batch (`/orchestrate` § Release review). PRs that no release acceptance will
-     cover (governance, standalone `/implement`, hotfix) also run it before merge.
-     Ordinary version issues under `/orchestrate` do not repeat it per issue.
+     for every merge in `AGENTS.md` § Build, test, run (lint/type). These always pass
+     before any merge. Nothing in this workflow overrides or skips them.
+  2. **Relevant issue checks.** The E2E scenarios for the issue's acceptance criteria and
+     the lint/type checks that can catch a failure in what changed. Run them for every PR.
+  3. **Smoke E2E** (`scripts/e2e.sh --smoke`). Every PR, in CI or run locally. Its output
+     goes in the PR.
+  4. **Full E2E** (`scripts/e2e.sh --full`). The final head of governance, standalone
+     `/implement` and hotfix PRs, which no release acceptance covers. It includes the
+     smoke scenarios. Ordinary version issues under `/orchestrate` do not run it per issue.
+  5. **Release E2E** (`scripts/e2e.sh --release <X.Y.Z>`). Candidate H and after each fix
+     batch (`/orchestrate` § Release review). Its artifact is the review input and is
+     attached to the GitHub Release at promotion.
+  6. **Long-run acceptance.** Only issues with `Verification cost: hours`. At most once per
+     Release, scheduled by the owner; agents never re-run it during implementation or
+     release mechanics.
+- **CI unavailable** (quota exhausted, Actions off): the required check is never disabled
+  or bypassed. The PR body carries a line `CI unavailable: <reason>` plus the same commands
+  CI would run (lint, type, `scripts/e2e.sh --smoke`) run locally on the final SHA, with
+  real output. The orchestrator or reviewer accepts that evidence in place of the check.
+  Disable Actions on forks you do not develop in. See `docs/CI.md`.
 - Never commit secrets, `.env`, large logs, or local data files
 
 ### 3. Open PR → the resolved base, enter review
@@ -284,14 +333,16 @@ PR fits no row, or fits a row whose conditions you cannot show, it stays at `In 
 
 | Work | Before merge | Agent may merge? |
 | --- | --- | --- |
-| Ordinary version issue → an existing version-integration `release/v*`, under `/orchestrate` | The issue's acceptance, the required project checks and the relevant issue checks pass on the final HEAD; PR MERGEABLE/CLEAN; the orchestrator has verified the evidence | **Yes** (the orchestrator). Independent review is deferred to the release review of the whole version |
+| Ordinary version issue → an existing version-integration `release/v*`, under `/orchestrate` | The issue's acceptance, the required project checks, the relevant issue checks and smoke E2E pass on the final HEAD; PR MERGEABLE/CLEAN; the orchestrator has verified the evidence | **Yes** (the orchestrator). Independent review is deferred to the release review of the whole version |
 | Bootstrap issue → `dev`, before the first production tag, under `/orchestrate` | Same as above; `dev` is explicitly the first version's integration branch | **Yes**. The first release still needs a full release review |
-| Repo-wide governance → `dev` | Required project checks, relevant checks and the full suite, plus **one independent PR review** (`/code-review`, `REVIEWER`) that passed on the final commit | **Yes**, then fan out |
-| Standalone `/implement`, no release orchestration taking over | Required project checks, relevant checks and the full suite, plus **one independent PR review** that passed on the final commit | **Yes**, unless a human-gated row below applies. A promised future review does not count |
-| Anything touching **{{HIGH_RISK_PATHS}}** | The checks of its lane, plus a documented verification approach | **No** — human |
-| `hotfix/*` → `main` | Required project checks, relevant checks, the full suite and one independent review, then a human | **No** — every production entry is human-approved |
-| Finished version-integration `release/v*` → `dev` | The full suite (complete acceptance) and a passed release review on the **current** SHA (`/orchestrate` § Release review), then a human | **No** |
-| Temporary `release/*` cut → `main` | Existing release flow ([§ Releasing to `main`](#releasing-to-main)) | **No** — human |
+| Repo-wide governance → `dev` | Required project checks, relevant checks and full E2E, plus **one independent PR review** (`/code-review`, `REVIEWER`) that passed on the final commit | **Yes**, then fan out, unless a human-gated row below applies |
+| Standalone `/implement`, no release orchestration taking over | Required project checks, relevant checks and full E2E, plus **one independent PR review** that passed on the final commit | **Yes**, unless a human-gated row below applies. A promised future review does not count |
+| Quick-fix → the owner-named `dev` or `release/v*` ([§ Quick-fix lane](#quick-fix-lane-owner-requested)), no tracker issue | Required project checks and smoke E2E on the final HEAD; PR MERGEABLE/CLEAN; the PR body quotes the owner's request; the diff lists no high-risk or mandatory human path. No independent review | **Yes**, then cleanup (and fan-out if `dev`). Never into `main` |
+| Anything touching **{{HIGH_RISK_PATHS}}** | The checks of its lane, plus a documented verification approach | **No** — human. A quick-fix is never eligible |
+| Anything touching a **mandatory human path** — `.github/workflows/**` or the project's release/promotion scripts (`{{RELEASE_SCRIPT_PATHS}}`) — in every lane, whatever `{{HIGH_RISK_PATHS}}` says | The checks of its lane, plus a documented verification approach | **No** — human. No waiver, no `--through tag` scope and no quick-fix request covers it |
+| `hotfix/*` → `main` | Required project checks, relevant checks, full E2E and one independent review, then a human | **No** — every production entry is human-approved |
+| Finished version-integration `release/v*` → `dev` | Release E2E (complete acceptance) and a passed release review on the **current** SHA (`/orchestrate` § Release review), then a human | **No**, unless the owner invoked `--through tag` ([below](#unattended-promotion---through-tag)) |
+| Temporary `release/*` cut → `main` | Existing release flow ([§ Releasing to `main`](#releasing-to-main)) | **No**, unless the owner invoked `--through tag` ([below](#unattended-promotion---through-tag)) — human otherwise |
 
 - "Passed" means no unresolved blocking finding and acceptance valid on the reviewed SHA
   — not zero suggestions (`/code-review` § Findings). A review of an earlier commit does not
@@ -303,9 +354,45 @@ PR fits no row, or fits a row whose conditions you cannot show, it stays at `In 
   in standalone `/implement`, the implementing agent. Either way, run the post-merge
   cleanup below.
 
+#### Unattended promotion: `--through tag`
+
+By default `/orchestrate` stops at every human-gated row above. The owner may instead invoke
+`/orchestrate <Release> --through tag`: an authorization scope that lets the orchestrator
+carry **that Release** through promotion in one session. It applies only after a passed
+release review of the **current** candidate H and a passed `scripts/e2e.sh --release <X.Y.Z>`
+on H, and it follows the normal routing ([§ Two `release/` lifecycles](#two-release-lifecycles),
+[§ Releasing to `main`](#releasing-to-main)). It covers **only**:
+
+1. merging the finished `release/v*` into `dev` (merge commit);
+2. the temporary `release/vX.Y.Z` cut from `dev` (deleting the merged integration branch of
+   that name first), its PR and its merge into `main` (merge commit), with `ci-ok` green (or
+   the `CI unavailable` evidence) and MERGEABLE/CLEAN;
+3. the annotated tag `vX.Y.Z` and the GitHub Release with the release E2E artifact of H
+   attached;
+4. the tracker Release's `commitSha` and released stage;
+5. post-merge cleanup, fan-out and `scripts/wt-gc.sh`.
+
+It never covers: a mandatory human path (`.github/workflows/**`, the project's
+release/promotion scripts) or a high-risk path — a promotion step whose
+`git diff --name-only origin/<target>...<source>` lists one stops for a human, and the
+agent neither edits nor runs those scripts; deploy; `hotfix/*` → `main`; any promotion merge
+whose result differs from H (`git diff --quiet <H> <merge-result>` fails), which needs
+verification and review first.
+
+`--through tag` is not a waiver of the table: it is the standing authorization defined here,
+invoked per Release. Before the first covered step the orchestrator records it in the
+`Authorization scope` section of the `Release X.Y.Z — orchestration` document in the shape
+of [§ Waiving an exception](#waiving-an-exception-owner-decision): (1) scope — Release
+`X.Y.Z` by title prefix + tracker Release + the invocation; (2) expiry — the tag `vX.Y.Z`
+exists and the tracker Release is released; (3) not relaxed — everything in the paragraph
+above, the release review, the release E2E and CI; (4) compensating control — every covered
+step has a machine-checkable precondition whose command and output go in the `Decision log`;
+(5) rationale — this section. Anything outside the scope is a human-gated step: stop.
+
 #### Waiving an exception (owner decision)
 
-An owner may waive one human-gated row of the table above for a bounded issue set. A waiver that
+An owner may waive one human-gated row of the table above for a bounded issue set. No waiver
+covers a mandatory human path, and a quick-fix request is not a waiver. A waiver that
 lives only in tracker labels does not work — agents obey these docs, not labels —
 so a waiver is a **PR against every doc site that states the rule it overrides**,
 and it must carry, explicitly: **(1) scope** recognized by the same
@@ -348,7 +435,7 @@ documented exceptions — they are not PR-gated and they push with
    --delete-branch` into `dev` or a long-lived `release/v*`; `--merge` (a merge commit)
    for `hotfix/*` or `release/*` → `main` and a finished integration branch → `dev`
 2. **Remove the worktree:** `git worktree remove <worktree-path>` then
-   `git worktree prune`
+   `git worktree prune`. Never `--force` a dirty or locked worktree
 3. **Delete the local branch:** `git branch -D feat/{{ISSUE_PREFIX_LOWER}}-123-topic`
    (fails while the worktree still holds the branch — do step 2 first)
 4. **Fast-forward the resolved base:** `git fetch origin --prune` then
@@ -362,6 +449,38 @@ documented exceptions — they are not PR-gated and they push with
    the query; it is not a shorter list than that one.
 6. **Tracker → `Done`**
 
+#### No worktree left behind
+
+Every worktree an agent creates — including `.claude/worktrees/agent-*` and pi sub-agent
+worktrees — is removed, with its local branch and private build dirs, when its task ends,
+whether it was merged or abandoned. The session that spawned it cleans it up (the
+orchestrator owns its implementers' worktrees). A worktree kept on purpose is named, with
+path and reason, in the final reply.
+
+Before deleting, either the work is merged into the target branch, or its uncommitted
+changes are committed, tagged `archive/<worktree-name>` and the tag **pushed**; only after
+the push succeeded run `git worktree remove` + `git branch -D`. If the push fails, keep the
+worktree and branch and report it.
+
+`scripts/wt-gc.sh` is the safe sweep (dry run by default; `--apply` acts, `--select <path>`
+marks one worktree finished):
+
+- It classifies every worktree and local branch. `done` means `--select`ed, or every PR for
+  the branch is merged or closed per a **successful** `gh` query. Everything else is
+  `active-or-unknown`: `gh` errors, no PR, an open PR, a detached HEAD, a branch equal to its
+  base, a missing upstream. Location or ancestry alone never make a worktree `done`.
+- Locked, conflicted (merge/rebase in progress) and trunk-named (`main`, `dev`, `release/*`)
+  items, the primary clone and the current worktree are never touched, even with `--select`;
+  a dirty worktree is preserved unless `--select`ed.
+- `--apply` removes a clean worktree fully contained in a merged PR. Anything else it
+  commits, tags `archive/<name>`, pushes the tag, verifies it on `origin`, and only then
+  removes; any failure leaves worktree and branch intact (reported, exit 1). Never `--force`.
+  `prunable` entries are pruned.
+- Exit 0: nothing `done` left; 1: something is left or failed.
+
+Run it from a worktree or the primary clone at three points: `/orchestrate` preflight and
+release close, the end of `/implement`, and once in `SETUP.md`.
+
 ### State mapping (tracker ↔ git)
 
 | Stage | Tracker state | Git |
@@ -371,7 +490,10 @@ documented exceptions — they are not PR-gated and they push with
 | PR open, awaiting verification / merge | **`In Review`** | open PR → resolved base |
 | Waiting for a human, or verification failed | **`In Review`**, reason recorded on the issue | open PR, not merged |
 | Merged | **`Done`** | merged into the resolved base with the lane's strategy, cleanup done, fan-out done if that base was `dev`, worktree removed |
-| Abandoned | `Canceled` | PR closed, worktree removed, not merged |
+| Abandoned | `Canceled` | PR closed, not merged, worktree removed (archived with a pushed tag first if it holds unmerged work) |
+
+`Done` **and** `Canceled` both require the worktree and its local branch to be gone
+(`scripts/wt-gc.sh` shows leftovers); until then the issue is not closed.
 
 Triage labels (`ready-for-agent` / `ready-for-human` / …) are **orthogonal** to workflow
 state: labels say *who* does the work, state says *how far along* it is.
@@ -520,14 +642,16 @@ on the open PR into `main` — and a concurrent fan-out in that window would mer
 `dev`'s unreleased work into the branch you are about to ship.
 
 After the PR reads MERGEABLE/CLEAN and a human has approved it (`release/*` → `main` is
-**always** a human gate):
+**always** a human gate, except under `--through tag`, [§ 4](#unattended-promotion---through-tag)):
 
 1. **Merge with a merge commit, not squash** (see
    [§ Merge strategy](#merge-strategy-per-lane))
 2. Create the annotated tag and the GitHub Release: `git tag -a v0.1.0 -m "v0.1.0"` +
-   `git push origin v0.1.0`
+   `git push origin v0.1.0`, then `gh release create v0.1.0 --verify-tag --notes-file <notes>
+   <release E2E artifact of the candidate>` (notes in English)
 3. **Deploy from the tag**, never from a branch
-4. Backfill the tracker Release's `commitSha` (see [§ Version axis](#version-axis))
+4. Backfill the tracker Release's `commitSha` (see [§ Version axis](#version-axis)) and move it
+   to its released stage
 
 Temporary `release/*` branches may be auto-deleted; `dev` lives forever.
 
@@ -555,7 +679,7 @@ Then:
    `v0.1.5.1` points at a tree that calls itself `0.1.5`
 3. `gh pr create --base main`, title/body carry `{{ISSUE_PREFIX}}-NNN`; tracker →
    `In Review`
-4. Required project checks, relevant checks, the full suite and one independent review
+4. Required project checks, relevant checks, full E2E and one independent review
    (`/code-review`) pass, then **a human
    approves** — every hotfix is a production entry
    ([§ Merge authorization](#4-merge-authorization)). **Merge with a merge commit, not
@@ -620,6 +744,7 @@ If any one of them disagrees, a step was skipped:
 |----|-----------|-----|
 | `feat/*` `fix/*` `chore/*` → `dev` | **squash** | Governance: one issue, one commit; clean `dev` history |
 | `feat/*` `fix/*` `chore/*` → long-lived `release/v*` | **squash** | Same, on the version integration branch |
+| `quick/*` → `dev` or long-lived `release/v*` | **squash** | Same; one request, one commit |
 | Finished integration `release/v*` → `dev` | **merge commit** | Preserves the version's ancestry on the trunk |
 | `release/*` → `main` (temporary cut) | **merge commit** | Preserves ancestry |
 | `hotfix/*` → `main` | **merge commit** | Same |
@@ -642,26 +767,32 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 | Fix | `fix/{{ISSUE_PREFIX_LOWER}}-<id>-<topic>` | `fix/{{ISSUE_PREFIX_LOWER}}-112-race-condition` |
 | Chore | `chore/{{ISSUE_PREFIX_LOWER}}-<id>-<topic>` | `chore/{{ISSUE_PREFIX_LOWER}}-108-lint-config` |
 | Hotfix | `hotfix/{{ISSUE_PREFIX_LOWER}}-<id>-<topic>` | `hotfix/{{ISSUE_PREFIX_LOWER}}-140-login-loop` |
+| Quick-fix | `quick/<short-topic>` (owner-requested, no tracker id) | `quick/readme-typo` |
 | Release | `release/v<version>` | `release/v0.1.0`, `release/v0.1.5.1` |
 
 - All lowercase, words joined with `-`
 - **Must include the tracker id** (`{{ISSUE_PREFIX_LOWER}}-NNN`) for PR ↔ issue tracing —
-  hotfixes included, they are tracked issues too
+  hotfixes included, they are tracked issues too. The only exception is `quick/*`, which has
+  no issue by definition; its trace is the owner's request quoted in the PR
 - One PR does one thing
 
 ## Recommended worktree layout
 
 ```text
 ~/Work/src/.../
-  {{PROJECT_NAME}}/              # primary clone (stays on dev)
+  {{PROJECT_NAME}}/                  # primary clone (stays on dev)
   {{PROJECT_NAME}}-wt/
-    {{ISSUE_PREFIX_LOWER}}-101/  # worktree
+    {{ISSUE_PREFIX_LOWER}}-101/      # issue worktree: ../<repo>-wt/<issue-id>
+    {{ISSUE_PREFIX_LOWER}}-101-verify/  # verification worktree: ../<repo>-wt/<issue-id>-verify
     {{ISSUE_PREFIX_LOWER}}-105/
     hotfix-…/
 ```
 
 - Worktree directories go **outside** the primary repo (avoid nested-git confusion)
-- The primary repo's `.gitignore` does not need to ignore sibling worktrees
+- The primary repo's `.gitignore` does not need to ignore sibling worktrees, but it does
+  ignore `.claude/worktrees/` (Claude Code's own sub-agent worktrees live inside the clone)
+- Every worktree, wherever it lives, is deleted when its task ends — see
+  [No worktree left behind](#no-worktree-left-behind)
 
 ## Forbidden
 
@@ -674,6 +805,10 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 - Leaving the tracker un-`Done` after the PR merges
 - Continuing work on a branch not based on latest `origin/<resolved-base>`
   (drop the worktree, re-branch from the fresh resolved base)
+- Leaving a worktree behind: one whose task ended and that was neither removed nor named,
+  with its path and reason, in the final reply (see
+  [No worktree left behind](#no-worktree-left-behind)); removing a dirty or locked worktree
+  with `--force`; deleting unmerged work before an `archive/<name>` tag was pushed
 - **Defaulting a version-scoped issue to `dev`** because the release field is
   empty or the release branch does not exist — refuse and surface it
 - **Creating `release/v*` as a side effect of picking up a ticket**
@@ -716,15 +851,20 @@ Implementing agents (including unattended ones) **must**:
    without a merged PR is not `Done`
 5. Respect module isolation when several issues run in parallel (see
    [§ Parallel issues](#parallel-issues))
-6. **Never** self-merge or deploy a change touching **{{HIGH_RISK_PATHS}}**, even with a
+6. **Never** self-merge or deploy a change touching **{{HIGH_RISK_PATHS}}**, a mandatory
+   human path (`.github/workflows/**`, the project's release/promotion scripts
+   `{{RELEASE_SCRIPT_PATHS}}`), even with a
    green test run — stop at `In Review` for human confirmation. This gate **overrides every
-   agent-merge row in #4.** No waiver of it is in force; if the owner ever
+   agent-merge row in #4**, `--through tag` included. No waiver of it is in force; if the
+   owner ever
    grants one it must take the shape in
    [§ Waiving an exception](#waiving-an-exception-owner-decision) and amend this rule
-   here, not merely a tracker label
-7. Never merge `release/*` → `main` or `hotfix/*` → `main` without human approval.
-   Never merge a finished version-integration branch into `dev` without human approval
-   and a passed release review on its current SHA.
+   here, not merely a tracker label — and none can cover a mandatory human path;
+   a quick-fix request never touches one (§ Quick-fix lane)
+7. Never merge `release/*` → `main` or `hotfix/*` → `main` without human approval, and never
+   merge a finished version-integration branch into `dev` without human approval and a passed
+   release review on its current SHA — except what the owner's recorded `--through tag` scope
+   covers ([§ 4](#unattended-promotion---through-tag)); a hotfix is never covered.
 
 ## Branch protection
 

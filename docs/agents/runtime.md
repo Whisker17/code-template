@@ -16,7 +16,8 @@ one edit point.
 | --- | --- | --- | --- |
 | `ORCHESTRATOR` | Reads the whole release, dispatches work, verifies evidence, merges serially, runs the release review loop (`/orchestrate`) | `high` | Implement features; declare a review passed |
 | `IMPLEMENTER` | Implements one issue in its own worktree, runs the relevant checks, opens the PR, hands off (`/implement`) | `medium` / `high` from the issue's `Complexity` (`docs/agents/issue-template.md` § Execution) | Widen scope; create the next release |
-| `REVIEWER` | Independent adversarial review of a PR range or a release snapshot (`/code-review`) | `high` | Edit the reviewed code; pass style preferences off as defects |
+| `REVIEWER` | Independent adversarial review of a PR range or a release snapshot (`/code-review`): each bug hunter and the verifier is its own fresh dispatch | `high` | Edit the reviewed code; pass style preferences off as defects; verify its own findings |
+| `REVIEWER_FALLBACK` (optional) | The same review step (one hunter or the verifier), only after a real `REVIEWER` call failed (§ Reviewer unavailable) | `high` | Run unless the primary was actually invoked and failed; run for a validation failure |
 
 Ordinary exploration is done by whichever role owns the task. There is no escalation role:
 unresolved findings past the review budget go to a human.
@@ -44,7 +45,9 @@ scripts/agent-dispatch.sh --probe [ROLE ...]
   Unset runtime/model, unsupported effort (mapping unset), unknown runtime, or binary not
   on `PATH`: exit `3`. Any other non-zero exit is the runtime's own (authentication and call
   failures included), returned unchanged. The dispatcher never retries, never swaps in
-  another model and never lowers the effort.
+  another model and never lowers the effort. `REVIEWER_FALLBACK` is validated exactly like
+  any other role (undeclared: exit `3`) and the dispatcher never selects it: using it is the
+  caller's explicit second dispatch, allowed only by § Reviewer unavailable.
 - The adapter builds the **whole** argv; there is no free-form flag or command field, so
   nothing can override the model, the effort or the fresh session (no resume/continue).
   Model and effort values must be single plain tokens. Permissions and sandboxing belong
@@ -60,22 +63,51 @@ read from `config/agent-roles.conf`. If the primitive cannot set the configured 
 effort, use the subprocess path — do not silently drop the effort.
 
 **Orchestrator session.** `ORCHESTRATOR_MODEL` names the target orchestrator model. If the
-current session is not running it, start a matching session (dispatch `ORCHESTRATOR`) and
-hand off. A config file cannot switch the model of a session that is already running; never
-claim it did.
+current session is not running it, warn once, record the actual model and effort in the
+orchestration document and continue in this session; do not start another session or hand
+off. A config file cannot switch the model of a session that is already running; never claim
+it did. `/orchestrate` runs unattended in that session: its implementers are native
+sub-agents visible to it when they honour the role's model, effort and working directory
+(above), else `scripts/agent-dispatch.sh` run where the session can watch it to completion —
+never an unobserved background process.
 
 ## Preflight
 
 - `--probe` checks the config file and `PATH` only. It is **not** evidence of
-  authentication or a working call, and must never be reported as such.
+  authentication or a working call, and must never be reported as such. An undeclared
+  `REVIEWER_FALLBACK` is reported `unset` and does not fail the probe; an unset primary role
+  or a half-declared fallback does. It warns when the fallback shares `IMPLEMENTER`'s model.
 - The real check is one light call per role that will be used:
   `printf 'Reply with exactly: DISPATCH-OK\n' | scripts/agent-dispatch.sh <ROLE> - --effort high`
-  must print `DISPATCH-OK` and exit `0`.
+  must print `DISPATCH-OK` and exit `0`. Include `REVIEWER_FALLBACK` when it is declared.
 - Run it **once at the start of a release** (or before a standalone `/implement` relies on
   `REVIEWER`) — not before every issue. Run it again when the config changes or a real
   dispatch hits an authentication or call error.
 
 ## Reviewer unavailable
+
+`REVIEWER` is unavailable when its dispatch exits non-zero. Two cases differ:
+
+- **Validation failure — exit `2` or `3`** (unknown role or effort, unset runtime, model or
+  effort mapping, unknown runtime, binary not on `PATH`, rejected value): no runtime was
+  invoked. This is a configuration or usage error, **never a reason to use
+  `REVIEWER_FALLBACK`**. Stop, fix the configuration, and treat the reviewer as unavailable
+  (below).
+- **Call failure:** the primary `REVIEWER` passed validation, the runtime was actually
+  invoked and returned a non-zero exit code, empty output or a transport error.
+
+**`REVIEWER_FALLBACK`** (optional, declared in `config/agent-roles.conf`) is eligible
+**only** after a call failure of the primary. The caller — never the dispatcher — then
+dispatches it, **at most once per review step** (one hunter or the verifier dispatch of
+`/code-review`). Record both outcomes in the PR or the
+orchestration document: `primary REVIEWER <model> failed: <error>; used REVIEWER_FALLBACK
+<model>`, and the fallback's own result (a fallback that also fails is recorded the same
+way). The fallback review counts as the independent review only if it ran in a fresh
+context other than the implementer's; a fallback that is `IMPLEMENTER`'s model is not
+independent, and `--probe` warns about it.
+
+If no fallback is declared, or it is unset, fails validation, or fails its call: the
+v0.2 behaviour below applies.
 
 - Ordinary version issues may still be implemented and integrated into the version branch
   (their review is the release review anyway), but the **release is blocked** and must not
@@ -98,10 +130,19 @@ Cross-vendor review is the preferred configuration: independent failure modes ca
 than a stronger model sharing the implementer's blind spots. `--probe` notes when
 `IMPLEMENTER` and `REVIEWER` use the same model.
 
-The template ships every role **unconfigured**, so each fails closed until `SETUP.md`
-step 1.9 fills in the exact model ID and effort values the target runtime accepts and a real
-call succeeds. The selection intent recorded in the config (implementer on Claude Opus 5.5,
-reviewer on GPT-6 Astra) is not a verified default.
+The template ships these **defaults**, all on `pi`, each confirmed with a real
+`DISPATCH-OK` call at the efforts it maps:
+
+| Role | Model (pi registry ID) | Note |
+| --- | --- | --- |
+| `ORCHESTRATOR` | `claude/claude-opus-5-5` | `medium` and `high` mapped as themselves |
+| `IMPLEMENTER` | `claude/claude-sonnet-5-5` | `medium` or `high` from the issue's `Complexity` |
+| `REVIEWER` | `magpie/codex/gpt-6-astra` | A different vendor than `IMPLEMENTER` |
+| `REVIEWER_FALLBACK` | none (empty) | Declare one deliberately; see § Reviewer unavailable |
+
+A model ID is valid only on a machine whose runtime lists it, so the defaults are not
+proof: `SETUP.md` step 1.9 re-verifies every role with a real call and the project keeps or
+changes each one. A role that fails stays failed — no silent substitution, no lower effort.
 
 When a generation turns over, edit `config/agent-roles.conf` and nothing else. A model name
 inside `.claude/skills/` is drift; fix the skill to name a role.

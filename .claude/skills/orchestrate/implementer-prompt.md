@@ -32,7 +32,9 @@ If your runtime has no skill loader, read these files directly:
    stop at PR + handoff and do not merge.
 2. `.claude/skills/ponytail/SKILL.md`.
 3. `docs/GIT_WORKFLOW.md` § Resolving the base branch.
-4. {{EXTRA_DOCS: DESIGN.md sections the issue cites, predecessor code to extend}}
+4. `AGENTS.md` § Testing: write or extend E2E scenarios for the acceptance criteria; never
+   unit tests after the code; isolation tests only if the issue has `## Failure modes`.
+5. {{EXTRA_DOCS: DESIGN.md sections the issue cites, predecessor code to extend}}
 
 ## Predecessors
 
@@ -71,6 +73,8 @@ If the work needs anything outside this, **stop and report**. Do not edit it.
 - `git diff --stat` against the base, showing the scope held.
 - Acceptance: each criterion → the command run and its actual output, plus artifact paths.
   Every criterion you did **not** meet, and every check you did not run, with the reason.
+- Smoke E2E: `scripts/e2e.sh --smoke` output and manifest path on the final HEAD (full E2E
+  instead, for a governance, standalone or hotfix issue). It also goes in the PR body.
 - Effects on dependent issues, with evidence for any corrected conclusion.
 - The role, model and effort you actually ran as.
 - Open questions and the next step.
