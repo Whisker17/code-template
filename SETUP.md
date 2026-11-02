@@ -1,12 +1,31 @@
-# SETUP.md — Project bootstrap runbook (self-destructing)
+# SETUP.md — Project setup runbook (bootstrap or adopt)
 
-> **To the human:** after cloning this template, open the repo in any coding agent
-> (Claude Code, Codex, …) and say *"Read SETUP.md and execute it."* That's the whole
-> setup.
+> **To the human:** open the repo in any coding agent (Claude Code, Codex, …) and say
+> *"Read SETUP.md and execute it."* For a new repo cloned from this template that is the
+> whole setup. For an existing repo that should adopt the template's process, say
+> *"Read SETUP.md and execute it in adopt mode"* from inside that repo, with the template
+> checked out next to it.
 >
-> **To the agent:** this file is an executable runbook. Work through the steps in
-> order. Steps marked **[interview]** require asking the user one question at a time and
-> waiting for the answer. The final step deletes this file.
+> **To the agent:** this file is an executable runbook. Choose the mode first, then work
+> through only that mode's steps, in order. Steps marked **[interview]** require asking the
+> user one question at a time and waiting for the answer.
+
+## Mode selection
+
+Ask the user which mode, unless they already said ([interview]). The modes are exclusive:
+run one, never both, and never a mix of their steps.
+
+- **`bootstrap`** — a fresh clone of the template. Run §§0–6; the last step deletes this file.
+- **`adopt`** — an existing repo with its own code, remote and branches. Run **only § A**,
+  then stop. Adopt does not run §§0–6, change `origin` or any remote, create, rename or
+  recreate a branch, replace stack files, reset project status, or delete SETUP.md (it is
+  never copied into the target repo).
+
+If the working directory is a fresh template clone with no code of its own, the mode is
+`bootstrap`; if it already has history, source files or an `AGENTS.md` of its own, it is
+`adopt` — when in doubt, ask.
+
+## Mode: bootstrap (§§0–6)
 
 ## 0. Sanity check
 
@@ -197,3 +216,161 @@ git rm SETUP.md
 git commit -m "chore: complete template bootstrap, remove SETUP.md"
 git push
 ```
+
+## Mode: adopt (§ A only)
+
+Run this section and then **stop**. `$TEMPLATE` is the path of the template checkout
+(the directory that holds this SETUP.md); `$TARGET` is the repo being adopted, the current
+directory. Adopt only **adds** files and merges `AGENTS.md`; it never overwrites an existing
+file, so a file that already exists is reported for manual merge instead.
+
+## A. Adopt the process layer into an existing repo
+
+**A.0 Preconditions and the "before" snapshot.** Stop and tell the user if any is false:
+`$TARGET` is a git work tree whose tracked files are clean (`git status --porcelain
+--untracked-files=no` prints nothing); `$TARGET` is not the template (no `SETUP.md` in it and
+`git remote -v` does not point at `{{TEMPLATE_REPO_URL}}`); `$TEMPLATE/TEMPLATE_VERSION` exists
+and `git -C "$TEMPLATE" status --porcelain` prints nothing. Then:
+
+```bash
+V="$(cat "$TEMPLATE/TEMPLATE_VERSION")"      # the template version being adopted
+ADOPT_TMP="$(mktemp -d)"                     # outside the repo
+cd "$TARGET"
+git remote -v > "$ADOPT_TMP/remotes.before"
+git branch -a > "$ADOPT_TMP/branches.before"
+git ls-files -co --exclude-standard -z | xargs -0 sha256sum > "$ADOPT_TMP/manifest.before"
+```
+
+**A.1 Interview** ([interview], one question at a time; this is the subset of §1 whose
+values land in the copied files):
+
+1. `PROJECT_NAME` (default: the directory name), 2. `LINEAR_PROJECT`, 3. `LINEAR_TEAM`
+   (→ `ISSUE_PREFIX` uppercase, `ISSUE_PREFIX_LOWER` lowercase), 4. `HIGH_RISK_PATHS` and
+   5. `RELEASE_SCRIPT_PATHS`, both exactly as asked in §1.5, 6. `TEMPLATE_REPO_URL` (default:
+   `git -C "$TEMPLATE" remote get-url origin`).
+7. **Verification commands** — the repo's *own* commands for **lint**, **type check**,
+   **smoke** (a fast scenario that needs no model CLI or credentials) and **full** (every
+   E2E/test command the repo has). `none` is allowed for each; an empty smoke or full slot is
+   reported as a gap in A.6, never filled with a template test.
+8. **Agent roles** — present `$TEMPLATE/config/agent-roles.conf` and keep or change it
+   exactly as §1.9 describes (exact model IDs from the runtime itself, optional
+   `REVIEWER_FALLBACK`).
+9. **UI project?** If yes, the optional UI line in A.5.
+
+**A.2 Copy the process layer — never overwrite.** For every path below, taken from
+`git -C "$TEMPLATE" ls-files` (tracked files only):
+
+```bash
+PROCESS_PATHS=(.claude/skills docs/agents docs/GIT_WORKFLOW.md docs/REVIEW.md docs/CI.md
+  docs/TRAPS.md docs/DEFERRED_ISSUES.md config/agent-roles.conf scripts .githooks .github
+  tests/test_agent_dispatch.py TEMPLATE_VERSION)
+: > "$ADOPT_TMP/copied.txt"; : > "$ADOPT_TMP/conflicts.txt"
+git -C "$TEMPLATE" ls-files -z -- "${PROCESS_PATHS[@]}" | while IFS= read -r -d '' f; do
+  if [ ! -e "$TARGET/$f" ] && [ ! -L "$TARGET/$f" ]; then
+    mkdir -p "$(dirname "$TARGET/$f")"; cp -p "$TEMPLATE/$f" "$TARGET/$f"; echo "$f" >> "$ADOPT_TMP/copied.txt"
+  elif ! cmp -s "$TEMPLATE/$f" "$TARGET/$f"; then
+    echo "$f" >> "$ADOPT_TMP/conflicts.txt"            # exists and differs: leave it alone
+  fi                                                    # identical: nothing to do
+done
+```
+
+Not copied, on purpose: `main.py`, `pyproject.toml`, `tests/e2e/` (the template's smoke test
+runs the template's `main.py`), `docs/DESIGN.md`, `Dockerfile`, `docker-compose.yml`,
+`.env.example`, `CHANGELOG.md`, `README.md`, `SETUP.md`, `skills-lock.json`. A file the target
+already has — typically `.github/workflows/ci.yml`, `.github/pull_request_template.md`, an
+existing `scripts/` or `.githooks/` file — goes to `conflicts.txt` and is reported in A.6.
+Do not set `core.hooksPath`: the target may already use its own hooks.
+
+Then fill the markers **in the copied files only** (`copied.txt`; never in the target's own
+files):
+
+```bash
+export PROJECT_NAME LINEAR_PROJECT LINEAR_TEAM ISSUE_PREFIX ISSUE_PREFIX_LOWER \
+  HIGH_RISK_PATHS RELEASE_SCRIPT_PATHS TEMPLATE_REPO_URL
+while IFS= read -r f; do
+  perl -pi -e 's/\{\{(PROJECT_NAME|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX_LOWER|ISSUE_PREFIX|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}/$ENV{$1}/g' "$f"
+done < "$ADOPT_TMP/copied.txt"
+tr '\n' '\0' < "$ADOPT_TMP/copied.txt" | xargs -0 grep -nE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}'   # must print nothing
+```
+
+**A.3 Merge `AGENTS.md`.** If `$TARGET/AGENTS.md` does not exist, create it with the title
+`# AGENTS.md` and a one-line description. Take these `## ` sections from `$TEMPLATE/AGENTS.md`,
+in this order, with the markers filled as above, and never modify an existing section:
+
+- `Testing (read first)` — insert it above the target's first `## ` section; every other
+  section is appended at the end of the file.
+- `Git workflow (mandatory)`, `Agent runtime`, `Agent skills`, `Template feedback loop`.
+
+If the target already has a section on the same topic (the same heading once a trailing
+parenthetical such as `(mandatory)` is dropped), do **not** touch it: add
+`AGENTS.md § <heading>` to `conflicts.txt` instead. Never copy `What this is`, `Status`,
+`Build, test, run`, `Runtime configuration` or `Architecture`: they describe a project, and the
+target has its own. Record the version with the line `Template version: $V` as the last line
+of the `Template feedback loop` section (appended, or — if that section already existed — added
+to the end of the existing one; that single line is the only change to an existing section).
+Finally append a `## Verification commands` section (heading free of conflict, else
+`## Verification commands (template adopt)`) listing the commands from A.1.7: lint, type
+check, smoke, full, and the dispatch E2E, each with its exact command, and what
+`scripts/e2e.sh --smoke` and `--full` run.
+
+**A.4 Configure the verification contract.** The runner `scripts/e2e.sh` reads its suite
+commands from **one marked block**, between `# >>> E2E SUITES` and `# <<< E2E SUITES <<<`.
+If `scripts/e2e.sh` was copied (it is not in `conflicts.txt`), replace the **whole content of
+that block and nothing outside it** so that:
+
+- `SUITES` in smoke mode is the repo's own smoke command(s) from A.1.7, then the dispatch E2E;
+- `SUITES` in full and release mode is the repo's own full command(s), then the dispatch E2E;
+- the dispatch E2E is `uv run --no-project --with pytest python -m pytest tests/test_agent_dispatch.py`
+  (it tests only `scripts/agent-dispatch.sh` against fake runtimes, needs Python + pytest and
+  no model CLI; use `python3 -m pytest …` when pytest is installed and `uv` is not; if neither
+  exists, the dispatch E2E is a gap and A.6 reports it);
+- `INPUTS` lists the config and fixture files those commands read, plus
+  `scripts/agent-dispatch.sh` (and `tests/test_agent_dispatch.py` outside smoke mode);
+- no command references the template's `main.py`, `tests/e2e/` or `pyproject.toml` placeholder
+  check. An empty smoke or full slot from A.1.7 stays empty and is reported as a gap.
+
+If `scripts/e2e.sh` is in `conflicts.txt`, do not edit the target's: report that the dispatch
+E2E is not wired in and show the block to merge by hand.
+
+Then prove it, in the target: `scripts/e2e.sh --smoke` and `scripts/e2e.sh --full` must both
+exit 0. If a repo command fails, stop and tell the user; do not edit the repo's commands or
+tests to make it pass. The runs write `artifacts/` (untracked); adopt does not touch the
+target's `.gitignore`, so tell the user to add `artifacts/` to it.
+
+**A.5 Optional UI line.** For a UI project, offer to add this sentence under the target's
+existing UI/style section of `AGENTS.md`, or under a new `## UI` section: "Avoid unnecessary
+secondary labels and descriptions. Let the layout do the explaining." Skip it if the user
+declines.
+
+**A.6 Verify and report.** Verify the roles from A.1.8 (a default is valid only after a real
+call succeeds):
+
+```bash
+scripts/agent-dispatch.sh --probe
+for role in ORCHESTRATOR IMPLEMENTER REVIEWER; do
+  printf 'Reply with exactly: DISPATCH-OK\n' | scripts/agent-dispatch.sh "$role" - --effort high
+done
+printf 'Reply with exactly: DISPATCH-OK\n' | scripts/agent-dispatch.sh IMPLEMENTER - --effort medium
+```
+
+A role that fails stays failed (`docs/agents/runtime.md` § Reviewer unavailable); say so. Then
+check that adopt changed nothing it must not:
+
+```bash
+cd "$TARGET"
+sha256sum -c --quiet "$ADOPT_TMP/manifest.before" 2>&1 | grep -v '^AGENTS.md: FAILED'   # only "WARNING: 1 computed checksum did NOT match" (AGENTS.md) may appear
+git remote -v    | diff - "$ADOPT_TMP/remotes.before"                                   # no output
+git branch -a    | diff - "$ADOPT_TMP/branches.before"                                   # no output
+```
+
+Report to the user, in this order: every file in `conflicts.txt` (the template's version is
+in `$TEMPLATE`; merge by hand, nothing was overwritten) — a conflicting
+`.github/workflows/ci.yml` also means the repo's CI does not yet run `scripts/e2e.sh --smoke`
+behind a single required `ci-ok` check (`docs/CI.md`); the files copied; the template version
+recorded; the gaps (no smoke or full scenario, no dispatch E2E, missing `artifacts/` ignore);
+that `core.hooksPath` was not set (the user runs `git config core.hooksPath .githooks` per
+worktree if the repo uses no hooks of its own); that branch resolution
+(`docs/GIT_WORKFLOW.md` § Resolving the base branch) fails closed until the repo has the
+integration branch it names, which the owner cuts deliberately; and that the changes are
+**uncommitted** in the work tree for the user to commit through the repo's own flow. Do not
+commit, push, or delete anything. Then stop: do not continue with §§0–6.

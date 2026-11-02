@@ -159,6 +159,31 @@ Format: date — what changed and why — which project surfaced it (if any).
   - **Downstream migration:** copy the two skill edits and the § Publishing ticket sets
     section; no config change.
 
+- **Adopt mode for existing repos and a template version stamp (WHI-2202).** `SETUP.md` opens
+  with a mode selection: `bootstrap` (the unchanged §§0–6) or `adopt`, which runs only the new
+  `§ A` and stops. Adopt copies the process layer (`.claude/skills/`, `docs/agents/`,
+  `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md`, `docs/CI.md`, `docs/TRAPS.md`,
+  `docs/DEFERRED_ISSUES.md`, `config/agent-roles.conf`, `scripts/`, `.githooks/`, `.github/`,
+  `tests/test_agent_dispatch.py`, `TEMPLATE_VERSION`) without overwriting anything: an existing
+  file that differs is listed for manual merge, `AGENTS.md` gets the missing sections merged in
+  and the line `Template version: 0.3.0`. It never touches business code, remotes, branches,
+  stack files or `.gitignore`, never sets `core.hooksPath`, and leaves its changes uncommitted.
+  The repo's own lint/type/smoke/full commands are mapped into `AGENTS.md` and into the one
+  marked block of `scripts/e2e.sh` (`# >>> E2E SUITES` … `# <<< E2E SUITES <<<`), with
+  `tests/test_agent_dispatch.py` as the process-only dispatch E2E; the template's `main.py`
+  smoke test is never installed (an empty smoke slot is reported as a gap). New
+  `TEMPLATE_VERSION` file (`0.3.0`); `scripts/e2e.sh` now builds the manifest with `python3` and
+  its `{{PROJECT_NAME}}` placeholder check is split (`[{][{]PROJECT_NAME`) so SETUP's marker
+  substitution no longer rewrites it. Optional UI line for UI projects: "Avoid unnecessary
+  secondary labels and descriptions. Let the layout do the explaining."
+  - **Downstream migration:** a repo that copied the workflow from another downstream repo
+    runs `SETUP.md` § A (adopt mode) from this template, merges the files it lists as
+    conflicts by hand, and adds `artifacts/` to its `.gitignore`. A repo already on
+    this template: add `TEMPLATE_VERSION` and the line `Template version: <version>` to the end
+    of the `Template feedback loop` section of `AGENTS.md`, and move the suite commands in
+    `scripts/e2e.sh` into the `E2E SUITES` block (change its placeholder check to
+    `[{][{]PROJECT_NAME` if it still carries the literal marker).
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0
