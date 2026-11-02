@@ -123,7 +123,7 @@ pr_verdict() { # <branch> <tip>
     if [ "$any" -eq 0 ]; then PR_VERDICT=none; PR_NOTE="no PR for this branch"
     elif [ -n "$open" ]; then PR_VERDICT=open; PR_NOTE="PR #$open is open"
     elif [ -n "$merged" ]; then PR_VERDICT=merged; PR_NOTE="PR #$merged merged"
-    else PR_VERDICT=closed; PR_NOTE="PR #$last closed or merged without the local commits"
+    else PR_VERDICT=closed; PR_NOTE="PR #$last closed, or merged without all local commits"
     fi
 }
 
