@@ -1,0 +1,3 @@
+interface:
+  display_name: "Slide"
+  short_description: "Build a 1920x1080 single-file HTML deck with Excalidraw diagrams, bilingual toggle and PDF export"

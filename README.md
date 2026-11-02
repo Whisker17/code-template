@@ -50,7 +50,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 |-------|----------|
 | **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively) |
 | **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; ships unconfigured, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
-| **Skills** (9) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html + `skills-lock.json` |
+| **Skills** (10) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html, slide + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
 | **Git workflow** | See below |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
