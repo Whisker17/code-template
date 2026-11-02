@@ -12,13 +12,16 @@ per AGENTS.md § Testing / the issue's `## Failure modes`):
 * a merged PR hides local commits that never reached it;
 * a commit lands while `gh` is being queried and the branch is deleted at the older tip;
 * a PR from a fork (or without identity fields) that shares the branch name counts as this
-  branch's PR.
+  branch's PR;
+* the preservation verdict goes stale: while `gh` is queried (or the archive tag is being pushed)
+  the branch gets checked out in the primary clone, or the worktree gets a new uncommitted file,
+  and the item is deleted, or committed and archived without `--select`, anyway.
 
 Real `git` is used throughout, including a bare `origin` whose `pre-receive` hook can reject tags.
 `gh` is replaced by a fake on PATH (the script itself always calls plain `gh`): it answers
 `gh pr list --head <branch> ...` from per-branch files (tab-separated number, state, head sha,
-isCrossRepository, headRefName), commits into $FAKE_GH_COMMIT_IN first when set, or fails on
-demand. A fake is used instead
+isCrossRepository, headRefName), commits into $FAKE_GH_COMMIT_IN and/or runs the shell command
+$FAKE_GH_RUN first when set, or fails on demand. A fake is used instead
 of a bad GH_HOST because the scratch remote is a local path, so real gh cannot resolve a repo at
 all; one extra test still runs the real `gh` (if installed) against an unresolvable host.
 Every scenario runs under the PATH bash and, when different, /bin/bash (3.2 on macOS).
@@ -40,11 +43,20 @@ FAKE_GH = """#!/bin/sh
 [ -z "$FAKE_GH_FAIL" ] || { echo "error connecting to api.github.com" >&2; exit 1; }
 [ "$1 $2" = "pr list" ] || exit 64
 [ -z "$FAKE_GH_COMMIT_IN" ] || git -C "$FAKE_GH_COMMIT_IN" commit -q --allow-empty -m "late commit"
+[ -z "$FAKE_GH_RUN" ] || sh -c "$FAKE_GH_RUN"
 head=
 while [ $# -gt 0 ]; do [ "$1" = --head ] && head=$2; shift; done
 f="$FAKE_GH_DIR/$(printf %s "$head" | tr / _)"
 [ -f "$f" ] && cat "$f"
 exit 0
+"""
+
+# pre-receive hook that runs $1 (a shell command) whenever a tag is pushed, outside git's hook env
+RUN_ON_TAG_PUSH = """#!/bin/sh
+while read -r old new ref; do
+    case "$ref" in refs/tags/*) env -u GIT_DIR -u GIT_OBJECT_DIRECTORY -u GIT_QUARANTINE_PATH \\
+        -u GIT_ALTERNATE_OBJECT_DIRECTORIES sh -c '%s' ;; esac
+done
 """
 
 REJECT_TAGS = """#!/bin/sh
@@ -479,3 +491,78 @@ def test_a_pr_that_is_not_this_repos_same_named_branch_never_counts(
     assert scratch.rows(result)["WHI-8"].cls == "active-or-unknown"
     assert result.returncode == 0, result.stdout + result.stderr
     assert wt.is_dir() and scratch.state() == before
+
+
+def head_resolves(repo: Path) -> bool:
+    return (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", "-q", "HEAD"], cwd=repo, env=GIT_ENV
+        ).returncode
+        == 0
+    )
+
+
+def test_branch_checked_out_in_primary_during_the_gh_query_is_kept(scratch: Scratch) -> None:
+    wt = scratch.worktree(scratch.layout / "WHI-1", "feat/finished", "MERGED")
+    git(scratch.primary, "worktree", "remove", str(wt))  # now a plain branch with a merged PR
+
+    result = scratch.run(
+        "--apply", FAKE_GH_RUN=f"git -C {scratch.primary} checkout -q feat/finished"
+    )
+
+    row = scratch.rows(result)["branch:feat/finished"]
+    assert row.cls == "active-or-unknown" and "checked out" in row.reason
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert git(scratch.primary, "symbolic-ref", "HEAD") == "refs/heads/feat/finished"
+    assert head_resolves(scratch.primary)
+    assert git(scratch.primary, "branch", "--list", "feat/finished")
+
+
+def test_untracked_file_appearing_during_the_gh_query_is_never_archived(scratch: Scratch) -> None:
+    wt = scratch.worktree(scratch.layout / "WHI-2", "feat/closed", "CLOSED")
+    pushed = git(wt, "rev-parse", "HEAD")
+
+    result = scratch.run("--apply", FAKE_GH_RUN=f"echo active > {wt}/late.txt")
+
+    row = scratch.rows(result)["WHI-2"]
+    assert row.cls == "active-or-unknown" and "uncommitted" in row.reason
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (wt / "late.txt").read_text() == "active\n"
+    assert git(wt, "rev-parse", "HEAD") == pushed and git(wt, "tag", "-l", "archive/*") == ""
+    assert scratch.remote_tags() == []
+
+
+def test_branch_checked_out_during_the_archive_push_is_kept(scratch: Scratch) -> None:
+    git(scratch.primary, "branch", "feat/finished", "main")
+    git(scratch.primary, "checkout", "-q", "-b", "scratch-work")
+    (scratch.primary / "x.txt").write_text("x\n")
+    git(scratch.primary, "add", "-A")
+    git(scratch.primary, "commit", "-qm", "x")
+    git(scratch.primary, "branch", "-f", "feat/finished", "scratch-work")
+    git(scratch.primary, "checkout", "-q", "main")
+    scratch.pr("feat/finished", "CLOSED", git(scratch.primary, "rev-parse", "feat/finished"))
+    hook = scratch.origin / "hooks" / "pre-receive"
+    hook.write_text(RUN_ON_TAG_PUSH % f"git -C {scratch.primary} checkout -q feat/finished")
+    hook.chmod(0o755)
+
+    result = scratch.run("--apply")
+
+    assert result.returncode == 1, result.stdout + result.stderr  # reported, not silently dropped
+    assert "checked out" in result.stderr
+    assert git(scratch.primary, "symbolic-ref", "HEAD") == "refs/heads/feat/finished"
+    assert head_resolves(scratch.primary)
+
+
+def test_file_appearing_during_the_archive_push_keeps_the_worktree(scratch: Scratch) -> None:
+    wt = scratch.worktree(scratch.layout / "WHI-2", "feat/closed", "CLOSED")
+    hook = scratch.origin / "hooks" / "pre-receive"
+    hook.write_text(RUN_ON_TAG_PUSH % f"echo active > {wt}/late.txt")
+    hook.chmod(0o755)
+
+    result = scratch.run("--apply")
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "uncommitted changes appeared" in result.stderr
+    assert (wt / "late.txt").read_text() == "active\n"
+    assert git(wt, "status", "--porcelain") == "?? late.txt"  # never committed
+    assert "feat/closed" in git(scratch.primary, "branch", "--format=%(refname:short)").split()
