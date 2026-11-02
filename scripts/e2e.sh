@@ -77,7 +77,7 @@ for cmd in "${SUITES[@]}"; do
     n=$((n + 1)); log="$(printf '%02d' "$n").log"
     echo "e2e: [$n/${#SUITES[@]}] $cmd"
     rc=0
-    bash -c "$cmd" > "$OUT/$log" 2>&1 || rc=$?
+    bash -o pipefail -c "$cmd" > "$OUT/$log" 2>&1 || rc=$?
     tail -n 5 "$OUT/$log"
     printf '%s\t%s\t%s\n' "$cmd" "$rc" "$log" >> "$OUT/commands.tsv"
     [ "$rc" -le "$WORST" ] || WORST="$rc"

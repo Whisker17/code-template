@@ -337,6 +337,26 @@ exit 0. If a repo command fails, stop and tell the user; do not edit the repo's 
 tests to make it pass. The runs write `artifacts/` (untracked); adopt does not touch the
 target's `.gitignore`, so tell the user to add `artifacts/` to it.
 
+**A.4b Adapt a newly copied CI workflow.** Only if `.github/workflows/ci.yml` is in
+`copied.txt` (a conflicting one stays untouched and is reported in A.6). The copy is the
+template's Python workflow; edit it, in the target, so it runs the target's stack:
+
+- `lint` job: replace the `ruff + mypy` step's `run` (and rename the step) with the lint and
+  type commands from A.1.7, one per line (a `none` slot is dropped; with both `none`, delete the `lint` job and
+  remove `lint` from `ci-ok`'s `needs`, its `LINT` env and its result loop);
+- toolchain: in every job that runs a repo command (`lint`, `smoke-e2e`, `manual-e2e`) add the
+  setup step the stack needs (for example `actions/setup-node`, `actions/setup-go`) and point
+  its cache at the stack's lockfile instead of `cache-dependency-glob: pyproject.toml`. Keep
+  `astral-sh/setup-uv` only in jobs that run the dispatch E2E (`smoke-e2e`, `manual-e2e`);
+  drop it from `lint` unless a lint command uses `uv`;
+- keep `changes`, `ci-ok`, the triggers and the artifact upload as they are.
+
+Then prove it: extract each edited `run` block of `lint` and `smoke-e2e` and run it in the
+target with `bash -e -o pipefail`; every one must exit 0 (a repo command that fails: stop and
+tell the user, as in A.4). The workflow file is a mandatory human path in the target: say in
+A.6 that this `ci.yml` goes through the owner like any workflow edit, and that the `ci-ok`
+check must be required once it has run on a PR.
+
 **A.5 Optional UI line.** For a UI project, offer to add this sentence under the target's
 existing UI/style section of `AGENTS.md`, or under a new `## UI` section: "Avoid unnecessary
 secondary labels and descriptions. Let the layout do the explaining." Skip it if the user
@@ -366,7 +386,8 @@ git branch -a    | diff - "$ADOPT_TMP/branches.before"                          
 Report to the user, in this order: every file in `conflicts.txt` (the template's version is
 in `$TEMPLATE`; merge by hand, nothing was overwritten) — a conflicting
 `.github/workflows/ci.yml` also means the repo's CI does not yet run `scripts/e2e.sh --smoke`
-behind a single required `ci-ok` check (`docs/CI.md`); the files copied; the template version
+behind a single required `ci-ok` check (`docs/CI.md`); the files copied (a copied `ci.yml` was adapted in A.4b; it goes through the owner like any
+workflow edit); the template version
 recorded; the gaps (no smoke or full scenario, no dispatch E2E, missing `artifacts/` ignore);
 that `core.hooksPath` was not set (the user runs `git config core.hooksPath .githooks` per
 worktree if the repo uses no hooks of its own); that branch resolution
