@@ -77,7 +77,7 @@ jobs:
         run: |
           # An unfilled template has an invalid project name, so run without the project
           # (same check as scripts/e2e.sh). The pattern is split so SETUP does not rewrite it.
-          if grep -q '\{\{PROJECT_NAME' pyproject.toml; then
+          if grep -qE '[{][{]PROJECT_NAME' pyproject.toml; then
             uv run --no-project --with ruff ruff check .
             uv run --no-project --with mypy mypy
           else
