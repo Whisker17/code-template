@@ -41,6 +41,7 @@ jobs:
         run: |
           # Any error here fails the job; ci-ok then fails too. Never default to "docs only".
           set -euo pipefail
+          exit 1
           case "$EVENT" in
             pull_request) base="$PR_BASE" ;;
             push) base="$PUSH_BEFORE" ;;
