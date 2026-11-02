@@ -112,6 +112,7 @@ const ARTICLE = 'article';
 
 // Research fork: an {ID} that the claim ledger does not have, reported in the draft block that cited it (where: id → block). Inside the
 // block the line is the first one that names the ID outside `code`; the block's first line when none does.
+// shortcut: inside one block, an example in raw HTML, a link destination or indented code before the real citation can take the line; track token positions if that misleads.
 export function missingIds(missing, where) {
   const [id, ...more] = missing;
   const block = where.get(id);
