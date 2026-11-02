@@ -376,8 +376,23 @@ It never covers: a mandatory human path (`.github/workflows/**`, the project's
 release/promotion scripts) or a high-risk path — a promotion step whose
 `git diff --name-only origin/<target>...<source>` lists one stops for a human, and the
 agent neither edits nor runs those scripts; deploy; `hotfix/*` → `main`; any promotion merge
-whose result differs from H (`git diff --quiet <H> <merge-result>` fails), which needs
+whose result differs from H (`git diff --quiet <H> <result>` fails), which needs
 verification and review first.
+
+**Tree gate.** The promotion ships exactly the tree of H, so every promotion merge is
+checked twice, with the same command, and a failure at either point stops the run (no
+tag, no later step) for renewed verification and review of the difference:
+
+- **Before** the merge, on the proposed result:
+  `git diff --quiet <H> "$(git merge-tree --write-tree <target> <source>)"`. This runs for
+  the merge into `dev` and for the cut's PR into `main`. The cut's PR is merged only after
+  it passes.
+- **After** the merge, on the actual result: `git diff --quiet <H> <target>` on the
+  fetched `dev`, and on the fetched `origin/main` before the tag is created.
+
+The project version bump is part of H: it is committed on the integration branch before H
+is frozen. Nothing is committed on the temporary cut or after H, so a commit there (a
+version bump included) always fails the gate.
 
 `--through tag` is not a waiver of the table: it is the standing authorization defined here,
 invoked per Release. Before the first covered step the orchestrator records it in the
@@ -629,12 +644,23 @@ git fetch origin
 git checkout dev && git pull --ff-only origin dev
 git checkout -b release/v0.1.0
 
-# Bump the project version to match the tag you are about to create
-#   (e.g. pyproject.toml `version`), commit it on the release branch
+# The cut gets no commit of its own. The project version already matches the tag
+# (see below); commit nothing here.
 # release/v* is hook-protected; a new cut has no PR yet.
 ALLOW_DIRECT_PUSH=1 git push -u origin HEAD
 gh pr create --base main --title "release: v0.1.0" --body "..."
 ```
+
+**The cut ships exactly what was reviewed.** Bump the project version to match the tag
+(e.g. `pyproject.toml` `version`) **before** the release E2E and review freeze the
+candidate: on the version-integration branch for a long-lived version, on `dev` by PR for
+a release cut straight from `dev`. Never commit on the cut: a commit there changes the
+tree the review approved. If the version is missing, stop, fix it through its lane, and
+re-verify and re-review. Before approving or merging the PR into `main`, and again
+before tagging, the tree must equal the reviewed candidate H (the SHA that passed release
+E2E and review): `git diff --quiet <H> "$(git merge-tree --write-tree origin/main
+origin/release/v0.1.0)"` before the merge, `git diff --quiet <H> origin/main` after it.
+A difference stops the promotion for renewed verification and review.
 
 **Open the PR immediately after the push.** Until it exists, the fan-out query has
 no way to tell this temporary cut from a live integration branch — it discriminates
