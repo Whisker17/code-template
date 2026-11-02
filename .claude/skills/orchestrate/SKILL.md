@@ -76,9 +76,10 @@ git log --oneline <branch-point>..origin/<base> # what landed on the base meanwh
   missing artifact or doc section counts as an unmet criterion.
 - The required project checks and the relevant issue checks
   (`docs/GIT_WORKFLOW.md` § 2 Implement) are green, and the evidence belongs to the
-  **current** head SHA. For ordinary version and bootstrap issues, do not ask for the
-  full suite per issue; it runs at the candidate. Governance and hotfix PRs keep their own
-  full-suite gate. If the base moved in a way that conflicts textually or semantically, the
+  **current** head SHA. For ordinary version and bootstrap issues, read the **smoke E2E**
+  output (and artifact path) in the PR body; do not ask for full E2E per issue, since the
+  **release E2E** runs at the candidate. Governance and hotfix PRs keep their own
+  **full E2E** gate. If the base moved in a way that conflicts textually or semantically, the
   implementer updates the branch and reruns the affected checks.
 - MERGEABLE/CLEAN proves no textual conflict, nothing more.
 
@@ -94,9 +95,11 @@ amendment that cites committed evidence. Put a trap in the next prompt directly,
 
 ## 3. Release review
 
-Starts when every planned issue is integrated, external dependencies are met, and the
-project's **full** acceptance (including any existing full E2E) passes on the integration
-branch. Freeze that commit as candidate **H**. No new feature merges into the candidate
+Starts when every planned issue is integrated, external dependencies are met, and
+`scripts/e2e.sh --release <X.Y.Z>` has passed on the integration branch. Freeze that
+commit as candidate **H**. Record the manifest path
+(`artifacts/e2e/release/<X.Y.Z>/<H>/manifest.json`) and a one-line summary of each
+command's exit code in the orchestration document. No new feature merges into the candidate
 branch during review.
 
 Dispatch a **fresh** `REVIEWER` with effort `high` via `/code-review` release mode. Give it

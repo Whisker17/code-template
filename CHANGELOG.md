@@ -8,6 +8,35 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## Unreleased — v0.3.0
+
+- **E2E replaces after-the-fact unit tests (WHI-2195).** `AGENTS.md` opens with
+  `## Testing (read first)` (never write unit tests after code; prefer E2E and end each run
+  with a verifiable, repeatable artifact; isolation tests only after listing the failure
+  modes). `scripts/e2e.sh` runs `--smoke` (marker `smoke` in `tests/e2e/`, no model CLI or
+  credentials), `--full` (all of `tests/e2e/` plus `tests/test_agent_dispatch.py`) and
+  `--release <X.Y.Z>` (same suites, refuses on a dirty tracked tree), and writes
+  `artifacts/e2e/<mode>/<version|local>/<full-sha>/manifest.json` plus raw logs
+  (`artifacts/` is gitignored). The four tiers are named the same in `AGENTS.md`,
+  `docs/GIT_WORKFLOW.md` § 2 and § 4, `/implement`, `/orchestrate`, the implementer prompt,
+  the issue template and the PR template: **smoke E2E**, **full E2E**, **release E2E**,
+  **long-run acceptance**. "Full suite" and the "leave a runnable check per branching
+  change" rule are gone. `docs/agents/issue-template.md` adds the required
+  `Verification cost: minutes | hours` and an optional `## Failure modes`; acceptance
+  criteria become E2E scenarios. `tests/test_smoke.py` moved to `tests/e2e/test_template_smoke.py`.
+  - **Downstream migration:** copy `scripts/e2e.sh` and `tests/e2e/`, map the project's own
+    E2E commands into `SUITES`/`INPUTS` in the script, add the `smoke` marker to
+    `pyproject.toml` and `artifacts/` to `.gitignore`, and port the doc and template edits.
+    Delete low-signal unit tests during the repo's next Release (owner decision D4), with
+    Ray Fernando's cleanup prompt (adopted from Ansh):
+    > This repo is full of low-signal unit tests. Delete every one that wouldn't catch a
+    > real bug our E2E tests miss. Fan the work out across parallel subagents.
+    >
+    > Then add these rules to AGENTS.md so future agents stop writing them. [the three
+    > rules of `AGENTS.md` § Testing]
+
+---
+
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0
 
 The research fork of `.claude/skills/answer-me-with-html/` moves from upstream v0.2.2 to

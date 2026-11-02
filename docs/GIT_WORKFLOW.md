@@ -44,7 +44,7 @@ human approval** applies to both.
 | Cut from | `dev`. A multi-commit hotfix *batch* may also cut from `main`. That is not the `hotfix/*` lane — a single `hotfix/*` PR still goes straight to `main` per [§ Hotfix](#hotfix). | `dev` |
 | Receives feature PRs? | **No** | **Yes** — this is the version's integration branch. It may hold work that has not passed release review yet, so it is **not releasable** until it does |
 | Lifetime | Until the `main` PR merges, then deleted | The whole version's development |
-| When done | PR → `main` (human gate), delete | Once the **current** SHA passed full acceptance and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
+| When done | PR → `main` (human gate), delete | Once the **current** SHA passed release E2E and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
 
 Cutting a version-integration branch is a **deliberate act** (it comes with the
 merge-back decision above). An agent must not create `release/v*` as a side
@@ -210,18 +210,29 @@ and never a guessed `dev`.
 
 - **One worktree / one branch / one issue / one PR** (never bundle unrelated issues)
 - Small commits (`feat:` `fix:` `chore:` `docs:` `refactor:` `test:`)
-- Verification has three tiers. Every result must come from the final HEAD; an
-  earlier HEAD's result does not carry over:
+- Testing is E2E-first (`AGENTS.md` § Testing): write or extend E2E scenarios for the
+  acceptance criteria, never unit tests after the code. A system is tested in isolation
+  only when the issue lists its `## Failure modes` first. Every E2E run is
+  `scripts/e2e.sh`, which writes a manifest artifact
+  (`artifacts/e2e/<mode>/<version|local>/<full-sha>/`).
+- Verification: two always-on checks plus four E2E tiers, named the same everywhere. Every
+  result must come from the final HEAD; an earlier HEAD's result does not carry over:
   1. **Required project checks.** CI required checks, plus any check the project declares
-     for every merge in `AGENTS.md` § Build, test, run. These always pass before any
-     merge. Nothing in this workflow overrides or skips them.
-  2. **Relevant issue checks.** The affected tests, lint/type checks and targeted E2E that
-     can catch a failure in what changed. Run them for every PR.
-  3. **Full suite.** The project's complete test suite and lint, including any full E2E,
-     plus every acceptance criterion in scope. Run it at each release candidate and after
-     each fix batch (`/orchestrate` § Release review). PRs that no release acceptance will
-     cover (governance, standalone `/implement`, hotfix) also run it before merge.
-     Ordinary version issues under `/orchestrate` do not repeat it per issue.
+     for every merge in `AGENTS.md` § Build, test, run (lint/type). These always pass
+     before any merge. Nothing in this workflow overrides or skips them.
+  2. **Relevant issue checks.** The E2E scenarios for the issue's acceptance criteria and
+     the lint/type checks that can catch a failure in what changed. Run them for every PR.
+  3. **Smoke E2E** (`scripts/e2e.sh --smoke`). Every PR, in CI or run locally. Its output
+     goes in the PR.
+  4. **Full E2E** (`scripts/e2e.sh --full`). The final head of governance, standalone
+     `/implement` and hotfix PRs, which no release acceptance covers. It includes the
+     smoke scenarios. Ordinary version issues under `/orchestrate` do not run it per issue.
+  5. **Release E2E** (`scripts/e2e.sh --release <X.Y.Z>`). Candidate H and after each fix
+     batch (`/orchestrate` § Release review). Its artifact is the review input and is
+     attached to the GitHub Release at promotion.
+  6. **Long-run acceptance.** Only issues with `Verification cost: hours`. At most once per
+     Release, scheduled by the owner; agents never re-run it during implementation or
+     release mechanics.
 - Never commit secrets, `.env`, large logs, or local data files
 
 ### 3. Open PR → the resolved base, enter review
@@ -284,13 +295,13 @@ PR fits no row, or fits a row whose conditions you cannot show, it stays at `In 
 
 | Work | Before merge | Agent may merge? |
 | --- | --- | --- |
-| Ordinary version issue → an existing version-integration `release/v*`, under `/orchestrate` | The issue's acceptance, the required project checks and the relevant issue checks pass on the final HEAD; PR MERGEABLE/CLEAN; the orchestrator has verified the evidence | **Yes** (the orchestrator). Independent review is deferred to the release review of the whole version |
+| Ordinary version issue → an existing version-integration `release/v*`, under `/orchestrate` | The issue's acceptance, the required project checks, the relevant issue checks and smoke E2E pass on the final HEAD; PR MERGEABLE/CLEAN; the orchestrator has verified the evidence | **Yes** (the orchestrator). Independent review is deferred to the release review of the whole version |
 | Bootstrap issue → `dev`, before the first production tag, under `/orchestrate` | Same as above; `dev` is explicitly the first version's integration branch | **Yes**. The first release still needs a full release review |
-| Repo-wide governance → `dev` | Required project checks, relevant checks and the full suite, plus **one independent PR review** (`/code-review`, `REVIEWER`) that passed on the final commit | **Yes**, then fan out |
-| Standalone `/implement`, no release orchestration taking over | Required project checks, relevant checks and the full suite, plus **one independent PR review** that passed on the final commit | **Yes**, unless a human-gated row below applies. A promised future review does not count |
+| Repo-wide governance → `dev` | Required project checks, relevant checks and full E2E, plus **one independent PR review** (`/code-review`, `REVIEWER`) that passed on the final commit | **Yes**, then fan out |
+| Standalone `/implement`, no release orchestration taking over | Required project checks, relevant checks and full E2E, plus **one independent PR review** that passed on the final commit | **Yes**, unless a human-gated row below applies. A promised future review does not count |
 | Anything touching **{{HIGH_RISK_PATHS}}** | The checks of its lane, plus a documented verification approach | **No** — human |
-| `hotfix/*` → `main` | Required project checks, relevant checks, the full suite and one independent review, then a human | **No** — every production entry is human-approved |
-| Finished version-integration `release/v*` → `dev` | The full suite (complete acceptance) and a passed release review on the **current** SHA (`/orchestrate` § Release review), then a human | **No** |
+| `hotfix/*` → `main` | Required project checks, relevant checks, full E2E and one independent review, then a human | **No** — every production entry is human-approved |
+| Finished version-integration `release/v*` → `dev` | Release E2E (complete acceptance) and a passed release review on the **current** SHA (`/orchestrate` § Release review), then a human | **No** |
 | Temporary `release/*` cut → `main` | Existing release flow ([§ Releasing to `main`](#releasing-to-main)) | **No** — human |
 
 - "Passed" means no unresolved blocking finding and acceptance valid on the reviewed SHA
@@ -555,7 +566,7 @@ Then:
    `v0.1.5.1` points at a tree that calls itself `0.1.5`
 3. `gh pr create --base main`, title/body carry `{{ISSUE_PREFIX}}-NNN`; tracker →
    `In Review`
-4. Required project checks, relevant checks, the full suite and one independent review
+4. Required project checks, relevant checks, full E2E and one independent review
    (`/code-review`) pass, then **a human
    approves** — every hotfix is a production entry
    ([§ Merge authorization](#4-merge-authorization)). **Merge with a merge commit, not

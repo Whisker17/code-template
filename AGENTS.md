@@ -4,6 +4,19 @@ The single instruction entry for coding agents (Claude Code, Codex, pi, …) in 
 It holds the project facts and the load-bearing rules; details live in the linked docs —
 read them when the task needs them.
 
+## Testing (read first)
+
+- NEVER write unit tests after you write code.
+- Highly prefer E2E tests as the sole testing mechanism. Use them to verify complex
+  features work. At the end of E2E tests, produce a verifiable and repeatable artifact.
+- If you must test a system in isolation, FIRST write all the ways it could fail,
+  THEN write the code.
+
+`scripts/e2e.sh` is the one entry point; it writes the artifact
+(`artifacts/e2e/<mode>/<version|local>/<full-sha>/manifest.json` plus raw logs). The four
+verification tiers (`docs/GIT_WORKFLOW.md` § 2 Implement) are **smoke E2E**, **full E2E**,
+**release E2E** and **long-run acceptance**.
+
 ## What this is
 
 {{PROJECT_DESCRIPTION}}
@@ -26,8 +39,10 @@ produce it via `/grill-me` + `/to-spec` before implementing anything.
 
 ```bash
 uv sync                                  # install deps (creates .venv)
-uv run pytest                            # unit tests
-uv run pytest tests/test_smoke.py        # single test file
+scripts/e2e.sh --smoke                   # smoke E2E: every PR; needs no model CLI or credentials
+scripts/e2e.sh --full                    # full E2E: all of tests/e2e/ + tests/test_agent_dispatch.py
+scripts/e2e.sh --release 0.3.0           # release E2E: same suites; refuses on a dirty tracked tree
+uv run pytest tests/e2e/test_template_smoke.py   # single E2E file
 uv run ruff check .                      # lint
 uv run mypy                              # type check
 uv run python main.py                    # entrypoint
@@ -70,9 +85,11 @@ issue fits not exactly one row, **stop and surface it**.
   no Release.
 - Right after creating the worktree: `git merge-base HEAD origin/<base>` must equal
   `git rev-parse origin/<base>`; then `git config core.hooksPath .githooks` (per worktree).
-- Checks come in three tiers (`docs/GIT_WORKFLOW.md` § 2 Implement): required project
-  checks always, relevant issue checks for every PR, and the full suite at release
-  candidates and for PRs no release acceptance covers.
+- Checks (`docs/GIT_WORKFLOW.md` § 2 Implement): required project checks and relevant
+  issue checks always, plus the E2E tier of the lane — **smoke E2E** on every PR, **full
+  E2E** on the final head of governance, standalone `/implement` and hotfix PRs, **release
+  E2E** at each release candidate and after each fix batch, **long-run acceptance** only
+  for `Verification cost: hours` issues, at most once per Release, scheduled by the owner.
 - The PR body states the resolved base and the signals it came from, the evidence
   (commit SHA, commands, results) and the role/model/effort used.
 - Tracker moves with the PR: `In Progress` → `In Review` (PR open) → `Done` (merged and
@@ -82,12 +99,12 @@ issue fits not exactly one row, **stop and surface it**.
 
 | Work | Before merge | Agent may merge? |
 | --- | --- | --- |
-| Ordinary version issue → existing integration branch, under `/orchestrate` | Issue acceptance, required project checks and relevant issue checks on the final HEAD; orchestrator verified the evidence | Yes — review happens at release level |
+| Ordinary version issue → existing integration branch, under `/orchestrate` | Issue acceptance, required project checks, relevant issue checks and smoke E2E on the final HEAD; orchestrator verified the evidence | Yes — review happens at release level |
 | Bootstrap issue → `dev` (no production tag yet), under `/orchestrate` | Same | Yes — first release still gets a full release review |
-| Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and the full suite, plus one independent PR review passed on the final commit | Yes, then fan out |
+| Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and full E2E, plus one independent PR review passed on the final commit | Yes, then fan out |
 | Touches **{{HIGH_RISK_PATHS}}** | Its lane's checks + documented verification | **No** — human |
-| `hotfix/*` → `main` | Required and relevant checks, full suite, independent review | **No** — human |
-| Finished `release/v*` → `dev` | Full suite (complete acceptance) + passed release review on the current SHA | **No** — human |
+| `hotfix/*` → `main` | Required and relevant checks, full E2E, independent review | **No** — human |
+| Finished `release/v*` → `dev` | Release E2E (complete acceptance) + passed release review on the current SHA | **No** — human |
 | `release/*` → `main` | Release flow | **No** — human |
 
 No waiver of the human rows is in force; a waiver takes the shape in

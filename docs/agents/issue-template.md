@@ -22,9 +22,9 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 1. **One issue = one deliverable.** If it needs "and" in the objective, split it.
 2. **Concrete over abstract.** Name the files, functions, config keys, and
    `docs/DESIGN.md` section. Reference `docs/DESIGN.md §2.2`, not "the entry logic".
-3. **Verifiable.** Every issue ends in acceptance criteria that are objectively
-   checkable (a test passes, a log shows the expected decision, a value appears in the
-   data store).
+3. **Verifiable.** Every issue ends in acceptance criteria written as E2E scenarios
+   (Given → When → observable Then) that are objectively checkable (an exit code, a log
+   shows the expected decision, a value appears in the data store, an artifact exists).
 4. **Dependencies explicit.** State what blocks this and what this unblocks, so the
    work can be ordered and parallelized. Also state the files, modules and shared
    contracts it expects to touch (`## Execution`) — two issues with no `blocks` edge can
@@ -114,12 +114,20 @@ Required. Drives scheduling and the implementer's effort (`docs/agents/runtime.m
   Complexity is separate from priority, size and human-review risk: a tiny change can be
   `high`, a large mechanical one need not be.
 - **Reason:** one sentence on what makes it hard (or not).
+- **Verification cost:** exactly one of `minutes` | `hours`. `hours` marks an expensive
+  verification: it is **long-run acceptance** (`docs/GIT_WORKFLOW.md` § 2 Implement), run
+  at most once per Release on the owner's schedule, never re-run by agents.
 - **Expected scope:** the files, modules and shared contracts (schema, public interface,
   generated file) it expects to change.
 
 The designer sets it in `/to-tickets`. The orchestrator may raise it to `high` on
 evidence and records why on the issue; it is never silently lowered. An issue missing this
 section is completed before it is scheduled — no guessing.
+
+### `## Failure modes` _(optional)_
+Required when the issue tests a component in isolation (parsing, money, concurrency, a
+security boundary): list every way it could fail **before** the plan, then write the code.
+Otherwise drop it: after-the-fact unit tests are not allowed (`AGENTS.md` § Testing).
 
 ### `## Implementation`
 The plan of record. Numbered steps, each anchored to a concrete file/module. Include:
@@ -134,9 +142,9 @@ Explicitly list what this issue does **not** cover, to prevent scope creep and t
 where follow-up issues pick up.
 
 ### `## Acceptance criteria`
-A checklist of objectively verifiable conditions. Each item is a fact someone can
-confirm: a passing test, a log line, a stored record, a delivered notification. If you
-can't check it, it's not a criterion — rewrite it.
+A checklist of E2E scenarios: **Given** a starting state, **when** an action runs,
+**then** an observable result (an exit code, a log line, a stored record, a delivered
+notification, an artifact). If you can't check it, it's not a criterion — rewrite it.
 
 ### `## Testing / Verification` _(optional)_
 How to prove the criteria hold: exact commands, fixtures to replay, or manual steps and
@@ -164,11 +172,16 @@ Bare URLs are fine.
 > _Issue ids this unblocks, or `None`._
 
 ## Execution
-> _Keep exactly one Complexity value. Reason: one sentence on the hard part. Expected
-> scope: files, modules and shared contracts this changes._
+> _Keep exactly one Complexity and one Verification cost value. Reason: one sentence on
+> the hard part. Expected scope: files, modules and shared contracts this changes._
 - Complexity: medium | high
 - Reason:
+- Verification cost: minutes | hours
 - Expected scope:
+
+## Failure modes
+> _(optional) Required when testing a component in isolation: every way it could fail,
+> listed before the plan._
 
 ## Implementation
 > _Numbered, file-anchored plan. Signatures, config keys, schema, code blocks._
@@ -180,6 +193,7 @@ Bare URLs are fine.
 > _(optional) What this issue deliberately does not cover._
 
 ## Acceptance criteria
+> _E2E scenarios: Given <state>, when <action>, then <observable result>._
 - [ ]
 - [ ]
 - [ ]

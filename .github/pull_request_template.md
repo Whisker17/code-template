@@ -69,10 +69,13 @@ baseline B, reviewed candidate H and the final review round. -->
 Tiers per `docs/GIT_WORKFLOW.md` § 2 Implement, all on the final HEAD:
 
 - [ ] Required project checks (CI + what `AGENTS.md` marks for every merge) pass
-- [ ] Relevant issue checks (affected tests, lint/type checks, targeted E2E) pass
-- [ ] Full suite (complete tests + lint, incl. any full E2E) — governance, standalone
-      `/implement`, hotfix and release candidates only; N/A for an ordinary issue under
-      `/orchestrate`
+- [ ] Relevant issue checks (E2E scenarios for the acceptance criteria, lint/type checks)
+      pass
+- [ ] Smoke E2E (`scripts/e2e.sh --smoke`) — output and manifest path pasted below
+- [ ] Full E2E (`scripts/e2e.sh --full`) — governance, standalone `/implement` and hotfix
+      only; N/A for an ordinary issue under `/orchestrate`
+- [ ] Release E2E (`scripts/e2e.sh --release <X.Y.Z>`) — release candidates only; N/A
+      otherwise
 - [ ] If this touches {{HIGH_RISK_PATHS}}: verification approach documented (dry-run /
       staging / mocked)
 - [ ] No new tunable parameters outside `docs/DESIGN.md` §2, or the deviation is
