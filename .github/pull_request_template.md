@@ -1,6 +1,7 @@
 ## Summary
 
-<!-- What this PR does and why. Tracker issue: {{ISSUE_PREFIX}}-NNN -->
+<!-- What this PR does and why. Tracker issue: {{ISSUE_PREFIX}}-NNN. Quick-fix: no issue;
+quote the owner's request verbatim instead. -->
 
 ## Base branch
 
@@ -11,6 +12,8 @@ Resolved from `docs/GIT_WORKFLOW.md` § Resolving the base branch.
 - [ ] `dev` (repo-wide governance carve-out only) → merge with **squash**
 - [ ] `dev` (finished version-integration `release/v*` merge-back) → **merge commit**,
       never squash — **human gate**, or the owner's `--through tag` scope
+- [ ] `dev` or `release/vX.Y.Z` named by the owner (quick-fix, no tracker issue) → **squash**;
+      quote the owner's request under Summary. Never `main`
 - [ ] `main` (hotfix, or temporary `release/*` cut) → merge with a **merge commit**,
       never squash — **human gate** (a hotfix always; a cut only without `--through tag`)
 
@@ -26,6 +29,8 @@ Row of `docs/GIT_WORKFLOW.md` § Merge authorization this PR is under:
 - [ ] Ordinary version issue → integration branch, under `/orchestrate` (release review later)
 - [ ] Bootstrap issue → `dev`, under `/orchestrate`
 - [ ] Governance → `dev` / standalone `/implement` — independent review passed on commit: `<sha>`
+- [ ] Quick-fix → owner-named `dev` / `release/v*` — required checks + smoke E2E on the final
+      HEAD, no independent review; the diff lists no high-risk or mandatory human path
 - [ ] Human gate (high-risk path, mandatory human path — `.github/workflows/**` or the project's
       release/promotion scripts, never covered by `--through tag` — hotfix, `release/*` → `main`,
       finished `release/v*` → `dev`)
@@ -87,6 +92,7 @@ undo: data, config, generated files, a tag, a deployed version. -->
 - [ ] chore
 - [ ] docs
 - [ ] hotfix
+- [ ] quick-fix (owner's request quoted in Summary; branch `quick/<short-topic>`)
 - [ ] release
 
 ## Checks

@@ -184,6 +184,17 @@ Format: date — what changed and why — which project surfaced it (if any).
     `scripts/e2e.sh` into the `E2E SUITES` block (change its placeholder check to
     `[{][{]PROJECT_NAME` if it still carries the literal marker).
 
+- **Owner-requested quick-fix lane (WHI-2203).** When the owner says to just change something
+  and names an existing `dev` or `release/v*`, the change runs in a `quick/<short-topic>`
+  worktree off `origin/<named base>` and a `quick-fix` PR that quotes the request. It waives
+  only the tracker issue/Release binding and the pre-merge review; CI, smoke E2E, squash,
+  cleanup and the human gates stay. No named base, `main`, or a missing branch → refusal; a
+  high-risk or mandatory human path is never eligible. Quick-fix PRs merged into a `release/v*`
+  are listed in that Release's notes. Edits: `docs/GIT_WORKFLOW.md` (base table, § Quick-fix
+  lane, § 4, branch naming, merge strategy), `AGENTS.md`, `.github/pull_request_template.md`.
+  - **Downstream migration:** port those three files' quick-fix text; nothing else changes.
+    Not yet in `SETUP.md` or `/orchestrate`, whose wording on mandatory human paths still holds.
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0

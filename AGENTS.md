@@ -74,6 +74,7 @@ issue fits not exactly one row, **stop and surface it**.
 | Hotfix | `hotfix` label | `origin/main` | `main` |
 | Repo-wide governance | touches **only** the carve-out list (`docs/GIT_WORKFLOW.md` § Repo-wide governance carve-out) | `origin/dev` | `dev` |
 | Version-scoped work | everything else | `origin/release/v{version}` | `release/v{version}` |
+| Quick-fix | the owner says "just change it" **and names an existing `dev` or `release/v*`** | `origin/<named base>` | `<named base>` |
 
 - **Version:** the title prefix `[X.Y.Z]`, cross-checked against the tracker Release. If
   they disagree, or one is missing while the other exists, refuse. Never infer it from a
@@ -81,6 +82,11 @@ issue fits not exactly one row, **stop and surface it**.
   (bootstrap — a resolved value, not a default).
 - A missing `origin/release/v{version}` is a refusal. Cutting an integration branch is the
   owner's deliberate act, never a side effect of picking up a ticket.
+- **Quick-fix** (`docs/GIT_WORKFLOW.md` § Quick-fix lane): no named base (or `main`, or a
+  missing branch) → refuse, never a default. Branch `quick/<short-topic>`, PR type
+  `quick-fix` quoting the owner's request. Waives only the tracker issue/Release binding and
+  the pre-merge review; CI, smoke E2E, cleanup and every human gate stay. Never eligible for a
+  high-risk or mandatory human path.
 - A mixed PR (carve-out + other files) is **split**; governance issues carry no version and
   no Release.
 - Right after creating the worktree: `git merge-base HEAD origin/<base>` must equal
@@ -103,8 +109,9 @@ issue fits not exactly one row, **stop and surface it**.
 | Ordinary version issue → existing integration branch, under `/orchestrate` | Issue acceptance, required project checks, relevant issue checks and smoke E2E on the final HEAD; orchestrator verified the evidence | Yes — review happens at release level |
 | Bootstrap issue → `dev` (no production tag yet), under `/orchestrate` | Same | Yes — first release still gets a full release review |
 | Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and full E2E, plus one independent PR review passed on the final commit | Yes, then fan out (unless a human row below applies) |
-| Touches **{{HIGH_RISK_PATHS}}** | Its lane's checks + documented verification | **No** — human |
-| Touches a **mandatory human path**: `.github/workflows/**` or the project's release/promotion scripts (`{{RELEASE_SCRIPT_PATHS}}`), in every lane, whatever `{{HIGH_RISK_PATHS}}` says | Its lane's checks + documented verification | **No** — human; no waiver and no `--through tag` scope covers it |
+| Quick-fix → owner-named `dev` / `release/v*` | Required project checks and smoke E2E on the final HEAD; PR quotes the owner's request; no high-risk or mandatory human path in the diff | Yes — no independent review; never into `main` |
+| Touches **{{HIGH_RISK_PATHS}}** | Its lane's checks + documented verification | **No** — human; a quick-fix is never eligible |
+| Touches a **mandatory human path**: `.github/workflows/**` or the project's release/promotion scripts (`{{RELEASE_SCRIPT_PATHS}}`), in every lane, whatever `{{HIGH_RISK_PATHS}}` says | Its lane's checks + documented verification | **No** — human; no waiver, no `--through tag` scope and no quick-fix request covers it |
 | `hotfix/*` → `main` | Required and relevant checks, full E2E, independent review | **No** — human |
 | Finished `release/v*` → `dev` | Release E2E (complete acceptance) + passed release review on the current SHA | **No** — human, unless `/orchestrate <Release> --through tag` |
 | `release/*` → `main` | Release flow | **No** — human, unless `/orchestrate <Release> --through tag` |
@@ -118,7 +125,7 @@ scripts) or a high-risk path, running those scripts, deploy or a hotfix. The rec
 and the rule are `docs/GIT_WORKFLOW.md` § 4 *Unattended promotion*.
 
 No waiver of the human rows is in force; a waiver takes the shape in
-`docs/GIT_WORKFLOW.md` § Waiving an exception, and none can cover a mandatory human path.
+`docs/GIT_WORKFLOW.md` § Waiving an exception, and none can cover a mandatory human path (a quick-fix request is not a waiver).
 A tracker label alone waives nothing.
 
 ### No worktree left behind
