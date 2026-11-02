@@ -54,7 +54,7 @@ esac
 
 INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh)
 while IFS= read -r f; do INPUTS+=("$f"); done < <(find tests/e2e -type f ! -path '*/__pycache__/*' | sort)
-[ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py)
+[ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py config/agent-roles.conf scripts/e2e.sh scripts/wt-gc.sh)
 # <<< E2E SUITES <<<
 
 SHA="$(git rev-parse HEAD)"
