@@ -135,7 +135,9 @@ amendment that cites committed evidence. Put a trap in the next prompt directly,
 
 Starts when every planned issue is integrated, external dependencies are met, and
 `scripts/e2e.sh --release <X.Y.Z>` has passed on the integration branch. Freeze that
-commit as candidate **H**. Record the manifest path
+commit as candidate **H**. The project version (if it has one) must already be bumped to
+`<X.Y.Z>` on that branch: promotion commits nothing, so a later bump would change the
+reviewed tree. Record the manifest path
 (`artifacts/e2e/release/<X.Y.Z>/<H>/manifest.json`) and a one-line summary of each
 command's exit code in the orchestration document. No new feature merges into the candidate
 branch during review.
@@ -227,14 +229,21 @@ log`:
 1. **Mandatory human paths.** `git diff --name-only origin/<target>...<source>` must list
    no `.github/workflows/**`, no project release/promotion script and no high-risk path.
    If it does, stop: that step is human-gated.
-2. Merge the finished `release/v*` into `dev` (merge commit). Then
-   `git diff --quiet <H> <merge-result>` must pass; a difference is a new resolution or
-   code change that needs verification and review, so stop.
+2. Tree gate (`docs/GIT_WORKFLOW.md` § 4 *Unattended promotion*): `git diff --quiet <H>
+   "$(git merge-tree --write-tree origin/dev origin/release/vX.Y.Z)"` must pass before the merge,
+   and `git diff --quiet <H> <merge-result>` after it. Then merge the finished `release/v*` into
+   `dev` (merge commit). A difference is a new resolution or code change that needs
+   verification and review, so stop.
 3. Cut the temporary `release/vX.Y.Z` from `dev` (deleting the merged integration branch of
-   that name first), open its PR into `main` at once, require `ci-ok` green (or the
-   `CI unavailable` evidence) and MERGEABLE/CLEAN, and merge it with a **merge commit**.
-4. Annotated tag `vX.Y.Z`, pushed; GitHub Release for it with English notes and the release
-   E2E artifact of H attached (`artifacts/e2e/release/<X.Y.Z>/<H>/`).
+   that name first) and commit nothing on it. Open its PR into `main` at once. Require
+   `git diff --quiet <H> origin/release/vX.Y.Z` and
+   `git diff --quiet <H> "$(git merge-tree --write-tree origin/main origin/release/vX.Y.Z)"`
+   to pass, `ci-ok` green (or the `CI unavailable` evidence) and MERGEABLE/CLEAN, then merge
+   it with a **merge commit**. On a difference stop: a version bump or other commit on the
+   cut is exactly that.
+4. After `git fetch origin`, `git diff --quiet <H> origin/main` must pass; if it fails, do not
+   tag, stop. Then the annotated tag `vX.Y.Z`, pushed; GitHub Release for it with English
+   notes and the release E2E artifact of H attached (`artifacts/e2e/release/<X.Y.Z>/<H>/`).
 5. Linear Release: `commitSha` = `git rev-parse 'vX.Y.Z^{commit}'` and the released stage;
    re-read to confirm.
 6. Post-merge cleanup and fan-out (`docs/GIT_WORKFLOW.md` § Post-merge cleanup), then

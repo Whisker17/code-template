@@ -138,13 +138,17 @@ Format: date — what changed and why — which project surfaced it (if any).
   the GitHub Release with the release E2E artifact, the tracker Release `commitSha`/stage and
   post-merge cleanup (`scripts/wt-gc.sh` at release close); never a mandatory human path or
   high-risk path in the promotion diff, a script run, deploy, a hotfix, or a promotion result
-  that differs from H. The scope is recorded in the orchestration document's `Authorization
+  that differs from H. Every promotion merge (`dev`, the cut's PR into `main`) is tree-gated
+  with `git diff --quiet <H> <result>` before it and on the result before the tag; the project
+  version bump belongs in H (committed before the freeze), and nothing is committed on the
+  temporary cut. The scope is recorded in the orchestration document's `Authorization
   scope` before the first covered step. `AGENTS.md`: Releases stay small, notes in English.
   - **Downstream migration:** port the `.claude/skills/orchestrate/SKILL.md`,
     `docs/GIT_WORKFLOW.md` (§ 4 table, *Unattended promotion*, § Waiving an exception,
     § Releasing to `main`, Agent constraints 6–7), `AGENTS.md`, PR template,
     `docs/agents/runtime.md` (Orchestrator session) and `docs/agents/issue-tracker.md`
-    (orchestration document sections) edits; add `RELEASE_SCRIPT_PATHS` (the real paths of every
+    (orchestration document sections) edits; move any version bump from the temporary cut
+    into the candidate (the integration branch, before the freeze); add `RELEASE_SCRIPT_PATHS` (the real paths of every
     release/promotion script, or `none`) next to `HIGH_RISK_PATHS` in `AGENTS.md` and
     `docs/GIT_WORKFLOW.md`, and add its marker to the placeholder grep. Existing open Releases
     keep the default human gates unless the owner invokes `--through tag`.
