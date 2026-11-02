@@ -21,4 +21,23 @@ Include only:
 
 Reference specs, plans, issues, commits and diffs by path or URL; do not copy them. Redact secrets and personal data.
 
+## Next-session prompt
+
+End the handoff with one fenced block the owner can paste, unedited, into a fresh session. The
+fresh session has no memory of this one, so the block must stand alone. It carries every field
+below; write `none` for a field that does not apply, never omit it:
+
+- **Repo:** absolute path of the repo (primary clone) and the worktree path, if any.
+- **Ids:** Release (`X.Y.Z`) and the issue ids in play.
+- **State:** current commit SHAs (branch head, base head) and PR numbers with their status.
+- **Invocation:** the exact skill call to run first (for example `/orchestrate 0.3.0 --through tag`,
+  `/implement <ISSUE>`), or the first command if no skill applies.
+- **Stop conditions:** when to stop and hand back to the owner (human gates, failed required
+  checks, an unapproved decision, an unavailable role).
+- **Evidence:** where the durable facts live (Linear issue and `Release X.Y.Z — orchestration`
+  document, PR bodies, artifact paths), so the session reads them instead of trusting this prompt.
+
+The block names the next action in one sentence the fresh session can act on without asking a
+question. If it cannot, a fact is missing: fetch it first and put it in the block.
+
 If the user passed arguments, treat them as what the next session will focus on and tailor the handoff to that.
