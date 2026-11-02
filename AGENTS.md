@@ -192,6 +192,7 @@ Skills live in `.claude/skills/<name>/SKILL.md`. Runtimes that auto-discover the
 | `/handoff` | Short handoff that points at durable evidence |
 | `/ponytail` | Write the least code that meets the spec |
 | `/answer-me-with-html` | Explain an answer or share research as a one-page HTML explainer (Excalidraw sketches, UML blueprints, prerequisite cards, findings); `research` template for dev onboarding |
+| `/slide` | Build a 1920×1080 single-file HTML deck (bilingual, Excalidraw figures, PDF export) for a talk or briefing |
 
 ### Issue tracker
 

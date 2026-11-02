@@ -203,6 +203,16 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+- Content-output templates (WHI-2205): new `answer-me-with-html/references/research-post.md`
+  (research-post writing contract, linked from `SKILL.md`) and a new project-level `slide`
+  skill (`.claude/skills/slide/`: flow, English style guide, deck starter, Excalidraw
+  `lib.mjs` / `render.mjs`, example figure). Both carry a coverage table for the ten common
+  content rules. Repo copy is for agents, Notion for humans: changing one updates the other
+  with a CHANGELOG bullet.
+  Downstream migration: copy `.claude/skills/slide/` and `references/research-post.md`;
+  add the `/slide` row to the skills table in `AGENTS.md`. To render figures, run
+  `npm i puppeteer-core` in the deck dir and set `CHROME_PATH`.
+
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0
 
 The research fork of `.claude/skills/answer-me-with-html/` moves from upstream v0.2.2 to
