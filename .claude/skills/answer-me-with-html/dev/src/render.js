@@ -110,10 +110,19 @@ function collectGlossary(doc) {
 
 const ARTICLE = 'article';
 
-// Research fork: an {ID} that the claim ledger does not have. The line is the first draft line that names it.
-function missingIds(missing, source) {
+// Research fork: an {ID} that the claim ledger does not have. The line is the first citation of it in prose or in a component that reads
+// Markdown; code blocks, `code` and $math$ are skipped, as the renderer skips them.
+export function missingIds(missing, source) {
   const [id, ...more] = missing;
-  const idx = String(source).split('\n').findIndex((l) => new RegExp(`[{,\\s]${id}[},\\s]`).test(l));
+  const cite = new RegExp(`\\{[^{}]*(?<![\\w-])${id.replace(/[-]/g, '\\-')}(?![\\w-])[^{}]*\\}`);
+  let fence = null;
+  const idx = String(source).split('\n').findIndex((line) => {
+    const open = line.match(/^\s*(`{3,}|~{3,})\s*([\w-]*)/);
+    if (open && !fence) { fence = { mark: open[1], code: !COMPONENTS.has(ALIASES.get(open[2]) ?? open[2]) }; return false; }
+    if (fence && line.trim().startsWith(fence.mark)) { fence = null; return false; }
+    if (fence?.code) return false;
+    return cite.test(line.replace(/`[^`]*`/g, '').replace(/\$[^$]*\$/g, ''));
+  });
   return new RenderError(`evidence {${id}} is not in the claim ledger${more.length ? ` (also: ${more.join(', ')})` : ''}`, {
     line: idx + 1,
     component: 'evidence',

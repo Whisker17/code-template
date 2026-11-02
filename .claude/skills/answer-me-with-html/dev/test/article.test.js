@@ -4,12 +4,15 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Writable } from 'node:stream';
+import { Readable, Writable } from 'node:stream';
 import { renderDoc, RenderError } from '../src/render.js';
 import { ParseError } from '../src/parse.js';
 import { readPage } from '../src/page.js';
 import { main } from '../src/cli.js';
 import { numberSubheads } from '../src/templates/article.js';
+import { loadMath } from '../src/math-load.js';
+
+await loadMath('$x$');
 
 const DRAFT = `---
 template: article
@@ -26,7 +29,9 @@ The real-time path is fast {K1, K2}. A guess {S1}.
 
 ### Block loop
 
-Code stays code: \`{K9}\` and math $x_{K9}$.
+Code stays code: \`{K9}\`, \`\` {K9} \`\`, math $x_{K9}$, a [link](https://example.com/{K9}) and <span title="{K9}">html</span>.
+
+    indented {K9}
 
 \`\`\`finding F1 high
 # Preconf is on
@@ -89,6 +94,9 @@ test('evidence: {ID} becomes a chip of its kind, in text and in component fields
   assert.match(html, /am-ev--speculative" data-ev="S1"/);
   assert.match(html, /Node config <sup class="am-ev am-ev--inferred" data-ev="K2"/);
   assert.match(html, /<code>\{K9\}<\/code>/);
+  assert.match(html, /href="https:\/\/example\.com\/%7BK9%7D"/);
+  assert.match(html, /title="\{K9\}"/);
+  assert.match(html, /<pre><code>indented \{K9\}/);
   assert.doesNotMatch(html, /data-ev="K9"/);
 });
 
@@ -97,9 +105,9 @@ test('evidence: the page carries only the rows it cites', () => {
   assert.deepEqual(Object.keys(data).sort(), ['K1', 'K2', 'S1']);
 });
 
-test('evidence: an ID the ledger lacks is a render error at its line', () => {
-  const draft = DRAFT.replace('A guess {S1}.', 'A guess {S1}.\n\nMissing {Q404}.');
-  assert.throws(() => page(draft), (e) => e instanceof RenderError && /\{Q404\} is not in the claim ledger/.test(e.message) && e.line === draft.split('\n').findIndex((l) => l.includes('{Q404}')) + 1);
+test('evidence: an ID the ledger lacks is a render error at the line that cites it (not at a code example)', () => {
+  const draft = DRAFT.replace('The page answers', 'Write \`{Q404}\` to cite. The page answers').replace('A guess {S1}.', 'A guess {S1}.\n\nMissing {Q404}.');
+  assert.throws(() => page(draft), (e) => e instanceof RenderError && /\{Q404\} is not in the claim ledger/.test(e.message) && e.line === draft.split('\n').findIndex((l) => l.startsWith('Missing {Q404}')) + 1);
 });
 
 test('evidence: without a ledger the braces stay text', () => {
@@ -128,6 +136,31 @@ test('cli: render --evidence reads the ledger file; a bad file is a clear error'
     out = sink(); err = sink();
     assert.notEqual(await main(['render', 'd.md', '-o', 'e.html', '--evidence', 'bad.json'], io(out, err)), 0);
     assert.match(err.text(), /--evidence: row "K1" needs/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('cli: patch keeps the evidence the page carries; a new ID needs --evidence again', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'am-article-'));
+  try {
+    writeFileSync(join(dir, 'd.md'), DRAFT);
+    writeFileSync(join(dir, 'ev.json'), JSON.stringify(LEDGER));
+    const sink = () => { let s = ''; return Object.assign(new Writable({ write(c, _, cb) { s += c; cb(); } }), { text: () => s }); };
+    const run = async (args, stdin = '') => {
+      const out = sink(); const err = sink();
+      const code = await main(args, { cwd: dir, stdout: out, stderr: err, stdin: Readable.from([stdin]), env: { AM_NO_OPEN: '1', AM_NO_BAKE: '1', AM_HOME: join(dir, 'home') } });
+      return { code, err: err.text() };
+    };
+    assert.equal((await run(['render', 'd.md', '-o', 'd.html', '--evidence', 'ev.json'])).code, 0);
+    let r = await run(['patch', join(dir, 'd.html'), '-', '--panel', 'Terms'], 'New text.\n');
+    assert.equal(r.code, 0, r.err);
+    const html = readFileSync(join(dir, 'd.html'), 'utf8');
+    assert.match(html, /data-ev="K2"/);
+    assert.match(html, /New text\./);
+    r = await run(['patch', join(dir, 'd.html'), '-', '--panel', 'Terms'], 'Cites {K7}.\n');
+    assert.notEqual(r.code, 0);
+    assert.match(r.err, /\{K7\} is not in the claim ledger/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -117,9 +117,10 @@ function linkTerms(text) {
 
 // Research fork — evidence chips: {K2} or {K2, K5} names rows of the page's claim ledger. While a page renders with a ledger
 // (am render --evidence), render.js installs it with withEvidence(); each ID becomes a superscript chip coloured by its kind, and an ID
-// the ledger lacks is collected in missing. Without a ledger the braces stay text. Code and $…$ math are left alone ({x1} in TeX).
+// the ledger lacks is collected in missing. Without a ledger the braces stay text. It is an inline Markdown token, so code spans,
+// code blocks, $…$ math, raw HTML and link destinations never become chips.
 const EV_ID = '[A-Za-z]{1,4}-?\\d+[a-z]?';
-const EVIDENCE = new RegExp(`\\{(${EV_ID}(?:\\s*,\\s*${EV_ID})*)\\}`, 'g');
+const EVIDENCE = new RegExp(`^\\{(${EV_ID}(?:\\s*,\\s*${EV_ID})*)\\}`);
 const EV_KINDS = new Set(['observed', 'inferred', 'speculative']);
 let evidence = null;
 
@@ -135,11 +136,9 @@ export function withEvidence(ledger, fn) {
   }
 }
 
-function linkEvidence(text) {
-  if (!evidence) return text;
-  return text.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`|\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/).map((part, i) => (i % 2 ? part : part.replace(EVIDENCE, (_, ids) => ids.split(',').map((raw) => {
-    const id = raw.trim();
-    const row = evidence.map[id];
+function chips(ids) {
+  return ids.map((id) => {
+    const row = Object.hasOwn(evidence.map, id) ? evidence.map[id] : null;
     if (!row) {
       evidence.missing.add(id);
       return '';
@@ -147,11 +146,29 @@ function linkEvidence(text) {
     evidence.used[id] = row;
     const kind = EV_KINDS.has(row.type) ? row.type : 'observed';
     return `<sup class="am-ev am-ev--${kind}" data-ev="${escAttr(id)}" tabindex="0">${escAttr(id)}</sup>`;
-  }).join('')))).join('');
+  }).join('');
 }
 
-// Evidence first: a glossary definition that cites {K2} keeps the braces as text inside its hover tip.
-const prepare = (text) => linkTerms(linkEvidence(wrapSpacedImages(String(text ?? ''))));
+const evidenceExtension = {
+  extensions: [{
+    name: 'evidence',
+    level: 'inline',
+    start: (src) => {
+      if (!evidence) return undefined;
+      const i = src.indexOf('{');
+      return i < 0 ? undefined : i;
+    },
+    tokenizer(src) {
+      const m = evidence && EVIDENCE.exec(src);
+      return m ? { type: 'evidence', raw: m[0], ids: m[1].split(',').map((x) => x.trim()) } : undefined;
+    },
+    renderer: (token) => chips(token.ids),
+  }],
+};
+marked.use(evidenceExtension);
+inline.use(evidenceExtension);
+
+const prepare = (text) => linkTerms(wrapSpacedImages(String(text ?? '')));
 
 export function md(text) {
   return decorate(marked.parse(prepare(text)));

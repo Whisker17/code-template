@@ -96,8 +96,9 @@ export default {
 & .am-ev-tip-h { font: 600 11px var(--font-mono); opacity: .75; margin-bottom: 4px; }
 & .am-ev-tip-e { margin-top: 6px; font-size: 12px; opacity: .75; word-break: break-all; }
 /* figure zoom */
-& .am-zoom { position: fixed; inset: 0; z-index: 2147483100; display: flex; align-items: center; justify-content: center; padding: 52px 16px 16px; background: rgba(0, 0, 0, .72); cursor: zoom-out; }
-& .am-zoom[hidden] { display: none; }
+& .am-zoom { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 52px 16px 16px; border: 0; background: rgba(0, 0, 0, .72); cursor: zoom-out; }
+& .am-zoom[open] { display: flex; align-items: center; justify-content: center; }
+& .am-zoom::backdrop { background: transparent; }
 & .am-zoom-box { max-width: 100%; max-height: 100%; overflow: auto; padding: 16px; border-radius: 12px; background: var(--paper); cursor: default; -webkit-overflow-scrolling: touch; }
 & .am-zoom-box svg { display: block; width: max(720px, calc(100vw - 64px)); max-width: 1600px; height: auto; }
 & .am-zoom-x { position: fixed; top: 10px; inset-inline-end: 14px; width: 36px; height: 36px; border: 0; border-radius: 99px; background: rgba(255, 255, 255, .16); color: #fff; font: 22px/36px var(--font-sans); cursor: pointer; }

@@ -337,6 +337,17 @@ export function readEvidence(file, ctx) {
   return data;
 }
 
+// A patched article keeps the ledger rows its page already carries; citing a new ID then needs --evidence again.
+export function embeddedEvidence(html) {
+  const m = String(html).match(/<script type="application\/json" id="am-evidence">([\s\S]*?)<\/script>/);
+  if (!m) return undefined;
+  try {
+    return JSON.parse(m[1]);
+  } catch {
+    return undefined;
+  }
+}
+
 async function cmdRender(src, opts, ctx, baseDir) {
   const { fail, print } = ctx;
   const replaced = opts.replace === undefined ? null : pagePath(opts.replace, ctx);
@@ -538,7 +549,8 @@ async function cmdPatch(htmlArg, fromArg, opts, ctx) {
     return 1;
   }
   // A page made with a user theme that is no longer installed is not restyled silently.
-  const problem = ctx.themes.problem(page.theme, video ? 'video' : 'page');
+  // Research fork: an article page always uses the article theme, which only that template can use.
+  const problem = page.template === 'article' ? null : ctx.themes.problem(page.theme, video ? 'video' : 'page');
   if (problem && !opts.theme) {
     fail(`✗ The page uses theme "${page.theme}", which is not installed or cannot be used (${problem}); add --theme <name> to pick another`);
     return 1;
@@ -564,7 +576,7 @@ async function cmdPatch(htmlArg, fromArg, opts, ctx) {
       // Video pages also keep the original page's theme, mode and STE strictness (e.g. 3b1b / --style off); this command's arguments win.
       result = await buildVideo(patched, voice, { ...opts, theme: overrides.theme, mode: overrides.mode, style: overrides.style, previousLanguage: page.lang }, config, ctx);
     } else {
-      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html), update: updateFor(config, ctx), evidence: readEvidence(opts.evidence, ctx) });
+      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html), update: updateFor(config, ctx), evidence: readEvidence(opts.evidence, ctx) ?? embeddedEvidence(html) });
     }
   } catch (e) {
     if (e instanceof TtsError) {
