@@ -19,12 +19,16 @@
 #      (`gh` errors, no PR, an open PR, a detached HEAD, "branch equals base" and ancestry or a
 #      missing upstream alone are all active-or-unknown). Only a PR whose head is the same-named
 #      branch of THIS repository counts (a fork's PR, or a row without those fields, does not).
-#      An item whose HEAD/branch tip changed while `gh` was queried is preserved. gh honours
-#      GH_REPO / GH_HOST / GH_TOKEN.
-#   3. --apply on a done item: clean and fully contained in a merged PR's head -> remove worktree
-#      + delete the branch only if it still sits at the validated tip. Anything else -> commit dirty changes, tag `archive/<name>`, push the
-#      tag to `origin`, verify it on the remote, and only then remove. Any failure leaves the
-#      worktree and branch in place and is reported. Never `--force`, never a force-push.
+#      gh honours GH_REPO / GH_HOST / GH_TOKEN.
+#   3. The rules in 1 and the HEAD/branch tip are re-read from the live repository right before every
+#      mutation (after the `gh` query, before the archive commit, before the worktree removal, before
+#      the branch deletion): an item that became dirty, locked, conflicted, checked out in another
+#      worktree (or the primary clone), or whose HEAD/tip moved is preserved and reported.
+#   4. --apply on a done item: clean and fully contained in a merged PR's head -> remove worktree
+#      + delete the branch only if it still sits at the validated tip. Anything else -> commit dirty
+#      changes (only for a --select'ed item), tag `archive/<name>`, push the tag to `origin`, verify
+#      it on the remote, and only then remove. Any failure leaves the worktree and branch in place
+#      and is reported. Never `--force`, never a force-push.
 #   `prunable` worktrees (directory gone) are pruned with --apply.
 #
 # Exit: 0 = nothing `done` left and every --select satisfied; 1 = something is left or failed;
@@ -160,11 +164,14 @@ remote_tag_sha() { # <tag>; prints the commit sha, empty if absent; returns 1 if
     printf '%s\n' "$out" | awk -v r="refs/tags/$1" '$2==r || $2==r"^{}" {s=$1} END {print s}'
 }
 
-# archive <name> <path|""> <branch|""> <tip-ref>: commit dirty changes, then publish the tag.
+# archive <name> <path|""> <branch|""> <tip> <selected 0|1>: publish the tag; only a selected item's
+# dirty changes are committed first (an unselected one that went dirty is refused, never snapshotted).
 archive() {
-    local name=$1 path=$2 branch=$3 tag sha rsha
+    local name=$1 path=$2 branch=$3 tag sha rsha why
     tag="archive/$name"
-    if [ -n "$path" ] && dirty "$path"; then
+    why=$(blocked_now "$path" "$branch" "$4" "$5")
+    [ -z "$why" ] || { fail "$name" "$why; nothing archived"; return 1; }
+    if [ -n "$path" ] && [ "$5" -eq 1 ] && dirty "$path"; then
         git -C "$path" add -A \
             && git -C "$path" commit --no-verify -q -m "wip: wt-gc snapshot of $name before cleanup" \
             || { fail "$name" "could not commit the dirty changes"; return 1; }
@@ -194,13 +201,25 @@ archive() {
 
 # remove_item <name> <path|""> <branch|""> <expected-tip>: never forced; git itself refuses dirty or
 # locked trees, and the branch goes only if it is still at <expected-tip> (a later commit survives).
+# `update-ref -d` skips git's checked-out-branch refusal, so that is re-checked here, right before
+# and right after the delete (a branch caught checked out by the later check is put back).
 remove_item() {
+    local why
+    why=$(blocked_now "$2" "$3" "$4" 0)
+    [ -z "$why" ] || { fail "$1" "$why; nothing removed"; return 1; }
     if [ -n "$2" ]; then
         git worktree remove "$2" 2>/dev/null || { fail "$1" "git worktree remove refused"; return 1; }
     fi
     if [ -n "$3" ]; then
+        why=$(blocked_now "" "$3" "$4" 0)
+        [ -z "$why" ] || { fail "$1" "$why; branch $3 kept (worktree already removed)"; return 1; }
         git update-ref -d "refs/heads/$3" "$4" 2>/dev/null \
             || { fail "$1" "branch $3 is no longer at $4 or could not be deleted (kept; worktree already removed)"; return 1; }
+        why=$(checkout_block "" "$3")
+        if [ -n "$why" ]; then
+            git update-ref "refs/heads/$3" "$4" "" 2>/dev/null
+            fail "$1" "$why while the branch was deleted; branch $3 restored"; return 1
+        fi
         git config --remove-section "branch.$3" 2>/dev/null
     fi
     echo "wt-gc: removed $1"
@@ -212,13 +231,48 @@ head_key() {
     else printf '%s refs/heads/%s' "$(git rev-parse "refs/heads/$2" 2>/dev/null)" "$2"; fi
 }
 
+# checkout_block <path|""> <branch|"">: the live worktree list says why <path> must not be removed
+# (locked) or <branch> must not be deleted (checked out in another, non-prunable worktree, the
+# primary clone included). Prints nothing when free; an unreadable list blocks.
+checkout_block() {
+    local out line p="" b="" l=0 pr=0
+    out=$(git worktree list --porcelain 2>/dev/null) || { echo "worktree list unreadable"; return; }
+    while IFS= read -r line; do
+        case "$line" in
+            "worktree "*) p=${line#worktree }; b=""; l=0; pr=0 ;;
+            "branch "*) b=${line#branch refs/heads/} ;;
+            locked*) l=1 ;;
+            prunable*) pr=1 ;;
+            "") if [ -n "$p" ] && [ "$pr" -eq 0 ]; then
+                    if [ -n "$1" ] && [ "$(phys "$p")" = "$1" ]; then
+                        [ "$l" -eq 0 ] || { echo "worktree became locked"; return; }
+                    elif [ -n "$2" ] && [ "$b" = "$2" ]; then
+                        echo "branch became checked out in $p"; return
+                    fi
+                fi
+                p="" ;;
+        esac
+    done <<<"$out"$'\n'
+}
+
+# blocked_now <path|""> <branch|""> <expected-tip> <dirty-ok 0|1>: re-reads, from the live repository,
+# every condition that preserves an item and prints why it must not be touched now (nothing = free).
+# The verdict taken before the `gh` query is stale; call this right before each mutation.
+blocked_now() {
+    if [ -n "$1" ]; then
+        ! conflicted "$1" || { echo "merge/rebase/cherry-pick began (or state unreadable)"; return; }
+        [ "$4" -eq 1 ] || ! dirty "$1" || { echo "uncommitted changes appeared"; return; }
+    fi
+    [ "$(head_key "$1" "$2")" = "$3 ${2:+refs/heads/$2}" ] || { echo "HEAD or branch tip changed"; return; }
+    checkout_block "$1" "$2"
+}
+
 # process <kind wt|branch> <path|""> <branch|""> <tip>
 process() {
-    local kind=$1 path=$2 branch=$3 tip=$4 target sel=0 name reason="" class=active-or-unknown dirty_now=0
+    local kind=$1 path=$2 branch=$3 tip=$4 target sel=0 name reason="" class=active-or-unknown dirty_now=0 why
     target=${path:-$branch}
     if [ "$kind" = wt ]; then name=${path##*/}; else name=${branch//\//-}; fi
     is_selected "$path" "$branch" && sel=1
-    local key0="$tip ${branch:+refs/heads/$branch}"
 
     # 1. Preservation rules win over everything, including --select.
     if [ "$kind" = wt ] && conflicted "$path"; then reason="merge/rebase/cherry-pick in progress or unreadable"
@@ -232,7 +286,8 @@ process() {
     PR_VERDICT=unknown
     if [ -z "$reason" ]; then
         if [ -n "$branch" ]; then pr_verdict "$branch" "$tip"; else PR_VERDICT=none; PR_NOTE="detached HEAD"; fi
-        if [ "$(head_key "$path" "$branch")" != "$key0" ]; then reason="HEAD or branch tip changed during the check; preserved"
+        why=$(blocked_now "$path" "$branch" "$tip" "$sel")
+        if [ -n "$why" ]; then reason="$why during the check; preserved"
         elif [ "$sel" -eq 1 ]; then class="done"; reason="selected ($PR_NOTE)"
         else case "$PR_VERDICT" in
             merged|closed) class="done"; reason=$PR_NOTE ;;
@@ -249,7 +304,7 @@ process() {
     if [ "$PR_VERDICT" = merged ] && [ "$dirty_now" -eq 0 ]; then
         remove_item "$name" "$path" "$branch" "$tip"
     else
-        archive "$name" "$path" "$branch" && remove_item "$name" "$path" "$branch" "$ARCHIVED_SHA"
+        archive "$name" "$path" "$branch" "$tip" "$sel" && remove_item "$name" "$path" "$branch" "$ARCHIVED_SHA"
     fi
 }
 
