@@ -99,6 +99,28 @@ Format: date — what changed and why — which project surfaced it (if any).
     in any local checklist with the named-marker form, and require `ci-ok` (not `lint` or
     `smoke-e2e`) in branch protection once it has run once.
 
+- **No worktree left behind, with a safe cleanup script (WHI-2199).** Every worktree an
+  agent creates (including `.claude/worktrees/agent-*` and sub-agent worktrees) is deleted
+  with its local branch when its task ends: merged, or its uncommitted changes committed,
+  tagged `archive/<worktree-name>` and the tag pushed, only then `git worktree remove` +
+  `git branch -D`. The session that spawned it cleans it up; a worktree kept on purpose is
+  named in the final reply. Layout `../<repo>-wt/<issue-id>` and `<issue-id>-verify`.
+  `scripts/wt-gc.sh` (dry run by default) classifies every worktree and local branch:
+  `done` = `--select`ed or its PR merged/closed per a **successful** `gh` query; everything
+  else (including `gh` errors, no PR, an open PR, a branch equal to its base) is
+  `active-or-unknown`. Locked, conflicted, trunk-named (`main`, `dev`, `release/*`),
+  primary and current worktrees are never touched, a dirty one only with `--select`. `--apply`
+  removes a clean worktree contained in a merged PR; anything else is archived first (tag
+  pushed and verified on `origin`) and any failure keeps worktree and branch. Never
+  `--force`. `GIT_WORKFLOW.md` State mapping: `Done` **and** `Canceled` need the worktree
+  gone. Called from `/orchestrate` preflight and release close, the end of `/implement` and
+  `SETUP.md`. `.claude/worktrees/` is gitignored. E2E: `tests/e2e/test_wt_gc.py`.
+  - **Downstream migration:** copy `scripts/wt-gc.sh` and `tests/e2e/test_wt_gc.py`, add
+    `.claude/worktrees/` to `.gitignore`, port the `AGENTS.md`, `GIT_WORKFLOW.md` (Post-merge
+    cleanup, State mapping, worktree layout, Forbidden) and `/implement` and `/orchestrate`
+    edits, then run `scripts/wt-gc.sh` once and clear the existing leftovers (dry run first;
+    `gh` must be authenticated or everything is reported `active-or-unknown`).
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0

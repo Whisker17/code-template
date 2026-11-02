@@ -56,7 +56,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 | **CI** | `.github/workflows/ci.yml` (fast lint/type + smoke E2E, docs-only PRs skip them, single required check `ci-ok`, manual full/release E2E), `docs/CI.md` (design, CI-unavailable rule, tuning checklist) |
 | **Skills** (9) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md` (what review counts as failure, output format, escapes), `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
-| **Git workflow** | See below |
+| **Git workflow** | See below; `scripts/wt-gc.sh` (safe cleanup of leftover worktrees and branches) |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
 
 The Git workflow covers:
@@ -70,6 +70,9 @@ The Git workflow covers:
 - the release vs hotfix decision rule;
 - the version axis (tracker Release ↔ tag ↔ GitHub Release);
 - mandatory post-merge cleanup;
+- no worktree left behind: every worktree is removed (merged, or archived with a pushed
+  `archive/<name>` tag) when its task ends; `scripts/wt-gc.sh` reports leftovers and removes
+  only what it can prove finished;
 - Linear state lockstep;
 - the `.githooks/pre-push` guard.
 
@@ -94,8 +97,9 @@ per-project.
 > cannot detect these edits, and **re-vendoring from `mattpocock/skills` will silently
 > overwrite them.** Diff before accepting any skill upgrade to:
 >
-> - `implement/SKILL.md` — v0.2 contract: ponytail, relevant checks, PR, handoff; merge
->   authority from `docs/GIT_WORKFLOW.md`; no TDD mandate, no built-in review loop
+> - `implement/SKILL.md` — v0.2 contract: ponytail, relevant checks, PR, handoff, no worktree
+>   left behind; merge authority from `docs/GIT_WORKFLOW.md`; no TDD mandate, no built-in
+>   review loop
 > - `code-review/SKILL.md` — Quick / Standard / Deep modes: fresh-context `REVIEWER` bug
 >   hunters per angle plus an independent verifier; `confirmed` / `refuted` / `unverified`
 >   dispositions; blocking/suggestion/pre-existing finding format; diff-only re-review

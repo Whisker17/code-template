@@ -110,6 +110,24 @@ issue fits not exactly one row, **stop and surface it**.
 No waiver of the human rows is in force; a waiver takes the shape in
 `docs/GIT_WORKFLOW.md` § Waiving an exception. A tracker label alone waives nothing.
 
+### No worktree left behind
+
+Every worktree an agent creates (including `.claude/worktrees/agent-*` and pi sub-agent
+worktrees) is deleted, together with its local branch and private build dirs, when its task
+ends. Layout: `../<repo>-wt/<issue-id>`; verification worktrees
+`../<repo>-wt/<issue-id>-verify`.
+
+- Before deleting, the work is either merged into the target branch, or its uncommitted
+  changes are committed, tagged `archive/<worktree-name>` and the **tag pushed**; only after
+  the push succeeded: `git worktree remove` (never `--force`) + `git branch -D`.
+- The session that spawned a worktree cleans it up (an orchestrator owns its implementers').
+  A worktree kept on purpose is named, with path and reason, in the final reply.
+- `scripts/wt-gc.sh` reports leftovers (dry run) and, with `--apply`, removes only items it
+  can prove `done`. It never deletes active or unknown-state work: `gh` errors, a branch equal
+  to its base, a missing upstream, a locked, conflicted or (unless `--select`ed) dirty
+  worktree are all preserved. Linear `Done` **and** `Canceled` require the worktree removed.
+  Details: `docs/GIT_WORKFLOW.md` § Post-merge cleanup.
+
 ### After a merge
 
 Follow `docs/GIT_WORKFLOW.md` § Post-merge cleanup from the primary clone: remove the

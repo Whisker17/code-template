@@ -161,6 +161,10 @@ A role that fails stays failed: fix the mapping, or tell the user plainly that w
 needing it stops at `In Review` and releases stay blocked (`docs/agents/runtime.md`
 § Reviewer unavailable). Never paper over it by switching model or effort silently.
 
+Then run `scripts/wt-gc.sh` once (dry run). A bootstrapped repo has no leftover worktrees; if
+it lists any, remove them per `docs/GIT_WORKFLOW.md` § No worktree left behind before you
+hand off.
+
 Finally, confirm agents actually load `AGENTS.md` — the template ships no `CLAUDE.md`:
 
 - **Claude Code** reads `AGENTS.md` natively from **v2.1.281** (`claude --version`). On an

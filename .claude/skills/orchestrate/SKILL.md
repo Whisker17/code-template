@@ -31,7 +31,12 @@ milestone.
 5. Check GitHub, Linear and the project's real verification commands. Make one real
    `DISPATCH-OK` call per role you will use (`docs/agents/runtime.md` § Preflight) — once
    per release, again only after a config change or an auth/call error.
-6. Create or reuse the `Release X.Y.Z — orchestration` document. Record the planned issue
+6. Run `scripts/wt-gc.sh` (dry run) and clear leftovers before dispatching anything
+   (`docs/GIT_WORKFLOW.md` § No worktree left behind). `--apply` removes only what it proves
+   `done`; pass `--select <path>` only for a worktree you can attribute to a finished or
+   abandoned task of this orchestration. A worktree you cannot attribute is not yours: report
+   it, never select it.
+7. Create or reuse the `Release X.Y.Z — orchestration` document. Record the planned issue
    set, the integration branch, the contract version (`v0.2`) and the fixed baseline
    **B**: the verified commit this version starts from. When taking over a release in
    progress, establish B from the record — never from today's HEAD, which would hide work
@@ -58,6 +63,10 @@ the issues that depend on it.
 - Tracker: `In Progress` when you dispatch, `In Review` as soon as you see the PR, `Done`
   after merge and cleanup. Waiting for a human or failed verification stays `In Review`
   with the reason. On resume, reconcile against real PR states before doing anything.
+- You own the worktrees of the implementers you dispatch (layout `../<repo>-wt/<issue-id>`,
+  verification `../<repo>-wt/<issue-id>-verify`). `Done` after merge and `Canceled`
+  both require that issue's worktree and local branch to be gone (an abandoned one with
+  unmerged work is archived with a pushed tag first); `scripts/wt-gc.sh` shows what is left.
 - If a scope conflict appears mid-flight, pause the conflicting task and re-sequence. Do
   not widen an issue, and do not let two agents produce the same result.
 
@@ -166,9 +175,12 @@ scope error, not a pass.
   `REVIEWER_FALLBACK` is eligible only as it defines. If no review can be completed, the
   release is blocked and never advances.
 
-Release ready = the evidence is bound to H. Merging the integration branch into `dev` is a
-human gate (`docs/GIT_WORKFLOW.md`). If that merge brings a new conflict resolution or code
-change, verify the merged result and review what changed. Then follow the normal release
+Release ready = the evidence is bound to H. Before declaring it, run `scripts/wt-gc.sh`:
+no worktree of this release (implementers', verification, review) may remain, and every
+leftover is removed or named with path and reason in the orchestration document. Merging the
+integration branch into `dev` is a human gate (`docs/GIT_WORKFLOW.md`). If that merge brings
+a new conflict resolution or code change, verify the merged result and review what changed.
+Then follow the normal release
 cut, `main` human gate, tag and publish flow.
 
 Record every round in the orchestration document: mode, H, reviewer model and effort,
