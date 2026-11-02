@@ -161,9 +161,18 @@ criteria. All issue content is written in English.
 When a skill produces a **set** of tickets with blocking edges, publish them to Linear
 like this:
 
-1. **Order**: create issues in dependency order — blockers first — so each later issue
-   can reference real identifiers.
-2. **Blocking edges**: wire them as Linear's native **`blocked-by` / `blocks`
+0. **Review first.** The set passed the REVIEWER design review in `/to-tickets` § 4b
+   (max 3 rounds, consensus recorded in a Linear project document). Nothing is written
+   before that.
+1. **Single writer, one at a time, relations last**: exactly one session writes the set
+   (no parallel writers or sub-agents). Create one issue per call, in dependency order —
+   blockers first — and record each returned identifier before creating the next.
+   **On a timeout or an error, query by title** (`list_issues({ project, query: "<title>" })`;
+   GraphQL `issues` with a title filter) **before retrying**: the write may have landed, and
+   a blind retry creates a duplicate. If it exists, adopt it and fix it up with an update;
+   if two exist, stop and report. Never report an unconfirmed write as done: re-read each
+   issue with `get_issue` and list the set's confirmed ids in the report.
+2. **Blocking edges** (only after **all** issues exist): wire them as Linear's native **`blocked-by` / `blocks`
    relations** (`save_issue({ id, blocks, blockedBy })`, or the dedicated relation tool
    if your server's schema has one), then confirm with `get_issue({ id,
    includeRelations: true })`. Also mirror
@@ -202,10 +211,17 @@ Release-level state lives in **one** Linear project document named
 linked from the issues it concerns. It records:
 
 - workflow contract version (`v0.2`), and which issues, if any, started under an older one;
+- the actual model and effort of the orchestrating session, when it is not `ORCHESTRATOR_MODEL`;
 - the planned issue set, the fixed review baseline **B** and the integration branch;
 - each review round: candidate SHA **H**, reviewer role/model/effort, outcome;
 - every finding id → the fix issue that owns it (or its disposition), including
   governance fixes tracked as external blockers (no Release, routed to `dev`);
+- `Authorization scope`: written only when the owner invoked `--through tag`, before the first
+  covered step, in the shape of `docs/GIT_WORKFLOW.md` § Waiving an exception (scope, expiry,
+  what is not relaxed, the compensating checks) — `docs/GIT_WORKFLOW.md` § 4 *Unattended
+  promotion* defines what it may cover; absent means the default human gates;
+- `Decision log`: every decision the orchestrator made without asking, appended as it is made
+  (what, the rule or evidence behind it, the command and output of any gate check);
 - current blocker, if any.
 
 Look it up first with `list_documents({ projectId, query: "Release X.Y.Z — orchestration" })`.

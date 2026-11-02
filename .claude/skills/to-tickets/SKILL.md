@@ -56,11 +56,23 @@ Present the breakdown as a numbered list. For each ticket, show its title, what 
 
 Iterate until the user approves.
 
+### 4b. Design review (mandatory, before any write)
+
+Nothing is written to the tracker until this ends. The ticket set is a design: review it before it exists.
+
+1. Dispatch `REVIEWER` with `scripts/agent-dispatch.sh REVIEWER <prompt-file> --effort high`, in a fresh context. The prompt carries the full breakdown (every ticket body, blocking edges, complexity, scope), the source discussion and the repo docs it relies on (`docs/DESIGN.md`, `docs/agents/issue-template.md`, `docs/GIT_WORKFLOW.md`). Ask for blocking issues and suggestions only: missing or false edges, shared-file serialization, unverifiable acceptance, slices too large for one context.
+2. Address each finding: change the breakdown, or record why not. Re-dispatch with the revision and the previous findings, so the next round checks the diff.
+3. **At most 3 rounds.** Disagreements still open go to the draft's "Open questions", and after round 3 to the owner. Do not start a fourth round.
+4. Record the consensus — rounds, what changed, open disagreements, reviewer role/model/effort — in a Linear project document. Worked example: the "Design review (issue set)" section of [Release 0.3.0 — orchestration](https://linear.app/whisker-personal/document/release-030-orchestration-7cc551bb0540).
+5. **Only then write** to the tracker.
+
+If `REVIEWER` is unavailable, follow `docs/agents/runtime.md`; do not substitute a model or review your own breakdown.
+
 ### 5. Publish
 
 Follow `docs/agents/issue-tracker.md` § Publishing ticket sets:
 
-- Publish in dependency order, blockers first.
+- One writer, one issue at a time, blockers first; record each created id. On a timeout, query by title before retrying. Wire the relations only after all issues exist. Never report an unconfirmed write as done (`docs/agents/issue-tracker.md` § Publishing ticket sets).
 - Wire **native** `blocked-by` relations and mirror them in the body.
 - Use the template skeleton, including `## Execution`.
 - Version-scoped tickets carry the `[X.Y.Z]` title prefix **and** the matching Release. The two must agree. Milestone plays no part in routing.

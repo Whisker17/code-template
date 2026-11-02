@@ -39,6 +39,12 @@ BASE_CONF = {
     "ORCHESTRATOR_EFFORT_HIGH": "high",
 }
 
+FALLBACK_CONF = {
+    "REVIEWER_FALLBACK_RUNTIME": "claude",
+    "REVIEWER_FALLBACK_MODEL": "fallback-model",
+    "REVIEWER_FALLBACK_EFFORT_HIGH": "high",
+}
+
 
 @pytest.fixture
 def env(tmp_path: Path) -> dict[str, str]:
@@ -163,6 +169,14 @@ def test_usage_errors_exit_2_without_calling(tmp_path, env, args):
         ("REVIEWER", {"REVIEWER_MODEL": "rev-model\t-m other"}, "high", "single plain token"),
         ("REVIEWER", {"REVIEWER_EFFORT_HIGH": "x' -c model='o"}, "high", "single plain token"),
         ("ORCHESTRATOR", {"ORCHESTRATOR_MODEL": "prov/m:low"}, "high", "embeds a thinking"),
+        # The optional fallback is a role with identical validation: undeclared -> exit 3.
+        ("REVIEWER_FALLBACK", {}, "high", "REVIEWER_FALLBACK_RUNTIME is unset"),
+        (
+            "REVIEWER_FALLBACK",
+            {**FALLBACK_CONF, "REVIEWER_FALLBACK_MODEL": "-m"},
+            "high",
+            "single plain token",
+        ),
     ],
 )
 def test_unavailable_role_exits_3_without_calling(tmp_path, env, role, overrides, effort, reason):
@@ -237,3 +251,71 @@ def test_shipped_conf_parses_and_probe_never_calls_a_model(env):
     result = run(env, "--probe")
     assert result.returncode in (0, 3), result.stderr
     assert calls(env) == 0
+
+
+def test_declared_reviewer_fallback_runs_like_any_role(tmp_path, env):
+    write_conf(tmp_path, env, **FALLBACK_CONF)
+    result = run(env, "REVIEWER_FALLBACK", "-", "--effort", "high", stdin="x\n")
+    assert result.returncode == 0, result.stderr
+    assert argv(env) == ["claude", "-p", "--model", "fallback-model", "--effort", "high"]
+    # Only the effort it maps: medium is unset, so it fails rather than running at high.
+    result = run(env, "REVIEWER_FALLBACK", "-", "--effort", "medium", stdin="x\n")
+    assert result.returncode == 3
+    assert "REVIEWER_FALLBACK_EFFORT_MEDIUM is unset" in result.stderr
+    assert calls(env) == 1
+
+
+def test_dispatcher_never_selects_the_fallback_itself(tmp_path, env):
+    # Validation failure of the primary (exit 3): the fallback is not tried.
+    write_conf(tmp_path, env, **FALLBACK_CONF, REVIEWER_MODEL=None)
+    assert run(env, "REVIEWER", "-", "--effort", "high", stdin="x").returncode == 3
+    assert calls(env) == 0
+    # Usage error (exit 2): same.
+    assert run(env, "REVIEWER", "-", "--effort", "low", stdin="x").returncode == 2
+    assert calls(env) == 0
+    # A real call failure of the primary is returned unchanged; the dispatcher runs
+    # exactly one process (the caller decides on a second, explicit dispatch).
+    write_conf(tmp_path, env, **FALLBACK_CONF)
+    env["FAKE_EXIT"] = "7"
+    assert run(env, "REVIEWER", "-", "--effort", "high", stdin="x").returncode == 7
+    assert calls(env) == 1
+    assert argv(env)[0] == "codex"
+
+
+def test_probe_reports_an_empty_fallback_as_unset_and_still_exits_0(tmp_path, env):
+    write_conf(tmp_path, env)
+    result = run(env, "--probe")
+    assert result.returncode == 0, result.stdout
+    assert "unset     REVIEWER_FALLBACK" in result.stdout
+    result = run(env, "--probe", "REVIEWER_FALLBACK")
+    assert result.returncode == 0, result.stdout
+    assert "unset     REVIEWER_FALLBACK" in result.stdout
+    assert calls(env) == 0
+
+
+def test_probe_still_fails_for_an_unset_primary_or_a_half_declared_fallback(tmp_path, env):
+    write_conf(tmp_path, env, REVIEWER_RUNTIME=None)
+    result = run(env, "--probe")
+    assert result.returncode == 3
+    assert "UNUSABLE  REVIEWER --" in result.stdout
+    assert "unset     REVIEWER_FALLBACK" in result.stdout
+
+    write_conf(tmp_path, env, REVIEWER_FALLBACK_MODEL="fallback-model")
+    result = run(env, "--probe")
+    assert result.returncode == 3
+    assert "UNUSABLE  REVIEWER_FALLBACK" in result.stdout
+
+
+def test_probe_shows_a_declared_fallback_and_warns_when_it_shares_the_implementer_model(
+    tmp_path, env
+):
+    write_conf(tmp_path, env, **FALLBACK_CONF)
+    result = run(env, "--probe")
+    assert result.returncode == 0, result.stdout
+    assert "ok        REVIEWER_FALLBACK -> claude fallback-model (effort: high)" in result.stdout
+    assert "warning" not in result.stdout
+
+    write_conf(tmp_path, env, **{**FALLBACK_CONF, "REVIEWER_FALLBACK_MODEL": "impl-model"})
+    result = run(env, "--probe")
+    assert result.returncode == 0, result.stdout
+    assert "warning: REVIEWER_FALLBACK uses IMPLEMENTER's model" in result.stdout

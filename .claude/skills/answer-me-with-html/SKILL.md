@@ -48,6 +48,8 @@ Otherwise answer in plain text. When unsure: the more the question "needs a pict
 | **Write up and share** research, an investigation, an experiment, or a paper or codebase deep dive, for developers who must pick it up | **Research page (`research`)** | **Read [references/research.md](references/research.md) first** and follow its steps |
 | A **long-form report** to publish (for example a research-hub report): one reading column, numbered sections, claims cited from a claim ledger | **Article (`article`)** | **Read [references/article.md](references/article.md) first** |
 
+When writing a research report, read [references/research-post.md](references/research-post.md) (the writing contract: skeleton, claim ledger, figures, checklist).
+
 ### Always-on mode
 
 If the context contains the `[answer-me-with-html always-on]` reminder (the user added the always-on rule to a rules file such as `CLAUDE.md` or `AGENTS.md`), the bar is lower:
