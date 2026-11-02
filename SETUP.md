@@ -39,16 +39,19 @@ Ask **one at a time** ([interview]):
 7. **Docker** — keep `Dockerfile` + `docker-compose.yml` skeletons, or delete both?
 8. **Template repo URL** (for the feedback-loop pointer; default to the URL in
    `git remote -v` before you change it) → `TEMPLATE_REPO_URL`
-9. **Agent roles** — read `docs/agents/runtime.md` first, then settle, for each of
-   `ORCHESTRATOR`, `IMPLEMENTER` and `REVIEWER`: the runtime (`claude` | `codex` | `pi`),
-   the **exact** model ID that runtime accepts, and the runtime-native values for
-   `medium` and `high` effort. **Push for a cross-vendor reviewer** — independent failure
-   modes catch more than a stronger same-vendor model. The template ships every role
-   unconfigured; the recorded intent (implementer Claude Opus 5.5, reviewer GPT-6 Astra)
-   is not a verified value. Take IDs and effort values from the runtime itself (its
-   `--help`, model list, or current config), not from memory or a catalog listing alone,
-   and write them into `config/agent-roles.conf`. If a runtime cannot do one of the
-   efforts, leave that mapping unset — dispatch then fails closed for it.
+9. **Agent roles** — read `docs/agents/runtime.md` first. `config/agent-roles.conf` ships
+   defaults, all on `pi`: `ORCHESTRATOR` = `claude/claude-opus-5-5`, `IMPLEMENTER` =
+   `claude/claude-sonnet-5-5`, `REVIEWER` = `magpie/codex/gpt-6-astra`, each with `medium`
+   and `high` effort. **Present them and ask the user, role by role, to keep or change.**
+   A default is only valid if this machine's runtime accepts it: take any changed runtime
+   (`claude` | `codex` | `pi`), **exact** model ID and native `medium`/`high` values from the
+   runtime itself (its `--help`, model list, or current config), not from memory or a
+   catalog listing alone. **Push for a cross-vendor reviewer** — independent failure modes
+   catch more than a stronger same-vendor model. If a runtime cannot do one of the efforts,
+   leave that mapping unset — dispatch then fails closed for it. Ask whether to declare an
+   optional `REVIEWER_FALLBACK` (usable only after a real `REVIEWER` call failed; never for
+   a configuration error; `docs/agents/runtime.md` § Reviewer unavailable); default: leave it
+   empty. Every value kept or changed is proven in §4 by a real call.
 
 ## 2. Replace placeholders
 
@@ -136,13 +139,16 @@ Then verify the agent roles from step 1.9. Configuration is **done only when a r
 call succeeds** — `--probe` alone checks the file and `PATH`, not authentication:
 
 ```bash
-scripts/agent-dispatch.sh --probe            # every role must report ok
+scripts/agent-dispatch.sh --probe            # every role ok; REVIEWER_FALLBACK ok or unset
 for role in ORCHESTRATOR IMPLEMENTER REVIEWER; do
   printf 'Reply with exactly: DISPATCH-OK\n' \
     | scripts/agent-dispatch.sh "$role" - --effort high   # must print DISPATCH-OK, exit 0
 done
 printf 'Reply with exactly: DISPATCH-OK\n' \
   | scripts/agent-dispatch.sh IMPLEMENTER - --effort medium
+# Only if step 1.9 declared a fallback (an undeclared one exits 3 by design):
+printf 'Reply with exactly: DISPATCH-OK\n' \
+  | scripts/agent-dispatch.sh REVIEWER_FALLBACK - --effort high
 ```
 
 A role that fails stays failed: fix the mapping, or tell the user plainly that work
