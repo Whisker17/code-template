@@ -42,6 +42,8 @@ audience: <the reader>
 
 Adapt the sections to the research ([research.md](research.md) §6 lists the kinds). Keep 6–12 sections. A section longer than about two screens gets `###` sub-sections.
 
+The letter after `##` is only the anchor (`#panel-A`); it is not shown. It is read as an ID only when the title after it does not start with a lowercase letter, so start each title with a capital, a digit or a CJK character: `## C How revm dispatches`, not `## C revm dispatch` (that title would show as "C revm dispatch").
+
 ## 3. Evidence chips
 
 With a claim ledger (`am render --evidence ledger.json`, a JSON object `{ "K2": { "claim", "evidence", "type" } }`), write the ledger ID in braces right after the claim:

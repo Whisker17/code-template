@@ -39,6 +39,8 @@ export default {
 & .am-article .am-toc a.am-toc-sub { padding-inline-start: 24px; font-size: 12.5px; }
 & .am-article .am-toc a.is-on { color: var(--ink); border-inline-start-color: var(--accent); font-weight: 600; }
 & .am-article > .am-doc-body { min-width: 0; width: 100%; max-width: 760px; margin: 0 auto; padding-bottom: 120px; }
+/* Long paths and URLs wrap inside the column instead of widening the page on a phone. */
+& .am-article :not(pre) > code, & .am-article a { overflow-wrap: anywhere; }
 /* title block */
 & .am-article .am-head { margin: 0; padding: 64px 0 8px; }
 & .am-article .am-head h1 { font-size: 36px; line-height: 1.22; letter-spacing: -.01em; font-weight: 760; margin: 0 0 12px; }
