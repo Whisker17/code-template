@@ -59,25 +59,29 @@ check. Disable Actions on forks you do not develop in, so they do not burn quota
 
 ## Tuning checklist
 
-Ten steps for keeping CI fast and cheap. Apply them in order; stop when the run is fast enough.
+Tw93's ten steps for a fast, cheap CI ([source](https://x.com/HiTw93/status/2116797957454401746)),
+with the stack notes for this template. Apply them in order.
 
-1. Measure first: read the job timings, find the slowest step and attack that one.
-2. Skip work that cannot change the result: path-detect docs-only changes (`changes`), and
-   aggregate with a single required check (`ci-ok`) so skipping is safe.
-3. Cancel superseded runs: `concurrency` with `cancel-in-progress` for pull requests.
-4. Run jobs in parallel; keep each job's critical path short (`lint` and `smoke-e2e` do not
-   wait for each other).
-5. Cache dependencies by lockfile hash, one cache per ecosystem: `astral-sh/setup-uv`
-   `enable-cache`, `actions/setup-node` `cache`, `Swatinem/rust-cache`. No hand-rolled
-   duplicate caches.
-6. Use prebuilt tools (released binaries, setup actions) instead of compiling or
-   installing from source on every run.
-7. Run the fast, no-credential smoke tier on every PR; keep the full and release tiers
-   manual (`workflow_dispatch`) or scheduled.
-8. Use `ubuntu-latest`; add macOS or Windows runners only when the code needs them (they
-   cost a multiple of the minutes).
-9. Mind the cache budget: GitHub keeps 10 GB of cache per repository and evicts the
-   least-recently-used entries, so a cache per branch or per matrix cell evicts the useful
-   ones. Cache less, key narrowly.
-10. Set `timeout-minutes` on every job and upload only the artifacts you will read, so a hung
-    run cannot burn the quota.
+1. Pull the recent runs with `gh run list --limit 50`. Split every job into three phases —
+   queued, setup, and the actual test — and look for the pattern; the slow part is often setup.
+2. On a burst of pushes to a PR, run only the latest one (`cancel-in-progress`), except on
+   `main`.
+3. Do not run CI for docs-only changes, but mind that a skipped required check blocks the
+   merge. That is why `ci-ok` is the single required check.
+4. Prefer the setup action's built-in cache (`astral-sh/setup-uv` `enable-cache`,
+   `actions/setup-node` `cache`, `Swatinem/rust-cache`), and mind the 10 GB cache cap per
+   repository.
+5. Build twice in a row locally; the second build should cost almost nothing. If it does not,
+   look for a Dockerfile that `COPY`s the whole repository first, a build script that watches
+   files that do not exist, and similar.
+6. Download prebuilt versions of tools instead of compiling them.
+7. Run jobs that do not depend on each other in parallel, and split the longest test across
+   several machines.
+8. Put checks that do not care about the OS on Ubuntu; use macOS (or Windows) only when the
+   code needs it.
+9. Do not repeat work and do not do more than needed.
+10. After the change, push and measure: compare the run time before and after, then check for
+    anything missed.
+
+Beyond the list: set `timeout-minutes` on every job and upload only the artifacts you will
+read, so a hung run cannot burn the quota.
