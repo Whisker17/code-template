@@ -28,7 +28,11 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 3. Produce the spec of record: `/grill-me <your idea>` → `/to-spec` fills `docs/DESIGN.md`.
 4. Break it down: `/to-tickets` publishes Linear issues from `docs/agents/issue-template.md`,
    each with complexity (`medium` | `high`), expected scope and native blocking relations.
-5. Implement. Hand a Release to `/orchestrate`, which:
+5. Implement. Hand a Release to `/orchestrate <Release> [--through tag]`, which runs the whole
+   Release unattended in the current session (visible sub-agents, every decision logged in the
+   orchestration document; it stops only for a missing release branch, an unmet external
+   dependency, an exhausted review budget, a mandatory human path, a failed dispatch with no
+   usable fallback, or a human-gated step outside its declared scope):
    - schedules issues by real dependencies and shared-scope conflicts;
    - dispatches `/implement` per issue at the issue's effort (a worktree off the
      **resolved base**: version-scoped → `release/v{version}`, governance → `dev`,
@@ -41,10 +45,17 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
      Release is created per round.
 
    Standalone `/implement`, governance and hotfix PRs get one independent Quick review
-   before they may merge. High-risk paths, hotfixes and every promotion wait for a human.
+   before they may merge. High-risk paths, hotfixes and every promotion wait for a human,
+   and `.github/workflows/**` and the project's release/promotion scripts always do (all
+   lanes, no waiver or `--through tag` scope covers them) — except that
+   `--through tag`, the owner's declared scope for one Release, lets `/orchestrate` carry it
+   through promotion after a passed release review (see step 6).
 6. Ship: once the integration branch has passed release review, it merges into `dev`
    (human gate). Cut a temporary `release/vX.Y.Z` from `dev` → PR into `main` (merge commit,
-   human gate), tag, and deploy **from the tag**. If production breaks while `dev` holds
+   human gate), tag, and deploy **from the tag**. With `--through tag` the orchestrator does
+   the merge into `dev`, the cut and its merge into `main`, the annotated tag, the GitHub
+   Release (release E2E artifact attached), the tracker Release `commitSha`/stage and the
+   cleanup itself; deploy stays human. If production breaks while `dev` holds
    unshippable work, take the hotfix lane instead — `docs/GIT_WORKFLOW.md`.
 
 ## What's inside
@@ -112,6 +123,8 @@ per-project.
 > - `handoff/SKILL.md` — fixed field list; durable state lives in the PR, issue and
 >   orchestration document
 > - `orchestrate/` — first-party, not vendored; do not add it to `skills-lock.json`
+>   (unattended in-session; `--through tag` scope and mandatory human paths must stay
+>   identical to `docs/GIT_WORKFLOW.md` § 4)
 > - `ponytail/` — first-party, not vendored; do not add it to `skills-lock.json`
 > - `answer-me-with-html/` — local fork of `QingYunA/answer-me-with-html` v0.5.0 (adds
 >   Excalidraw / UML diagrams baked via local Chrome, the `research` template, prereq /

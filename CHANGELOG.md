@@ -121,6 +121,34 @@ Format: date — what changed and why — which project surfaced it (if any).
     edits, then run `scripts/wt-gc.sh` once and clear the existing leftovers (dry run first;
     `gh` must be authenticated or everything is reported `active-or-unknown`).
 
+- **Unattended `/orchestrate` with a declared authorization scope (WHI-2200).**
+  `/orchestrate <Release> [--through tag]` runs the whole Release in the current session: a
+  session not on `ORCHESTRATOR_MODEL` warns once, records the actual model and continues (no
+  hand-off to another session); implementers are native sub-agents visible to the session when
+  they honour model/effort, else `agent-dispatch.sh` watched to completion, never an
+  unobserved background process. It decides what the rules allow, appends each decision to the
+  orchestration document's `Decision log`, and stops only for a missing release branch, an unmet
+  external dependency, an exhausted review budget, a mandatory human path, a failed real
+  dispatch with no usable fallback, or a human-gated step outside the declared scope. New
+  **mandatory human paths** (all lanes, whatever `HIGH_RISK_PATHS` says): `.github/workflows/**`
+  and the project's release/promotion scripts (new `RELEASE_SCRIPT_PATHS`, asked in `SETUP.md`
+  1.5); no waiver or `--through` scope covers them. Default = the v0.2 human gates;
+  `--through tag` covers, after a passed release review and release E2E on the current SHA,
+  only the merge into `dev`, the temporary cut and its merge into `main`, the annotated tag,
+  the GitHub Release with the release E2E artifact, the tracker Release `commitSha`/stage and
+  post-merge cleanup (`scripts/wt-gc.sh` at release close); never a mandatory human path or
+  high-risk path in the promotion diff, a script run, deploy, a hotfix, or a promotion result
+  that differs from H. The scope is recorded in the orchestration document's `Authorization
+  scope` before the first covered step. `AGENTS.md`: Releases stay small, notes in English.
+  - **Downstream migration:** port the `.claude/skills/orchestrate/SKILL.md`,
+    `docs/GIT_WORKFLOW.md` (§ 4 table, *Unattended promotion*, § Waiving an exception,
+    § Releasing to `main`, Agent constraints 6–7), `AGENTS.md`, PR template,
+    `docs/agents/runtime.md` (Orchestrator session) and `docs/agents/issue-tracker.md`
+    (orchestration document sections) edits; add `RELEASE_SCRIPT_PATHS` (the real paths of every
+    release/promotion script, or `none`) next to `HIGH_RISK_PATHS` in `AGENTS.md` and
+    `docs/GIT_WORKFLOW.md`, and add its marker to the placeholder grep. Existing open Releases
+    keep the default human gates unless the owner invokes `--through tag`.
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0

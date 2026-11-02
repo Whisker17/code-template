@@ -63,9 +63,13 @@ read from `config/agent-roles.conf`. If the primitive cannot set the configured 
 effort, use the subprocess path — do not silently drop the effort.
 
 **Orchestrator session.** `ORCHESTRATOR_MODEL` names the target orchestrator model. If the
-current session is not running it, start a matching session (dispatch `ORCHESTRATOR`) and
-hand off. A config file cannot switch the model of a session that is already running; never
-claim it did.
+current session is not running it, warn once, record the actual model and effort in the
+orchestration document and continue in this session; do not start another session or hand
+off. A config file cannot switch the model of a session that is already running; never claim
+it did. `/orchestrate` runs unattended in that session: its implementers are native
+sub-agents visible to it when they honour the role's model, effort and working directory
+(above), else `scripts/agent-dispatch.sh` run where the session can watch it to completion —
+never an unobserved background process.
 
 ## Preflight
 

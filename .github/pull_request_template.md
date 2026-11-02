@@ -10,9 +10,9 @@ Resolved from `docs/GIT_WORKFLOW.md` § Resolving the base branch.
 - [ ] `release/vX.Y.Z` (version-scoped) → merge with **squash**
 - [ ] `dev` (repo-wide governance carve-out only) → merge with **squash**
 - [ ] `dev` (finished version-integration `release/v*` merge-back) → **merge commit**,
-      never squash — **human gate**
+      never squash — **human gate**, or the owner's `--through tag` scope
 - [ ] `main` (hotfix, or temporary `release/*` cut) → merge with a **merge commit**,
-      never squash — **human gate**
+      never squash — **human gate** (a hotfix always; a cut only without `--through tag`)
 
 <!-- Signals this base was derived from: title prefix `[X.Y.Z]` / tracker
 Release / hotfix label / carve-out paths. Targeting `main`? If
@@ -26,7 +26,13 @@ Row of `docs/GIT_WORKFLOW.md` § Merge authorization this PR is under:
 - [ ] Ordinary version issue → integration branch, under `/orchestrate` (release review later)
 - [ ] Bootstrap issue → `dev`, under `/orchestrate`
 - [ ] Governance → `dev` / standalone `/implement` — independent review passed on commit: `<sha>`
-- [ ] Human gate (high-risk path, hotfix, `release/*` → `main`, finished `release/v*` → `dev`)
+- [ ] Human gate (high-risk path, mandatory human path — `.github/workflows/**` or the project's
+      release/promotion scripts, never covered by `--through tag` — hotfix, `release/*` → `main`,
+      finished `release/v*` → `dev`)
+- [ ] Promotion under the owner's `/orchestrate <Release> --through tag` scope (it covers only
+      the merge into `dev`, the cut and its merge into `main`, tag, GitHub Release, tracker
+      `commitSha`/stage, cleanup; never a mandatory human path, a high-risk path or a hotfix):
+      orchestration document `Authorization scope` link: `<url>`
 
 <!-- Finished `release/v*` → `dev`: link the `Release X.Y.Z — orchestration` document,
 baseline B, reviewed candidate H and the final review round. -->

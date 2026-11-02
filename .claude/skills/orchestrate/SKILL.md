@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: "Drive one tracker Release from issues to release-ready: schedule by real dependencies, verify and merge serially, then run the bounded release review loop."
+description: "Drive one tracker Release unattended in this session: schedule by real dependencies, verify and merge serially, run the bounded release review loop and, with --through tag, complete promotion through tag and GitHub Release."
 disable-model-invocation: true
 ---
 
@@ -13,12 +13,37 @@ wherever this skill summarises them.
 Nothing counts as evidence unless it is in Git, a PR, the tracker or a check's output: not
 chat, not a running process, not an agent saying "done".
 
+## Invocation and authority
+
+`/orchestrate <Release> [--through tag]`. Run the whole Release in **this session**.
+
+- **Unattended.** Decide everything the rules allow; do not stop to ask. Append each
+  decision (what, and the rule or evidence behind it) to the `Decision log` section of the
+  orchestration document as you make it.
+- **Stop only for:** a missing release branch; an unmet external dependency; the review
+  budget exhausted (§ 3); a mandatory human path (below); a failed real dispatch with no
+  usable fallback (`docs/agents/runtime.md` § Reviewer unavailable); a human-gated step
+  outside the declared authorization scope. Stopping means: record the blocker in the
+  orchestration document, leave the affected issue or PR at `In Review`, and report.
+- **Mandatory human paths** (every lane, whatever `{{HIGH_RISK_PATHS}}` says):
+  `.github/workflows/**` and the project's release/promotion scripts (`AGENTS.md`
+  § Merge authorization). A PR touching one is never agent-merged, and no waiver or
+  `--through tag` scope covers it.
+- **Default scope** is the human gates of `docs/GIT_WORKFLOW.md` § 4: stop at finished
+  `release/v*` → `dev`, every cut and every merge into `main`.
+- **`--through tag`** authorizes the steps of § 4 below, and only those, for this Release.
+  Write the **Authorization scope** section of the orchestration document before the first
+  covered step, in the shape of `docs/GIT_WORKFLOW.md` § Waiving an exception. Any other
+  human-gated step is outside the scope: stop.
+
 ## 1. Preflight
 
 Input is an explicit Linear project **and** Release. Never guess from a similar title or a
 milestone.
 
-0. If this session is not running `ORCHESTRATOR_MODEL`, start one that is and hand off.
+0. If this session is not running `ORCHESTRATOR_MODEL`, warn once, record the actual model
+   and effort in the orchestration document and continue. A config file cannot switch a
+   running session, and this is no reason to start another one.
 1. Read the whole Release (`docs/agents/issue-tracker.md` § Reading a release — every page).
 2. For each issue, check its version signals and resolve the Git base
    (`docs/GIT_WORKFLOW.md` § Resolving the base branch). A missing version branch is a
@@ -36,7 +61,9 @@ milestone.
    `done`; pass `--select <path>` only for a worktree you can attribute to a finished or
    abandoned task of this orchestration. A worktree you cannot attribute is not yours: report
    it, never select it.
-7. Create or reuse the `Release X.Y.Z — orchestration` document. Record the planned issue
+7. Create or reuse the `Release X.Y.Z — orchestration` document (sections in
+   `docs/agents/issue-tracker.md` § Release orchestration document, including `Decision log`
+   and `Authorization scope`). Record the planned issue
    set, the integration branch, the contract version (`v0.2`) and the fixed baseline
    **B**: the verified commit this version starts from. When taking over a release in
    progress, establish B from the record — never from today's HEAD, which would hide work
@@ -56,8 +83,10 @@ the issues that depend on it.
 - Independent issues run in parallel: one `IMPLEMENTER` dispatch, one worktree and one PR
   per issue, up to the runtime's existing concurrency limit. If capacity is unknown, run
   serially.
-- Dispatch with `scripts/agent-dispatch.sh IMPLEMENTER <prompt> --effort <medium|high>`
-  (or a native sub-agent honouring the same model and effort). Effort comes from the
+- Run each implementer as a native sub-agent visible to this session when it honours the
+  role's model, effort and working directory (`docs/agents/runtime.md` § Dispatch); otherwise
+  dispatch it with `scripts/agent-dispatch.sh IMPLEMENTER <prompt> --effort <medium|high>`
+  where you can watch it to completion. Never an unobserved background process. Effort comes from the
   issue's `Complexity`. You may raise it to `high` on evidence — record why on the issue —
   never lower it. The prompt is [`implementer-prompt.md`](implementer-prompt.md), filled.
 - Tracker: `In Progress` when you dispatch, `In Review` as soon as you see the PR, `Done`
@@ -177,14 +206,43 @@ scope error, not a pass.
 
 Release ready = the evidence is bound to H. Before declaring it, run `scripts/wt-gc.sh`:
 no worktree of this release (implementers', verification, review) may remain, and every
-leftover is removed or named with path and reason in the orchestration document. Merging the
-integration branch into `dev` is a human gate (`docs/GIT_WORKFLOW.md`). If that merge brings
-a new conflict resolution or code change, verify the merged result and review what changed.
-Then follow the normal release
-cut, `main` human gate, tag and publish flow.
+leftover is removed or named with path and reason in the orchestration document. Without
+`--through tag`, stop here: merging the integration branch into `dev`, the cut, the `main`
+merge, the tag and the publish are human gates (`docs/GIT_WORKFLOW.md`). If that merge
+brings a new conflict resolution or code change, verify the merged result and review what
+changed. With `--through tag`, continue with § 4.
 
 Record every round in the orchestration document: mode, H, reviewer model and effort,
 outcome, the finding → issue map and each finding's disposition.
+
+## 4. Promotion (`--through tag` only)
+
+The authorization, its exclusions and its recorded shape are defined once, in
+`docs/GIT_WORKFLOW.md` § 4 *Unattended promotion*. Start only on a passed release review of
+the **current** candidate H with `scripts/e2e.sh --release <X.Y.Z>` passed on H, and run the
+normal routing (`docs/GIT_WORKFLOW.md` § Two `release/` lifecycles and § Releasing to
+`main`). Before each step run its check and put the command and output in the `Decision
+log`:
+
+1. **Mandatory human paths.** `git diff --name-only origin/<target>...<source>` must list
+   no `.github/workflows/**`, no project release/promotion script and no high-risk path.
+   If it does, stop: that step is human-gated.
+2. Merge the finished `release/v*` into `dev` (merge commit). Then
+   `git diff --quiet <H> <merge-result>` must pass; a difference is a new resolution or
+   code change that needs verification and review, so stop.
+3. Cut the temporary `release/vX.Y.Z` from `dev` (deleting the merged integration branch of
+   that name first), open its PR into `main` at once, require `ci-ok` green (or the
+   `CI unavailable` evidence) and MERGEABLE/CLEAN, and merge it with a **merge commit**.
+4. Annotated tag `vX.Y.Z`, pushed; GitHub Release for it with English notes and the release
+   E2E artifact of H attached (`artifacts/e2e/release/<X.Y.Z>/<H>/`).
+5. Linear Release: `commitSha` = `git rev-parse 'vX.Y.Z^{commit}'` and the released stage;
+   re-read to confirm.
+6. Post-merge cleanup and fan-out (`docs/GIT_WORKFLOW.md` § Post-merge cleanup), then
+   `scripts/wt-gc.sh`: remove or name every leftover with path and reason in the
+   orchestration document, and report them.
+
+Never run the project's release/promotion scripts and never deploy: both stay with a human.
+A hotfix → `main` is never covered.
 
 ## When to intervene
 
