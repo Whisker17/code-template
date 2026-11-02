@@ -16,8 +16,8 @@ one edit point.
 | --- | --- | --- | --- |
 | `ORCHESTRATOR` | Reads the whole release, dispatches work, verifies evidence, merges serially, runs the release review loop (`/orchestrate`) | `high` | Implement features; declare a review passed |
 | `IMPLEMENTER` | Implements one issue in its own worktree, runs the relevant checks, opens the PR, hands off (`/implement`) | `medium` / `high` from the issue's `Complexity` (`docs/agents/issue-template.md` § Execution) | Widen scope; create the next release |
-| `REVIEWER` | Independent adversarial review of a PR range or a release snapshot (`/code-review`) | `high` | Edit the reviewed code; pass style preferences off as defects |
-| `REVIEWER_FALLBACK` (optional) | The same review, only after a real `REVIEWER` call failed (§ Reviewer unavailable) | `high` | Run unless the primary was actually invoked and failed; run for a validation failure |
+| `REVIEWER` | Independent adversarial review of a PR range or a release snapshot (`/code-review`): each bug hunter and the verifier is its own fresh dispatch | `high` | Edit the reviewed code; pass style preferences off as defects; verify its own findings |
+| `REVIEWER_FALLBACK` (optional) | The same review step (one hunter or the verifier), only after a real `REVIEWER` call failed (§ Reviewer unavailable) | `high` | Run unless the primary was actually invoked and failed; run for a validation failure |
 
 Ordinary exploration is done by whichever role owns the task. There is no escalation role:
 unresolved findings past the review budget go to a human.
@@ -94,7 +94,8 @@ claim it did.
 
 **`REVIEWER_FALLBACK`** (optional, declared in `config/agent-roles.conf`) is eligible
 **only** after a call failure of the primary. The caller — never the dispatcher — then
-dispatches it, **at most once per review step**. Record both outcomes in the PR or the
+dispatches it, **at most once per review step** (one hunter or the verifier dispatch of
+`/code-review`). Record both outcomes in the PR or the
 orchestration document: `primary REVIEWER <model> failed: <error>; used REVIEWER_FALLBACK
 <model>`, and the fallback's own result (a fallback that also fails is recorded the same
 way). The fallback review counts as the independent review only if it ran in a fresh

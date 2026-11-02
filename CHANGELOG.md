@@ -54,6 +54,34 @@ Format: date — what changed and why — which project surfaced it (if any).
     and `AGENTS.md` wording. A project already setting `REVIEWER_EFFORT_HIGH="medium"`
     (research-hub) should re-verify `high` before keeping it.
 
+- **Multi-angle adversarial release review with verification (WHI-2196).** `/code-review`
+  is rewritten: a review is **hunters + one verifier**, every one a fresh `REVIEWER`
+  dispatch at effort `high`. Three modes with the same names in `/code-review`,
+  `/orchestrate` § 3 and `/implement`: **Quick** (governance, standalone, hotfix: one hunter
+  over all six angles; needs `scripts/e2e.sh --full` on the final head, never a release
+  artifact), **Standard** (a release: one hunter per angle; needs the release E2E manifest
+  for H) and **Deep** (a release touching high-risk or human-approved paths: two hunters per
+  angle). The six angles are spec & acceptance, failure paths, security & trust
+  boundaries, cross-issue integration, verification validity and simplicity (suggestions
+  only). The verifier tries to refute each finding and marks it `confirmed`, `refuted` or
+  `unverified`; only `confirmed` findings are defects, and an `unverified` one touching an
+  acceptance criterion blocks until resolved. Findings are `R<round>-F<n>`, stable across
+  rounds; rounds 2-3 review only `H_prev..H_new`; `pre-existing` goes to
+  `docs/DEFERRED_ISSUES.md`; a failed or empty dispatch is not a review and consumes no
+  round. The 3 reviews / 2 fix batches budget is unchanged, and `/orchestrate` § 3 and
+  `/implement` now point at `docs/agents/runtime.md` § Reviewer unavailable instead of
+  restating the pre-fallback behaviour. New `docs/REVIEW.md`: what counts as failure, nit
+  limits, output format, an `## Escapes` table, the replay rule (replay the escapes when
+  `REVIEWER` or the skill changes and record recall here) and the recurring-class rule (a
+  second occurrence of a confirmed bug class needs a preventive change with an entry here,
+  with a worked example). The PR template gains `Testing`, `Risk` and `How to revert`.
+  - **Downstream migration:** copy `docs/REVIEW.md` and `.claude/skills/code-review/SKILL.md`,
+    port the `/orchestrate` § 3 and `/implement` Merge edits and the PR template sections,
+    add the pointer to `AGENTS.md`, and list the project's high-risk paths where Deep mode
+    is chosen. Seed `## Escapes` with the project's past hotfixes and post-release bugs and
+    replay them once (recall goes here). Project-specific ignored paths and nit limits go
+    in `docs/REVIEW.md`.
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0

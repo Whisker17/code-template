@@ -102,29 +102,38 @@ commit as candidate **H**. Record the manifest path
 command's exit code in the orchestration document. No new feature merges into the candidate
 branch during review.
 
-Dispatch a **fresh** `REVIEWER` with effort `high` via `/code-review` release mode. Give it
-B, H, `git diff B...H`, every issue's acceptance criteria, the spec, the check artifacts,
-and all earlier findings with their fixes. First confirm that `B..H` contains the claimed
-work: an empty or partial diff where new work is claimed is a scope error, not a pass.
+Review with `/code-review` in **Standard** mode, or **Deep** when `B...H` touches a
+high-risk path (`AGENTS.md` § Merge authorization) or any other path a human must approve.
+Every hunter and the verifier is a **fresh** `REVIEWER` dispatch at effort `high`. Give
+them B, H, `git diff B...H`, every issue's acceptance criteria, the spec, `docs/REVIEW.md`,
+the release E2E manifest and all earlier findings with their fixes. First confirm that
+`B..H` contains the claimed work: an empty or partial diff where new work is claimed is a
+scope error, not a pass.
 
 | Stage | What happens |
 | --- | --- |
 | Review 1 | Review H1. No blocking finding → ready. Otherwise → fix batch 1 |
 | Fix batch 1 | Fix issues (version fixes in the **same Release**; governance fixes via `dev`, below), implemented and integrated → verified H2 |
-| Review 2 | Review H2: the original findings and any regressions. Blocking → fix batch 2 |
+| Review 2 | Review `H1..H2` only: is each original finding fixed, and any regression. Blocking → fix batch 2 |
 | Fix batch 2 | Same routing → verified H3 |
-| Review 3 | Review H3. Passes → ready. Still blocking → **blocked**, hand to a human |
+| Review 3 | Review `H2..H3` only, same checks. Passes → ready. Still blocking → **blocked**, hand to a human |
 
 - **Budget:** at most 3 complete reviews and 2 automatic fix batches. Only a completed
   review of a candidate snapshot counts. An auth failure or empty output is neither a
-  pass nor a review: record it and do not retry without end. After review 3 there is no
-  fourth round and no unreviewed fix batch. Its open blocking findings still get fix issues
-  created or updated.
-- **Findings:** remove duplicates and check each is in scope. Do not close a finding just
-  because the implementer disagrees. A real disagreement goes back to the reviewer, then to
-  a human. Suggestions do not block and do not become tasks automatically. Out-of-scope
-  ones go in `docs/DEFERRED_ISSUES.md` with the reason. Never relabel a blocking finding
-  as a suggestion.
+  pass nor a review and consumes no round: record it and do not retry without end. After
+  review 3 there is no fourth round and no unreviewed fix batch. Its open blocking
+  findings still get fix issues created or updated.
+- **Findings** (ids `R<round>-F<n>`, stable across rounds; schema and states in
+  `/code-review` § 4–5): remove duplicates and check each is in scope. Only `confirmed`
+  findings are defects; an `unverified` one touching an acceptance criterion blocks until a
+  fix or a fresh verifier's evidence-backed refutation resolves it. Never re-open a
+  dispositioned finding. Do not close a finding just because the implementer disagrees. A
+  real disagreement goes back to a fresh verifier, then to a human. Suggestions do not
+  block and do not become tasks automatically. Out-of-scope ones, and `pre-existing`
+  findings, go in `docs/DEFERRED_ISSUES.md` with the reason (a `pre-existing` security
+  problem blocks). Never relabel a blocking finding as a suggestion.
+- **Dispositions:** record every finding's disposition — fixed, refuted, intentional or not
+  worth it — in the orchestration document.
 - **Fix issues** follow the normal lane rules (`docs/GIT_WORKFLOW.md` § Resolving the base
   branch). Never create a patch Release for a review round.
   - **Version fix** (touches anything outside the carve-out): stays in the **original
@@ -132,31 +141,38 @@ work: an empty or partial diff where new work is claimed is a scope error, not a
   - **Governance fix** (touches only carve-out files, e.g. `AGENTS.md` or a skill): no
     prefix, no Release, targets `dev`. Record it in the orchestration document as an
     external governance blocker of this release. A version fix that depends on it gets a
-    native `blocked-by`. It needs its one independent pre-merge review, then fan-out into
-    the integration branch. That moves the candidate, which is then re-verified and
-    re-reviewed without resetting the round count.
+    native `blocked-by`. It needs its one independent pre-merge review (**Quick** mode,
+    `/code-review`), then fan-out into the integration branch. That moves the candidate,
+    which is then re-verified and re-reviewed without resetting the round count.
   - A fix that spans both lanes is split exactly as the lane rules require.
 
-  One fix issue per independent root cause (findings sharing a root cause may share one),
-  built from the standard issue template with complexity. The body carries
+  One fix issue per independent root cause or bug class (findings sharing either may share
+  one), built from the standard issue template with complexity. The body carries
   `Review round`, the finding ids, the candidate SHA and the review evidence. Look up the
   existing finding → issue mapping in the orchestration document before creating one;
   retries and resumes must never duplicate. Fixes go implement → PR → handoff → verify →
   merge like any issue. The original issues stay `Done`.
-- After each fix batch, run the full acceptance again on the new candidate.
-- **Pass** = no unresolved blocking finding and acceptance valid on **that** SHA.
+- After each fix batch, run the **release E2E** again on the new candidate
+  (`scripts/e2e.sh --release <X.Y.Z>`). A release directory is write-once per version and
+  SHA, so each candidate has its own `artifacts/e2e/release/<X.Y.Z>/<H>/manifest.json`.
+- **Recurring class:** a confirmed bug class that occurs a second time needs a preventive
+  change with a `CHANGELOG.md` entry (`docs/REVIEW.md` § Recurring-class rule).
+- **Pass** = no unresolved blocking finding, no open `unverified` finding touching an
+  acceptance criterion, and acceptance valid on **that** SHA.
 - **Moved HEAD:** if a required fan-out or other authorized change moves the candidate,
   earlier results apply only to the old SHA. The new candidate is verified and reviewed
   again, and the round count does not reset. Once the budget is spent, a human takes over.
-- **Reviewer unavailable:** the release is blocked. It never advances.
+- **Reviewer unavailable:** follow `docs/agents/runtime.md` § Reviewer unavailable.
+  `REVIEWER_FALLBACK` is eligible only as it defines. If no review can be completed, the
+  release is blocked and never advances.
 
 Release ready = the evidence is bound to H. Merging the integration branch into `dev` is a
 human gate (`docs/GIT_WORKFLOW.md`). If that merge brings a new conflict resolution or code
 change, verify the merged result and review what changed. Then follow the normal release
 cut, `main` human gate, tag and publish flow.
 
-Record every round in the orchestration document: H, reviewer model and effort, outcome,
-and the finding → issue map.
+Record every round in the orchestration document: mode, H, reviewer model and effort,
+outcome, the finding → issue map and each finding's disposition.
 
 ## When to intervene
 

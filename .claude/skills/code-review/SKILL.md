@@ -1,76 +1,164 @@
 ---
 name: code-review
-description: Independent adversarial review, in a fresh REVIEWER context, of a fixed PR range or a release snapshot (baseline B to candidate H). Reports verifiable findings, marked blocking or suggestion, and a verdict tied to the reviewed SHA.
+description: Multi-angle adversarial review of a fixed range (a PR, or a release snapshot B..H) by fresh-context REVIEWER dispatches - parallel bug hunters plus an independent verifier. Reports only verified findings and a verdict tied to the reviewed SHA.
 ---
 
-One independent reviewer, in a fresh context, looks for real defects in a fixed range. It
-does not edit the code under review.
+Fresh-context reviewers try to **break** a fixed range, then a separate fresh reviewer
+tries to **refute** what they found. Only what survives refutation enters the report. No
+reviewer edits the code under review. What counts as a failure, the nit limits and the
+output format are in `docs/REVIEW.md`; this file is the procedure.
+
+## Modes
+
+The caller picks the mode. The names are the same in `/orchestrate` § Release review and
+`/implement` § Merge.
+
+| Mode | Used for | Hunters | Verifier | Precondition on the head |
+| --- | --- | --- | --- | --- |
+| **Quick** | governance PRs, standalone `/implement`, hotfix | 1 hunter covering all six angles | 1 | **Full E2E** (`scripts/e2e.sh --full`) passed on the final head. Never a release artifact |
+| **Standard** | a release candidate | 1 hunter per angle (six) | 1 | **Release E2E** manifest passed on H (`artifacts/e2e/release/<X.Y.Z>/<H>/manifest.json`) |
+| **Deep** | a release candidate touching high-risk paths (`AGENTS.md` § Merge authorization) or any other path a human must approve | 2 hunters per angle (twelve); one of each pair may be another vendor | 1 | Same as Standard |
+
+A hunter or verifier dispatch is one *review step* in the sense of `docs/agents/runtime.md`
+§ Reviewer unavailable. "Another vendor" is optional and is not `REVIEWER_FALLBACK`, which
+exists only for a failed primary call.
 
 ## 1. Pin the range
 
-- **PR mode:** fixed point = the PR base (or the ref the user names); head = the PR's head
-  commit.
-- **Release mode:** baseline **B** and candidate **H**, from the
+- **PR range (Quick):** fixed point = the PR base (or the ref the user names); head = the
+  PR's head commit.
+- **Release range (Standard, Deep):** baseline **B** and candidate **H**, from the
   `Release X.Y.Z — orchestration` document (`/orchestrate` § Release review).
 
 Commit everything first. Resolve both ends (`git rev-parse`) and record the exact SHAs.
 Use the three-dot form `git diff <fixed>...<head>` (against the merge-base; for B..H,
 where B is an ancestor, it equals the plain range). Two-dot against a base that has moved
 shows foreign commits in reverse. Check that the diff is **non-empty and contains the work
-being claimed**. A bad ref, an empty diff, or a diff missing the claimed work stops here —
-it is never a pass.
+being claimed**. Then check the mode's precondition above: the artifact exists for exactly
+this head, its manifest records exit code `0` for every command, and its SHA equals the head.
+A bad ref, an empty diff, a diff missing the claimed work or a missing precondition stops
+here — it is never a pass.
 
 ## 2. Gather the inputs
 
-- The diff (inline it in the prompt; do not rely on the reviewer running git) and the
-  commit list. The reviewer may read the full tree at the head to check interactions.
+- The diff (inline it in every prompt; do not rely on the reviewer running git) and the
+  commit list. A reviewer may read the full tree at the head to check interactions.
 - The spec and **every** acceptance criterion in scope: the PR's issue, or every issue in
   the Release. Fetch them via `docs/agents/issue-tracker.md`, or ask the user where the
   spec is.
-- The verification artifacts (commands, results, logs) and, in release mode, all earlier
-  findings and their fixes.
-- The repo's documented standards (`CONTRIBUTING.md`, `CODING_STANDARDS.md`, …), if any.
+- The verification artifacts (commands, results, logs, the manifest) and, in later
+  rounds, the findings so far with their dispositions.
+- `docs/REVIEW.md` and the repo's documented standards (`CONTRIBUTING.md`,
+  `CODING_STANDARDS.md`, …), if any.
 
-## 3. Dispatch
+## 3. Hunt
 
-`scripts/agent-dispatch.sh REVIEWER <prompt-file> --effort high`, or a native sub-agent that
-honours the same model and effort (`docs/agents/runtime.md`). It must never run in the
-implementing context. Exit `3`, a failed call, or empty/transport-error output means **no
-review happened**: record it and follow `docs/agents/runtime.md` § Reviewer unavailable.
+Dispatch each hunter with `scripts/agent-dispatch.sh REVIEWER <prompt-file> --effort high`,
+or a native sub-agent that honours the same model and effort (`docs/agents/runtime.md`).
+Every dispatch is its own **fresh context**, never the implementing one, and no hunter sees
+another hunter's output. Hunters may run concurrently up to the runtime's limit, else
+serially.
 
-Brief the reviewer to cover, in one pass:
+Every hunter prompt starts: **"Assume a bug exists in this change. Find inputs, states and
+sequences that break it."** It names the angle(s), carries the inputs of § 2, and asks for
+candidate findings in the schema of § 5 with a concrete trigger each. Breadth over
+certainty: a hunter reports every plausible failure it can articulate and says whether it
+reproduced it; deciding is the verifier's job (§ 4). The angles:
 
-- whether the change meets the spec and each acceptance criterion;
-- error handling, edge cases, state recovery, security and data integrity;
-- consistency of interfaces and behaviour across issues (release mode especially);
-- whether the verification really proves the requirement — no vacuous gate, empty diff,
-  or test that would still pass with the change reverted;
-- simplicity per `/ponytail`: existing capability re-implemented, or an unneeded
-  dependency or abstraction.
+1. **Spec & acceptance.** Does each acceptance criterion hold? Find the input where it does not.
+2. **Failure paths.** Errors, recovery, concurrency, data loss.
+3. **Security & trust boundaries.** Untrusted input, paths, secrets, permissions.
+4. **Cross-issue integration.** Interfaces, config, schema and generated files that two
+   changes both touch.
+5. **Verification validity.** Would the E2E still pass with the feature reverted? Is the
+   artifact reproducible from its manifest? Is any gate vacuous?
+6. **Simplicity** per `/ponytail`: existing capability re-implemented, an unneeded
+   dependency or abstraction. Its findings are `suggestion` only.
 
-In later release rounds the reviewer still owns the whole candidate, with extra attention
-on the fixes and what they could have broken.
+Quick gives one hunter all six angles. Deep gives each angle to two hunters.
 
-## 4. Findings
+A hunter's reply is its candidate findings, or an explicit "no findings" with the checks
+it made. **A failed or empty dispatch is not a review** (§ 6).
 
-Each finding has:
+## 4. Verify
 
-- a stable id: `R<round>-F<n>` in release mode (`R1-F1`), `PR-F<n>` in PR mode;
-- a severity:
-  - **blocking** — a real defect, a missing acceptance criterion, missing critical
-    verification, a security or data problem, or a clear breach of an explicit simplicity
-    constraint;
-  - **suggestion** — style preference, optional cleanup or a future enhancement. Never
-    blocks, never becomes a task by itself;
-  - **unverified** — a finding with no reproduction or thin evidence. Not a proven defect,
-    but one that touches a key acceptance criterion blocks until resolved;
-- the location (file/line or behaviour), the trigger, the evidence or reproduction, the
-  requirement it violates, and the smallest fix.
+The caller concatenates the hunters' candidates verbatim, merges exact duplicates (keeping
+the source hunters), and gives each remaining candidate its id `R<round>-F<n>`. A **new**
+fresh `REVIEWER` dispatch — not one of the hunters — receives the numbered list, the diff,
+the spec and `docs/REVIEW.md`, and tries to **refute each finding** by reproduction (run
+it) or code citation, reading whatever it needs in the tree at the head. It returns one
+disposition per id, with the evidence:
 
-End with the **verdict** and the SHA it covers. **Pass** = no unresolved blocking finding
-and acceptance valid on that SHA; suggestions may remain. A later commit needs its own
-check.
+- `confirmed` — reproduced, or the cited code provably violates the requirement;
+- `refuted` — the trigger cannot happen, the code is correct, or the requirement is met;
+- `unverified` — it could neither reproduce nor refute (evidence thin, or it depends on
+  something outside the repo).
+
+The verifier adds nothing new. A candidate it judges style-only is dropped, not reported.
+Only `confirmed` findings enter the report as defects; `refuted` are listed with their
+refutation so nobody re-raises them.
+
+`git blame` on the cited line decides `pre-existing`: the line's commit is an ancestor of
+the fixed point / B, so the range did not introduce it.
+
+## 5. Findings and report
+
+Each finding has: id `R<round>-F<n>` (assigned once; **stable across rounds**), severity,
+bug class (a short noun phrase, reused for the same kind of bug), `file:line`, trigger,
+reproduction or evidence, the violated requirement, and the smallest fix. Severity:
+
+- **blocking** — a confirmed failure as defined in `docs/REVIEW.md`: a defect, an unmet
+  acceptance criterion, missing critical verification, a security or data problem;
+- **suggestion** — confirmed but optional (including every simplicity finding). Never
+  blocks, never becomes a task by itself;
+- **pre-existing** — confirmed, but `git blame` shows the range did not introduce it. Goes
+  to `docs/DEFERRED_ISSUES.md`; non-blocking unless it is a security problem.
+
+`unverified` is a disposition, not a severity. It **blocks while open when it touches an
+acceptance criterion in scope** (every listed criterion counts; one the spec marks optional
+does not). Otherwise it is reported and does not block.
+
+The report opens with the counts and an explicit statement, then the findings:
+
+```text
+Review R<round> · mode <Quick|Standard|Deep> · range <fixed>...<head> · head <full SHA>
+Counts: <C> confirmed (<b> blocking, <s> suggestion, <p> pre-existing), <r> refuted,
+        <u> unverified (<k> touching an acceptance criterion), <d> dropped as style
+No blocking findings.   |   <N> blocking finding(s).
+Verdict: PASS | BLOCKED (<why>)
+```
+
+**Pass** = no confirmed blocking finding, no open `unverified` touching an acceptance
+criterion, and the precondition of § 1 valid on **that** SHA. Suggestions may remain. An
+open `unverified` is shown as open and is never rendered as PASS; it clears only by a
+fix, or by a fresh verifier call that refutes it with evidence in a later round. A later
+commit needs its own check.
+
+## 6. Rounds
+
+- **Complete review.** A round counts only when every hunter of the mode and the verifier
+  returned usable output and every id has a disposition. A failed dispatch (non-zero
+  exit, exit `2`/`3`, a transport error, empty output) means **no review happened**: record
+  the role, exit code and error, follow `docs/agents/runtime.md` § Reviewer unavailable, and
+  leave the round counter unchanged. Never report a pass from it.
+- **Budget:** at most 3 complete reviews and 2 automatic fix batches. In a release the
+  counts live in the orchestration document (`/orchestrate` § Release review); for a Quick
+  review, on the PR.
+- **Rounds 2–3** run the same mode on `H_prev..H_new` **only**, plus two checks per earlier
+  finding and for regressions: is each earlier `confirmed` or `unverified` finding fixed,
+  and did the fix break anything. Findings keep their ids. A `refuted` or otherwise
+  dispositioned finding is never re-opened; only a new reproduction on new code can raise
+  a new finding, with a new id `R<round>-F<n>`. Hunters get the earlier findings with their
+  dispositions and may restate them; the caller maps a restatement to the existing id, never
+  to a new one. The verifier is given the fixed-claims as a separate list and answers
+  `status: fixed | not fixed` (a status, not a disposition), and re-checks an `unverified`
+  finding when the delta adds evidence for it.
+- **Fix issues:** one per root cause or bug class, not per finding.
+- **Dispositions:** every finding ends as `fixed`, `refuted`, `intentional` or `not worth
+  it`, recorded in the orchestration document (release) or the PR (Quick).
+- A second occurrence of a confirmed bug class triggers the preventive-change rule of
+  `docs/REVIEW.md`.
 
 The caller — the orchestrator, or the implementer in standalone mode — removes duplicates
 and checks scope. A finding is not closed just because the implementer disagrees; a real
-dispute goes back to the reviewer, then to a human.
+dispute goes back to a fresh verifier, then to a human.
