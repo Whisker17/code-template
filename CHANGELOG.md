@@ -195,6 +195,12 @@ Format: date — what changed and why — which project surfaced it (if any).
   - **Downstream migration:** port those three files' quick-fix text; nothing else changes.
     Not yet in `SETUP.md` or `/orchestrate`, whose wording on mandatory human paths still holds.
 
+- **Next-session prompt in `/handoff` (WHI-2204).** `.claude/skills/handoff/SKILL.md` ends every
+  handoff with a `## Next-session prompt` block: one fenced, self-contained prompt the owner pastes
+  into a fresh session, carrying repo path, Release and issue ids, state (commit SHAs, PR numbers),
+  the exact skill invocation, stop conditions and where the durable evidence lives.
+  - **Downstream migration:** copy the `## Next-session prompt` section of the skill.
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0
