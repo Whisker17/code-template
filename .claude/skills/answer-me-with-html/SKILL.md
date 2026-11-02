@@ -22,7 +22,7 @@ Reply to the user, and write the draft, in the user's language.
 
 The method follows Karpathy's "understand LLM output" ladder: controlled writing (STE), then diagrams, then HTML. This skill uses all three: the text goes through an STE check, the structure goes into diagrams, and the page does layout and interaction. Where the method and each rule come from: [references/method.md](references/method.md).
 
-> This directory is a project-level fork of upstream [QingYunA/answer-me-with-html](https://github.com/QingYunA/answer-me-with-html). It adds `excalidraw` / `uml` figures, the `research` template, the `prereq` / `finding` / `glossary` components, and `am bake` / `am shot`. The source is in `dev/`; after a change run `cd dev && npm run build`. Upstream's `am video` is not part of this fork's workflow.
+> This directory is a project-level fork of upstream [QingYunA/answer-me-with-html](https://github.com/QingYunA/answer-me-with-html). It adds `excalidraw` / `uml` figures, the `research` and `article` templates, the `prereq` / `finding` / `glossary` components, and `am bake` / `am shot`. The source is in `dev/`; after a change run `cd dev && npm run build`. Upstream's `am video` is not part of this fork's workflow.
 
 ## 0. When the user wants to change settings
 
@@ -46,6 +46,7 @@ Otherwise answer in plain text. When unsure: the more the question "needs a pict
 |---|---|---|
 | Answer one question, explain one concept | Explainer page (`sheet` / `doc`) | Follow sections 2–6 of this file; render once |
 | **Write up and share** research, an investigation, an experiment, or a paper or codebase deep dive, for developers who must pick it up | **Research page (`research`)** | **Read [references/research.md](references/research.md) first** and follow its steps |
+| A **long-form report** to publish (for example a research-hub report): one reading column, numbered sections, claims cited from a claim ledger | **Article (`article`)** | **Read [references/article.md](references/article.md) first** |
 
 ### Always-on mode
 
@@ -66,7 +67,7 @@ The CLI is bundled in this skill's directory: `scripts/am.mjs`, a single file wi
 node "${CLAUDE_SKILL_DIR}/scripts/am.mjs"
 ```
 
-In Claude Code, the path above is replaced with this skill's directory automatically. If you see the variable unreplaced (other agents), use the project-relative path `.claude/skills/answer-me-with-html/scripts/am.mjs`, or the absolute path of the directory that contains this SKILL.md.
+In Claude Code, the path above is replaced with this skill's directory automatically. If you see the variable unreplaced (other agents), use the project-relative path `.claude/skills/answer-me-with-html/scripts/am.mjs`, or the absolute path of the directory that contains this SKILL.md. When the skill was loaded with a "Base directory for this skill" line (DeepSeek Harness), that path is this directory. If the user installed the `am` command globally, you can also use `am` directly.
 
 1. First list 3–8 panels in your head. Each panel answers one sub-question only.
    The draft language follows the language of the user's question: an English question gets an English draft, a Chinese question a Chinese draft, a Japanese question a Japanese draft. The page button labels, `<html lang>` and the STE check rules switch automatically by the draft language (a draft containing kana counts as Japanese); STE applies the English or Chinese rules to each sentence by its language (Japanese sentences get only the sentence-length and paragraph-length checks, with the same character limits as Chinese; any other language gets only those two checks, counted in words). To set the language yourself, write `lang:` in the frontmatter: `en`, `zh` (Simplified Chinese), `zh-Hant` or `zh-TW` (Traditional Chinese), `ja`, or any other language tag such as `fr` or `ko`. Detection reads Chinese (Simplified, or Traditional when the text has characters written in only one form), Japanese, Korean, and Cyrillic, Arabic, Hebrew, Thai and Greek text, and reads all Latin-script text as English. Declare the language when the user writes a Latin-script language other than English, when a Chinese text is too short or too plain to show Traditional characters, or when an exact tag matters (Arabic script also writes Persian, Cyrillic also Ukrainian). A language without its own labels still gets the right `<html lang>`, with English page labels.
@@ -100,6 +101,7 @@ AM_EOF
 6. Reply in the terminal with only 2–3 lines: one core conclusion + the page link. Do not paste the draft or the HTML back into the terminal. Write this reply after the render, as the last step of the turn: render the page first, then reply. No tool call comes after the reply.
    If the render output has a `link:` line, the user runs `am serve`: use that URL as the page link instead, with the URL as the label too, and skip the `file://` link below. Never start `am serve` yourself; only the user starts it.
    Otherwise write the page link as a Markdown link to a `file://` URL, with the URL as the label too: `[file:///abs/path.html](file:///abs/path.html)`. Take the absolute path from the `✓` line and add `file://` in front; do not percent-encode it. GUI hosts (Codex, Antigravity) render this as a clickable link, and a terminal still shows the full URL.
+   If you have a `present` tool (DeepSeek Harness), call it with the absolute path from the `✓` line before you reply, so the user can open the page from a card in the app. Still end the reply with the link.
 
 When a page already exists and only one panel needs to change, do not rewrite the whole page. Take the source draft from the HTML's `#am-source`, replace only the matching `##` section, and overwrite the page in place (figures are baked again):
 
@@ -116,7 +118,7 @@ AM_EOF
 
 ```markdown
 ---
-template: sheet     # sheet board (default) | doc linear explanation | research research page (overview + body + reading paths)
+template: sheet     # sheet board (default) | doc linear explanation | research research page (overview + body + reading paths) | article long-form report
 theme: auto         # auto (default): paper for doc or text-only drafts, blueprint with diagrams | blueprint | shadcn | paper | a theme the user made (am list shows it)
 title: Title
 subtitle: One-line summary     # optional
@@ -135,8 +137,9 @@ Table status words: ok / no / warn (may carry text: "ok approved") → ✓ / ✗
 ## D Body panel {depth=3}   ← research: reading depth 1 = 5 minutes, 2 = 30 minutes (default), 3 = everything
 ```
 
-- The panel letter ID can be omitted; it is assigned automatically.
+- The panel letter ID can be omitted; it is assigned automatically. A capital letter and a space before a capitalized word is read as the ID, so write the ID before a title such as `A Miss Goes Unseen`: `## B A Miss Goes Unseen`.
 - ```html / ```svg fenced blocks are embedded as-is. **Use them only when no component can express the content.**
+- Math in text: `$x^2$` inline, and `$$` on its own line before and after a block; put a long formula in a `$$` block. `\$` writes a dollar sign. Diagrams and video take no math.
 - Full reference: `am help format`; component syntax: `am help <component>`; component list: `am list`.
 
 ## 4. Choose components by the shape of the information

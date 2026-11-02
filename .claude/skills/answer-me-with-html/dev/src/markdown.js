@@ -1,22 +1,30 @@
-// Markdown → HTML (GFM). Four extras: tables get a horizontally scrolling wrapper; status words in cells render as badges; an image on its own line becomes a captioned figure;
+// Markdown → HTML (GFM). Five extras: $…$ and $$ math (math.js); tables get a horizontally scrolling wrapper; status words in cells render as badges; an image on its own line becomes a captioned figure;
 // raw HTML is filtered (see raw-html.js): a placeholder such as <host> shows as text, tags that break the page are escaped, event handlers and javascript: links are removed.
 
 import { Marked } from 'marked';
 import { filterBlocks, filterInline } from './raw-html.js';
+import { mathExtension } from './math.js';
 
 // What the raw-HTML filter changed while collectHtmlNotes is running. Rendering is synchronous, so nothing leaks between calls.
 let sink = null;
 const note = (at, message) => sink?.push({ at, message });
 
+// Whether $ starts a formula (src/math.js). A video draft turns it off: scenes have no math styles.
+let mathOn = true;
+
 // Runs render() and returns its result with the notes about the raw HTML it changed: [{ at, message }], at being the tag as the draft wrote it.
-export function collectHtmlNotes(render) {
+// A formula that Temml cannot read adds a note too, { at, message, math: true }, at being the formula as the draft wrote it.
+export function collectHtmlNotes(render, { math = true } = {}) {
   const outer = sink;
+  const outerMath = mathOn;
   const notes = [];
   sink = notes;
+  mathOn = math;
   try {
     return { result: render(), notes };
   } finally {
     sink = outer;
+    mathOn = outerMath;
   }
 }
 
@@ -25,6 +33,9 @@ const marked = new Marked({ gfm: true });
 const inline = new Marked({ gfm: true });
 marked.use({ hooks: { processAllTokens: (tokens) => filterBlocks(tokens, { lex: (source) => marked.lexer(source), note }) } });
 inline.use({ hooks: { processAllTokens: (tokens) => filterInline(tokens, note) } });
+const math = mathExtension({ enabled: () => mathOn, note: (at, message) => sink?.push({ at, message, math: true }) });
+marked.use(math);
+inline.use(math);
 
 const STATUS = {
   ok: { cls: 'ok', icon: '✓' },
@@ -104,10 +115,73 @@ function linkTerms(text) {
   }))).join('');
 }
 
+// Research fork — evidence chips: {K2} or {K2, K5} names rows of the page's claim ledger. While a page renders with a ledger
+// (am render --evidence), render.js installs it with withEvidence(); each ID becomes a superscript chip coloured by its kind, and an ID
+// the ledger lacks is collected in missing. Without a ledger the braces stay text. It is an inline Markdown token, so code spans,
+// code blocks, $…$ math, raw HTML and link destinations never become chips.
+const EV_ID = '[A-Za-z]{1,4}-?\\d+[a-z]?';
+const EVIDENCE = new RegExp(`^\\{(${EV_ID}(?:\\s*,\\s*${EV_ID})*)\\}`);
+const EV_KINDS = new Set(['observed', 'inferred', 'speculative']);
+let evidence = null;
+
+export function withEvidence(ledger, fn) {
+  if (!ledger) return { value: fn(), missing: [], used: null, where: new Map() };
+  const prev = evidence;
+  evidence = { map: ledger, missing: new Set(), used: {}, where: new Map(), block: null };
+  try {
+    const value = fn();
+    return { value, missing: [...evidence.missing], used: evidence.used, where: evidence.where };
+  } finally {
+    evidence = prev;
+  }
+}
+
+// The draft block being rendered, so an unknown ID can be reported at the block that cites it (render.js sets it per block).
+export function evidenceBlock(block) {
+  if (evidence) evidence.block = block;
+}
+
+function chips(ids) {
+  return ids.map((id) => {
+    const row = Object.hasOwn(evidence.map, id) ? evidence.map[id] : null;
+    if (!row) {
+      evidence.missing.add(id);
+      if (!evidence.where.has(id)) evidence.where.set(id, evidence.block);
+      return '';
+    }
+    evidence.used[id] = row;
+    const kind = EV_KINDS.has(row.type) ? row.type : 'observed';
+    return `<sup class="am-ev am-ev--${kind}" data-ev="${escAttr(id)}" tabindex="0">${escAttr(id)}</sup>`;
+  }).join('');
+}
+
+const evidenceExtension = {
+  extensions: [{
+    name: 'evidence',
+    level: 'inline',
+    start: (src) => {
+      if (!evidence) return undefined;
+      const i = src.indexOf('{');
+      return i < 0 ? undefined : i;
+    },
+    // Text inside raw <code>, <pre> or <kbd> is code (marked marks it inRawBlock), not a citation.
+    tokenizer(src) {
+      if (this.lexer.state.inRawBlock) return undefined;
+      const m = evidence && EVIDENCE.exec(src);
+      return m ? { type: 'evidence', raw: m[0], ids: m[1].split(',').map((x) => x.trim()) } : undefined;
+    },
+    renderer: (token) => chips(token.ids),
+  }],
+};
+marked.use(evidenceExtension);
+inline.use(evidenceExtension);
+
+const prepare = (text) => linkTerms(wrapSpacedImages(String(text ?? '')));
+
 export function md(text) {
-  return decorate(marked.parse(linkTerms(wrapSpacedImages(String(text ?? '')))));
+  return decorate(marked.parse(prepare(text)));
 }
 
 export function mdInline(text) {
-  return inline.parseInline(linkTerms(wrapSpacedImages(String(text ?? ''))));
+  return inline.parseInline(prepare(text));
 }

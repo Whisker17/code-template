@@ -16,6 +16,8 @@ const fail = (fig, e) => {
   errors.push({ fig: fig?.id || '', line: Number(fig?.dataset.line || 0) + inner, kind: fig?.dataset.amLive || '', message: msg });
 };
 const stage = (s) => { root.dataset.amStage = s; };
+// Research fork: an article page draws its figures flat (no hand-drawn wobble, sans text, the article palette); every other page keeps the sketch.
+const FLAT = Boolean(document.querySelector('main.am-article'));
 const canvasOf = (fig) => fig.querySelector('.am-fig-canvas');
 const done = (fig) => { fig.dataset.amDone = '1'; };
 
@@ -30,13 +32,21 @@ async function renderUml(figs) {
     return;
   }
   const font = getComputedStyle(document.body).fontFamily;
-  mermaid.initialize({
-    startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: font,
-    themeVariables: {
+  const vars = FLAT
+    ? {
+      fontFamily: font, fontSize: '14px', primaryColor: '#fffdf9', primaryBorderColor: '#d3ccbd', primaryTextColor: '#1c2230',
+      secondaryColor: '#eaf0ff', tertiaryColor: '#f1efe9', lineColor: '#3a4254', noteBkgColor: '#fdf3e1',
+      noteBorderColor: '#b4730f', actorBkg: '#fffdf9', actorBorder: '#2d5be3', signalColor: '#1c2230', labelBoxBkgColor: '#f1efe9',
+      clusterBkg: '#f7f5f0', clusterBorder: '#d3ccbd',
+    }
+    : {
       fontFamily: font, fontSize: '14px', primaryColor: '#ffffff', primaryBorderColor: '#16181d', primaryTextColor: '#16181d',
       secondaryColor: '#e4ecf8', tertiaryColor: '#f3f5f8', lineColor: '#4b5260', noteBkgColor: '#fdf3e2',
       noteBorderColor: '#a8620a', actorBkg: '#ffffff', actorBorder: '#16181d', signalColor: '#16181d', labelBoxBkgColor: '#f3f5f8',
-    },
+    };
+  mermaid.initialize({
+    startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: font,
+    themeVariables: vars,
     sequence: { mirrorActors: false, actorMargin: 60, messageMargin: 36 },
     flowchart: { curve: 'basis', padding: 12 },
   });
@@ -56,10 +66,18 @@ async function renderUml(figs) {
 }
 
 // ── Excalidraw ─────────────────────────────────
-const EX = {
+const SKETCH = {
   bg: { blue: '#a5d8ff', green: '#b2f2bb', yellow: '#ffec99', red: '#ffc9c9', violet: '#d0bfff', gray: '#e9ecef', orange: '#ffd8a8', teal: '#96f2d7', white: '#ffffff', none: 'transparent' },
   stroke: { ink: '#1e1e1e', blue: '#1971c2', red: '#e03131', green: '#2f9e44', gray: '#868e96', violet: '#6741d9', orange: '#e8590c' },
 };
+// The article palette: pale fills, and a coloured node is outlined in its own colour (edge = the fill's strong shade).
+const FLAT_EX = {
+  bg: { blue: '#eaf0ff', green: '#e6f5ee', yellow: '#fdf3e1', red: '#fdecea', violet: '#f0ebfc', gray: '#f3f4f6', orange: '#fdf3e1', teal: '#e3f4f1', white: '#ffffff', none: 'transparent' },
+  stroke: { ink: '#3a4254', blue: '#2d5be3', red: '#c43d2b', green: '#1d8a5a', gray: '#9aa1ad', violet: '#6a4cc2', orange: '#b4730f', yellow: '#b4730f', teal: '#1f8a7a', white: '#c9cdd5' },
+};
+const EX = FLAT ? FLAT_EX : SKETCH;
+// A flat node without its own strokeColor takes the strong shade of its fill colour.
+const nodeStroke = (n) => (FLAT && !n.strokeColor ? (FLAT_EX.stroke[n.color ?? 'white'] ?? FLAT_EX.stroke.white) : undefined);
 // Snap an edge end to the shape outline (rectangle / ellipse / diamond).
 function clip(n, tx, ty) {
   const cx = n.x + n.w / 2;
@@ -78,7 +96,7 @@ function clip(n, tx, ty) {
 }
 function toSkeleton(spec) {
   const G = { w: 340, h: 150, ...(spec.grid || {}) };
-  const D = { w: 180, h: 70, fontSize: 18, roughness: 1, strokeWidth: 2, fontFamily: 5, ...(spec.defaults || {}) };
+  const D = { w: 180, h: 70, ...(FLAT ? { fontSize: 16, roughness: 0, strokeWidth: 1.5, fontFamily: 6 } : { fontSize: 18, roughness: 1, strokeWidth: 2, fontFamily: 5 }), ...(spec.defaults || {}) };
   const nodes = new Map();
   const out = [];
   const common = (o) => ({
@@ -104,7 +122,7 @@ function toSkeleton(spec) {
     if (b.label) out.push({ type: 'text', x: x + 10, y: y + 6, text: b.label, fontSize: b.fontSize ?? 14, fontFamily: D.fontFamily, strokeColor: EX.stroke[b.labelColor] || b.labelColor || EX.stroke.gray });
   }
   for (const n of nodes.values()) {
-    const el = { type: n.shape, id: n.id, x: n.x, y: n.y, width: n.w, height: n.h, ...common(n), backgroundColor: EX.bg[n.color ?? 'white'] || n.color, fillStyle: n.fill || 'solid' };
+    const el = { type: n.shape, id: n.id, x: n.x, y: n.y, width: n.w, height: n.h, ...common({ strokeColor: nodeStroke(n), ...n }), backgroundColor: EX.bg[n.color ?? 'white'] || n.color, fillStyle: n.fill || 'solid' };
     if (n.shape === 'rectangle' && n.rounded !== false) el.roundness = { type: 3 };
     if (n.label) el.label = { text: n.label, fontSize: n.fontSize ?? D.fontSize, fontFamily: D.fontFamily, strokeColor: EX.stroke[n.textColor] || n.textColor || EX.stroke.ink };
     out.push(el);

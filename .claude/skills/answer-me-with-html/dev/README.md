@@ -3,7 +3,7 @@
 This directory is the source of the skill. At run time the skill needs only the parent directory's `SKILL.md`, `references/`, `examples/` and `scripts/am.mjs` (the bundle).
 
 - Upstream: <https://github.com/QingYunA/answer-me-with-html>, MIT (see `LICENSE`).
-- Fork version `X.Y.Z-research.N`: based on upstream `X.Y.Z`. Current base: **upstream v0.5.0** (`b275eba`, synced at `533c39f`).
+- Fork version `X.Y.Z-research.N`: based on upstream `X.Y.Z`. Current base: **upstream v0.5.2** (`adf633b`).
 - `dev/` mirrors the upstream repository root for `src/`, `test/`, `bin/`, `scripts/build.mjs`, `scripts/inline-assets.mjs`, `package.json` and `examples/` (`dev/examples/` is used by the tests only; the agent-facing examples are in `../examples/`). Upstream's `skills/answer-me-with-html/` is the parent directory.
 - Not carried over: the plugin manifests and commands, the website (`site/`), bench, docs and demo, and the release / snapshot / smoke-install scripts.
 - Upstream's `am video` code stays in `src/` (it is wired into themes, languages, page and patch), but `SKILL.md` does not document it and `references/video.md` is not shipped.
@@ -32,6 +32,8 @@ npm run build               # after changing src/, regenerates ../scripts/am.mjs
 | `src/markdown.js` | `[[term]]` links (not inside code); an undefined term is an error |
 | `src/render.js` | Fence aliases become component names; glossary collected first; figures numbered; `data-am-live="pending"` and the diagram runtime when a page has figures; returns `live` |
 | `src/templates/research.js` | New template: `{sheet}` overview (sized like the sheet template), body, contents, reading paths by `depth=1/2/3` |
+| `src/templates/article.js`, `src/themes/article.js`, `src/runtime/article.js` | New template `article`: title block, contents, numbered sections (`##` → N, `###` → N.M), no toolbar, colophon in a footer; its own theme (scope `article`, never embedded elsewhere); page script for the contents highlight, evidence hover box and figure zoom. Flat figures on article pages in `src/runtime/diagrams.js` |
+| `src/markdown.js`, `src/cli.js` | `{K2}` / `{K2, K5}` evidence chips from a claim ledger (`am render --evidence <file.json>`); an unknown ID is a render error |
 | `src/templates/panel.js` | `depth` option (`data-depth`); `bake` is a reserved frontmatter key |
 | `src/page.js` | `readPage` recognizes the research template, so `am patch` keeps it |
 | `src/parse.js` | `research` is a template choice |
