@@ -54,7 +54,7 @@ esac
 
 INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh)
 while IFS= read -r f; do INPUTS+=("$f"); done < <(find tests/e2e -type f ! -path '*/__pycache__/*' | sort)
-[ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py)
+[ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py config/agent-roles.conf scripts/e2e.sh scripts/wt-gc.sh)
 # <<< E2E SUITES <<<
 
 SHA="$(git rev-parse HEAD)"
@@ -77,7 +77,7 @@ for cmd in "${SUITES[@]}"; do
     n=$((n + 1)); log="$(printf '%02d' "$n").log"
     echo "e2e: [$n/${#SUITES[@]}] $cmd"
     rc=0
-    bash -c "$cmd" > "$OUT/$log" 2>&1 || rc=$?
+    bash -o pipefail -c "$cmd" > "$OUT/$log" 2>&1 || rc=$?
     tail -n 5 "$OUT/$log"
     printf '%s\t%s\t%s\n' "$cmd" "$rc" "$log" >> "$OUT/commands.tsv"
     [ "$rc" -le "$WORST" ] || WORST="$rc"
