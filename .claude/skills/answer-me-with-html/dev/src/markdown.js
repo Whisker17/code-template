@@ -115,10 +115,48 @@ function linkTerms(text) {
   }))).join('');
 }
 
+// Research fork — evidence chips: {K2} or {K2, K5} names rows of the page's claim ledger. While a page renders with a ledger
+// (am render --evidence), render.js installs it with withEvidence(); each ID becomes a superscript chip coloured by its kind, and an ID
+// the ledger lacks is collected in missing. Without a ledger the braces stay text. Code and $…$ math are left alone ({x1} in TeX).
+const EV_ID = '[A-Za-z]{1,4}-?\\d+[a-z]?';
+const EVIDENCE = new RegExp(`\\{(${EV_ID}(?:\\s*,\\s*${EV_ID})*)\\}`, 'g');
+const EV_KINDS = new Set(['observed', 'inferred', 'speculative']);
+let evidence = null;
+
+export function withEvidence(ledger, fn) {
+  if (!ledger) return { value: fn(), missing: [], used: null };
+  const prev = evidence;
+  evidence = { map: ledger, missing: new Set(), used: {} };
+  try {
+    const value = fn();
+    return { value, missing: [...evidence.missing], used: evidence.used };
+  } finally {
+    evidence = prev;
+  }
+}
+
+function linkEvidence(text) {
+  if (!evidence) return text;
+  return text.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`|\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/).map((part, i) => (i % 2 ? part : part.replace(EVIDENCE, (_, ids) => ids.split(',').map((raw) => {
+    const id = raw.trim();
+    const row = evidence.map[id];
+    if (!row) {
+      evidence.missing.add(id);
+      return '';
+    }
+    evidence.used[id] = row;
+    const kind = EV_KINDS.has(row.type) ? row.type : 'observed';
+    return `<sup class="am-ev am-ev--${kind}" data-ev="${escAttr(id)}" tabindex="0">${escAttr(id)}</sup>`;
+  }).join('')))).join('');
+}
+
+// Evidence first: a glossary definition that cites {K2} keeps the braces as text inside its hover tip.
+const prepare = (text) => linkTerms(linkEvidence(wrapSpacedImages(String(text ?? ''))));
+
 export function md(text) {
-  return decorate(marked.parse(linkTerms(wrapSpacedImages(String(text ?? '')))));
+  return decorate(marked.parse(prepare(text)));
 }
 
 export function mdInline(text) {
-  return inline.parseInline(linkTerms(wrapSpacedImages(String(text ?? ''))));
+  return inline.parseInline(prepare(text));
 }

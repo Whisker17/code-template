@@ -12,7 +12,7 @@ export class ParseError extends Error {
 }
 
 export const CHOICES = Object.freeze({
-  template: ['sheet', 'doc', 'research', 'video'],
+  template: ['sheet', 'doc', 'research', 'article', 'video'],
   theme: [AUTO, ...themeNames('page')],
   style: ['off', '80', 'strict'],
   mode: ['auto', 'light', 'dark'],

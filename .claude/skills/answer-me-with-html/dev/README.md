@@ -32,6 +32,8 @@ npm run build               # after changing src/, regenerates ../scripts/am.mjs
 | `src/markdown.js` | `[[term]]` links (not inside code); an undefined term is an error |
 | `src/render.js` | Fence aliases become component names; glossary collected first; figures numbered; `data-am-live="pending"` and the diagram runtime when a page has figures; returns `live` |
 | `src/templates/research.js` | New template: `{sheet}` overview (sized like the sheet template), body, contents, reading paths by `depth=1/2/3` |
+| `src/templates/article.js`, `src/themes/article.js`, `src/runtime/article.js` | New template `article`: title block, contents, numbered sections (`##` → N, `###` → N.M), no toolbar, colophon in a footer; its own theme (scope `article`, never embedded elsewhere); page script for the contents highlight, evidence hover box and figure zoom. Flat figures on article pages in `src/runtime/diagrams.js` |
+| `src/markdown.js`, `src/cli.js` | `{K2}` / `{K2, K5}` evidence chips from a claim ledger (`am render --evidence <file.json>`); an unknown ID is a render error |
 | `src/templates/panel.js` | `depth` option (`data-depth`); `bake` is a reserved frontmatter key |
 | `src/page.js` | `readPage` recognizes the research template, so `am patch` keeps it |
 | `src/parse.js` | `research` is a template choice |

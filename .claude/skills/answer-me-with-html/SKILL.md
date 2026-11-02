@@ -22,7 +22,7 @@ Reply to the user, and write the draft, in the user's language.
 
 The method follows Karpathy's "understand LLM output" ladder: controlled writing (STE), then diagrams, then HTML. This skill uses all three: the text goes through an STE check, the structure goes into diagrams, and the page does layout and interaction. Where the method and each rule come from: [references/method.md](references/method.md).
 
-> This directory is a project-level fork of upstream [QingYunA/answer-me-with-html](https://github.com/QingYunA/answer-me-with-html). It adds `excalidraw` / `uml` figures, the `research` template, the `prereq` / `finding` / `glossary` components, and `am bake` / `am shot`. The source is in `dev/`; after a change run `cd dev && npm run build`. Upstream's `am video` is not part of this fork's workflow.
+> This directory is a project-level fork of upstream [QingYunA/answer-me-with-html](https://github.com/QingYunA/answer-me-with-html). It adds `excalidraw` / `uml` figures, the `research` and `article` templates, the `prereq` / `finding` / `glossary` components, and `am bake` / `am shot`. The source is in `dev/`; after a change run `cd dev && npm run build`. Upstream's `am video` is not part of this fork's workflow.
 
 ## 0. When the user wants to change settings
 
@@ -46,6 +46,7 @@ Otherwise answer in plain text. When unsure: the more the question "needs a pict
 |---|---|---|
 | Answer one question, explain one concept | Explainer page (`sheet` / `doc`) | Follow sections 2–6 of this file; render once |
 | **Write up and share** research, an investigation, an experiment, or a paper or codebase deep dive, for developers who must pick it up | **Research page (`research`)** | **Read [references/research.md](references/research.md) first** and follow its steps |
+| A **long-form report** to publish (for example a research-hub report): one reading column, numbered sections, claims cited from a claim ledger | **Article (`article`)** | **Read [references/article.md](references/article.md) first** |
 
 ### Always-on mode
 
@@ -117,7 +118,7 @@ AM_EOF
 
 ```markdown
 ---
-template: sheet     # sheet board (default) | doc linear explanation | research research page (overview + body + reading paths)
+template: sheet     # sheet board (default) | doc linear explanation | research research page (overview + body + reading paths) | article long-form report
 theme: auto         # auto (default): paper for doc or text-only drafts, blueprint with diagrams | blueprint | shadcn | paper | a theme the user made (am list shows it)
 title: Title
 subtitle: One-line summary     # optional

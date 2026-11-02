@@ -17,6 +17,8 @@ export const MATH_CSS = composeMathCss(read('./themes/math.css'));
 export const DELTA_JS = read('./runtime/delta.js');
 // Research fork: the browser runtime that draws excalidraw / uml figures (removed again when am bake inlines the SVG).
 export const DIAGRAM_JS = read('./runtime/diagrams.js');
+// Research fork: the article template's page script (contents highlight, evidence hover box, figure zoom).
+export const ARTICLE_JS = read('./runtime/article.js');
 export const UPDATE_CSS = read('./themes/update.css');
 export const UPDATE_JS = read('./runtime/update.js');
 export const VIDEO_CSS = read('./themes/video.css');

@@ -45,7 +45,7 @@ export function readPage(html) {
     source: m ? unescapeHtml(m[1]) : null,
     video,
     // A <main class="am-doc"> in the body does not count; the template's <main> always comes before the body.
-    template: video ? 'video' : s.match(/<main class="am-(doc|sheet|research)\b/)?.[1],
+    template: video ? 'video' : s.match(/<main class="am-(doc|sheet|research|article)\b/)?.[1],
     theme: attr('data-theme'),
     mode: attr('data-mode'),
     style: attr('data-style'),

@@ -71,6 +71,7 @@ export function lintDoc(doc, language) {
     else if (COMPONENTS.get(b.lang)?.lint) lintMarkdown(COMPONENTS.get(b.lang).lint(b.text), b.line + 1, warnings, family);
   }
   if (doc.meta.template === 'research') lintResearch(doc, blocks, warnings);
+  if (doc.meta.template === 'article') lintFigureQuestions(blocks, warnings);
   return warnings;
 }
 
@@ -88,13 +89,17 @@ function lintFields(text, startLine, out, family) {
 }
 
 // Research-page completeness (warnings only): every figure states its question; the page has prerequisites, findings, a glossary and an overview.
-function lintResearch(doc, blocks, out) {
-  const fences = blocks.filter((b) => b.type === 'fence');
-  for (const b of fences) {
-    if (FIG_FENCES.has(b.lang) && !/\bq=/.test(b.args)) {
+function lintFigureQuestions(blocks, out) {
+  for (const b of blocks) {
+    if (b.type === 'fence' && FIG_FENCES.has(b.lang) && !/\bq=/.test(b.args)) {
       out.push({ line: b.line, rule: 'research', message: `${b.lang} figure has no q="the question this figure answers"`, suggestion: 'add q=… and takeaway=…' });
     }
   }
+}
+
+function lintResearch(doc, blocks, out) {
+  const fences = blocks.filter((b) => b.type === 'fence');
+  lintFigureQuestions(blocks, out);
   const has = (lang) => fences.some((b) => b.lang === lang);
   const first = doc.panels[0]?.line ?? 1;
   if (!has('prereq')) out.push({ line: first, rule: 'research', message: 'no prerequisite cards (prereq)', suggestion: 'write one card for each key concept outside the reader\'s baseline' });

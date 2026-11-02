@@ -33,7 +33,7 @@ import { parseArgs } from "node:util";
 import { readFileSync as readFileSync9, writeFileSync as writeFileSync7, mkdirSync as mkdirSync4, existsSync as existsSync7, rmSync as rmSync7 } from "node:fs";
 
 // src/assets.js
-var VERSION = "0.5.2-research.1";
+var VERSION = "0.5.2-research.2";
 var BASE_CSS = `/* Answer me with HTML base \u2014 uses theme variables only, never hard-coded colors (theme tokens and decorations: themes/<name>.js). Exception: the var() fallbacks of diagrams (flow / sequence) equal the blueprint light tokens, guarded by a test. */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -1189,7 +1189,8 @@ math:not(.tml-display) { max-width: 100%; overflow-x: auto; overflow-y: hidden; 
 }
 `;
 var DELTA_JS = "\n// \u2500\u2500 Change markers: the Before / Changes / After switch \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// The switch starts hidden because it needs this script. It swaps the am-view-* class of its diagram; the delta styles show the colors and badges only in\n// the Changes view and hide the items that do not exist in the view.\n(() => {\n  const VIEWS = ['before', 'changes', 'after'];\n  const setView = (el, view) => {\n    el.classList.remove(...VIEWS.map((v) => `am-view-${v}`));\n    el.classList.add(`am-view-${view}`);\n  };\n  for (const bar of document.querySelectorAll('.am-delta-bar')) {\n    const view = bar.parentElement;\n    const group = bar.querySelector('.am-delta-switch');\n    if (!group) continue;\n    group.hidden = false;\n    group.addEventListener('click', (e) => {\n      const btn = e.target.closest('button[data-view]');\n      if (!btn) return;\n      setView(view, btn.dataset.view);\n      for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === btn));\n    });\n  }\n  // The expand button copies only the drawing into the viewer; the viewer shows the view the diagram is in.\n  document.addEventListener('click', (e) => {\n    const host = e.target.closest?.('.am-diagram-expand')?.parentElement;\n    const canvas = document.querySelector('.am-lightbox-canvas');\n    const view = host && VIEWS.find((v) => host.classList.contains(`am-view-${v}`));\n    if (view && canvas) setView(canvas, view);\n  });\n})();\n";
-var DIAGRAM_JS = "// Research fork \u2014 the diagram runtime: inlined only when a page has excalidraw / uml figures that are not baked yet.\n// It loads Mermaid and Excalidraw from a CDN, draws the figures, then sets data-am-live=\"ok|error\" on <html> for am bake / am shot to wait on.\n// am bake runs this script in the local Chrome, copies the drawn figures into the page file and drops this script: a single file with no dependencies.\nconst CDN = {\n  mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs',\n  excalidraw: 'https://esm.sh/@excalidraw/excalidraw@0.18.0?bundle-deps',\n};\nconst root = document.documentElement;\nconst $$ = (s, r = document) => [...r.querySelectorAll(s)];\nconst errors = [];\nconst fail = (fig, e) => {\n  let msg = String(e && e.message ? e.message : e).split('\\n').slice(0, 4).join(' ');\n  // Mermaid reports the line inside the figure: turn it into the draft line (fence line + inner line), and cut the long Expecting list.\n  const inner = Number(msg.match(/on line (\\d+)/)?.[1] ?? 0);\n  msg = msg.replace(/(Expecting .{0,90}).*$/, '$1\u2026');\n  errors.push({ fig: fig?.id || '', line: Number(fig?.dataset.line || 0) + inner, kind: fig?.dataset.amLive || '', message: msg });\n};\nconst stage = (s) => { root.dataset.amStage = s; };\nconst canvasOf = (fig) => fig.querySelector('.am-fig-canvas');\nconst done = (fig) => { fig.dataset.amDone = '1'; };\n\n// \u2500\u2500 UML (Mermaid) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nasync function renderUml(figs) {\n  stage('uml:import');\n  let mermaid;\n  try {\n    ({ default: mermaid } = await import(CDN.mermaid));\n  } catch (e) {\n    figs.forEach((f) => fail(f, `cannot load Mermaid (${e.message}): check the network and try again`));\n    return;\n  }\n  const font = getComputedStyle(document.body).fontFamily;\n  mermaid.initialize({\n    startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: font,\n    themeVariables: {\n      fontFamily: font, fontSize: '14px', primaryColor: '#ffffff', primaryBorderColor: '#16181d', primaryTextColor: '#16181d',\n      secondaryColor: '#e4ecf8', tertiaryColor: '#f3f5f8', lineColor: '#4b5260', noteBkgColor: '#fdf3e2',\n      noteBorderColor: '#a8620a', actorBkg: '#ffffff', actorBorder: '#16181d', signalColor: '#16181d', labelBoxBkgColor: '#f3f5f8',\n    },\n    sequence: { mirrorActors: false, actorMargin: 60, messageMargin: 36 },\n    flowchart: { curve: 'basis', padding: 12 },\n  });\n  let i = 0;\n  for (const fig of figs) {\n    stage(`uml:${fig.id}`);\n    try {\n      const src = JSON.parse(fig.querySelector('script.am-uml-src').textContent);\n      // Each figure renders on its own with a unique id: mermaid.run reuses ids in a batch, which breaks the SVGs.\n      const { svg } = await mermaid.render(`am-mmd-${Date.now().toString(36)}-${i++}`, src);\n      canvasOf(fig).innerHTML = svg;\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 Excalidraw \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst EX = {\n  bg: { blue: '#a5d8ff', green: '#b2f2bb', yellow: '#ffec99', red: '#ffc9c9', violet: '#d0bfff', gray: '#e9ecef', orange: '#ffd8a8', teal: '#96f2d7', white: '#ffffff', none: 'transparent' },\n  stroke: { ink: '#1e1e1e', blue: '#1971c2', red: '#e03131', green: '#2f9e44', gray: '#868e96', violet: '#6741d9', orange: '#e8590c' },\n};\n// Snap an edge end to the shape outline (rectangle / ellipse / diamond).\nfunction clip(n, tx, ty) {\n  const cx = n.x + n.w / 2;\n  const cy = n.y + n.h / 2;\n  const dx = tx - cx;\n  const dy = ty - cy;\n  if (!dx && !dy) return [cx, cy];\n  const hw = n.w / 2;\n  const hh = n.h / 2;\n  let t;\n  if (n.shape === 'ellipse') t = 1 / Math.sqrt((dx / hw) ** 2 + (dy / hh) ** 2);\n  else if (n.shape === 'diamond') t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);\n  else t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);\n  const gap = 6 / Math.hypot(dx, dy);\n  return [cx + dx * (t + gap), cy + dy * (t + gap)];\n}\nfunction toSkeleton(spec) {\n  const G = { w: 340, h: 150, ...(spec.grid || {}) };\n  const D = { w: 180, h: 70, fontSize: 18, roughness: 1, strokeWidth: 2, fontFamily: 5, ...(spec.defaults || {}) };\n  const nodes = new Map();\n  const out = [];\n  const common = (o) => ({\n    roughness: o.roughness ?? D.roughness, strokeWidth: o.strokeWidth ?? D.strokeWidth,\n    strokeColor: EX.stroke[o.strokeColor] || o.strokeColor || EX.stroke.ink, strokeStyle: o.stroke || 'solid',\n  });\n  for (const n of spec.nodes || []) {\n    const w = n.w ?? D.w;\n    const h = n.h ?? D.h;\n    nodes.set(n.id, { ...n, w, h, shape: n.shape || 'rectangle', x: n.x ?? (n.col ?? 0) * G.w + (n.dx || 0), y: n.y ?? (n.row ?? 0) * G.h + (n.dy || 0) });\n  }\n  for (const b of spec.boxes || []) {\n    let { x, y, w, h } = b;\n    if (b.around) {\n      const ns = b.around.map((id) => nodes.get(id)).filter(Boolean);\n      const p = b.pad ?? 30;\n      x = Math.min(...ns.map((n) => n.x)) - p;\n      y = Math.min(...ns.map((n) => n.y)) - p - (b.label ? 22 : 0);\n      w = Math.max(...ns.map((n) => n.x + n.w)) + p - x;\n      h = Math.max(...ns.map((n) => n.y + n.h)) + p - y;\n    }\n    out.push({ type: 'rectangle', x, y, width: w, height: h, ...common({ stroke: 'dashed', strokeColor: 'gray', ...b }), backgroundColor: EX.bg[b.color] || b.color || 'transparent', fillStyle: b.fill || 'solid', opacity: b.opacity ?? 60, roundness: { type: 3 } });\n    if (b.label) out.push({ type: 'text', x: x + 10, y: y + 6, text: b.label, fontSize: b.fontSize ?? 14, fontFamily: D.fontFamily, strokeColor: EX.stroke[b.labelColor] || b.labelColor || EX.stroke.gray });\n  }\n  for (const n of nodes.values()) {\n    const el = { type: n.shape, id: n.id, x: n.x, y: n.y, width: n.w, height: n.h, ...common(n), backgroundColor: EX.bg[n.color ?? 'white'] || n.color, fillStyle: n.fill || 'solid' };\n    if (n.shape === 'rectangle' && n.rounded !== false) el.roundness = { type: 3 };\n    if (n.label) el.label = { text: n.label, fontSize: n.fontSize ?? D.fontSize, fontFamily: D.fontFamily, strokeColor: EX.stroke[n.textColor] || n.textColor || EX.stroke.ink };\n    out.push(el);\n  }\n  for (const e of spec.edges || []) {\n    const a = nodes.get(e.from);\n    const b = nodes.get(e.to);\n    const via = e.via || [];\n    const first = via[0] || [b.x + b.w / 2, b.y + b.h / 2];\n    const last = via[via.length - 1] || [a.x + a.w / 2, a.y + a.h / 2];\n    const [sx, sy] = clip(a, ...first);\n    const [ex, ey] = clip(b, ...last);\n    const pts = [[sx, sy], ...via, [ex, ey]].map(([px, py]) => [px - sx, py - sy]);\n    const el = {\n      type: 'arrow', x: sx, y: sy, points: pts, width: Math.abs(ex - sx) || 1, height: Math.abs(ey - sy) || 1,\n      ...common({ ...e, stroke: e.dashed ? 'dashed' : e.dotted ? 'dotted' : 'solid' }),\n      start: { id: a.id }, end: { id: b.id },\n      startArrowhead: e.arrow === 'both' ? (e.head || 'arrow') : null, endArrowhead: e.arrow === 'none' ? null : (e.head || 'arrow'),\n    };\n    if (e.label) el.label = { text: e.label, fontSize: e.fontSize ?? 15, fontFamily: D.fontFamily };\n    out.push(el);\n  }\n  for (const t of spec.texts || []) out.push({ type: 'text', x: t.x, y: t.y, text: t.text, fontSize: t.fontSize ?? 16, fontFamily: D.fontFamily, strokeColor: EX.stroke[t.color] || t.color || EX.stroke.ink, textAlign: t.align || 'left' });\n  for (const r of spec.raw || []) out.push(r);\n  return out;\n}\n// Excalidraw measures text on a canvas; before the hand-drawn font loads it measures too narrow, so labels are cut and edge masks are too small.\n// Export once first, register the fonts embedded in that SVG with the document, then convert for real.\nasync function warmFonts(X, specs) {\n  const warm = [];\n  for (const sp of specs) { try { warm.push(...X.convertToExcalidrawElements(toSkeleton(sp))); } catch { /* reported by the real render */ } }\n  if (!warm.length) return;\n  const svg = await X.exportToSvg({ elements: warm, appState: {}, files: {} });\n  const css = [...svg.querySelectorAll('style')].map((s) => s.textContent).join('\\n');\n  for (const m of css.matchAll(/@font-face\\s*{([^}]*)}/g)) {\n    const fam = /font-family:\\s*[\"']?([^\"';]+)[\"']?/.exec(m[1])?.[1];\n    const src = /src:\\s*url\\(([^)]+)\\)/.exec(m[1])?.[1]?.replace(/^[\"']|[\"']$/g, '');\n    if (!fam || !src) continue;\n    try { const ff = new FontFace(fam, `url(${src})`); document.fonts.add(ff); await ff.load(); } catch { /* a font failure only affects text measuring */ }\n  }\n}\nasync function renderExcalidraw(figs) {\n  stage('excalidraw:import');\n  let X;\n  try {\n    X = await import(CDN.excalidraw);\n  } catch (e) {\n    figs.forEach((f) => fail(f, `cannot load Excalidraw (${e.message}): check the network and try again`));\n    return;\n  }\n  const specs = figs.map((f) => JSON.parse(f.querySelector('script.am-excal-spec').textContent));\n  stage('excalidraw:fonts');\n  try { await warmFonts(X, specs); } catch { /* draw anyway */ }\n  for (const [i, fig] of figs.entries()) {\n    stage(`excalidraw:${fig.id}`);\n    try {\n      const spec = specs[i];\n      const elements = X.convertToExcalidrawElements(toSkeleton(spec), { regenerateIds: false });\n      const svg = await X.exportToSvg({ elements, appState: { exportBackground: false, viewBackgroundColor: '#ffffff', exportPadding: 16 }, files: {} });\n      svg.removeAttribute('width');\n      svg.removeAttribute('height');\n      svg.style.width = `${Math.min(svg.viewBox.baseVal.width * (spec.scale || 1), 1100)}px`;\n      canvasOf(fig).replaceChildren(svg);\n      const file = { type: 'excalidraw', version: 2, source: 'answer-me-with-html', elements, appState: { viewBackgroundColor: '#ffffff', gridSize: 20 }, files: {} };\n      const store = Object.assign(document.createElement('script'), { type: 'application/json', className: 'am-excal-file' });\n      store.textContent = JSON.stringify(file).replace(/</g, '\\\\u003c');\n      const btn = Object.assign(document.createElement('button'), { type: 'button', className: 'am-btn am-fig-dl', textContent: '\u2193 .excalidraw' });\n      btn.dataset.am = 'excal-dl';\n      btn.title = 'excalidraw.com \u2192 Open';\n      btn.addEventListener('click', () => {\n        const url = URL.createObjectURL(new Blob([store.textContent], { type: 'application/json' }));\n        Object.assign(document.createElement('a'), { href: url, download: `${fig.dataset.name || fig.id}.excalidraw` }).click();\n        setTimeout(() => URL.revokeObjectURL(url), 2000);\n      });\n      canvasOf(fig).after(store, btn);\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 boot \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst pending = $$('figure[data-am-live]:not([data-am-done])');\nconst uml = pending.filter((f) => f.dataset.amLive === 'uml');\nconst excal = pending.filter((f) => f.dataset.amLive === 'excalidraw');\nstage('render');\nawait Promise.all([uml.length && renderUml(uml), excal.length && renderExcalidraw(excal)]);\nconst banner = document.getElementById('am-render-errors');\nif (banner) {\n  banner.hidden = !errors.length;\n  banner.textContent = errors.map((e) => `${e.fig} (L${e.line} ${e.kind}): ${e.message}`).join('\\n');\n}\nroot.dataset.amErrors = JSON.stringify(errors);\nstage('done');\nroot.dataset.amLive = errors.length ? 'error' : 'ok';\n";
+var DIAGRAM_JS = "// Research fork \u2014 the diagram runtime: inlined only when a page has excalidraw / uml figures that are not baked yet.\n// It loads Mermaid and Excalidraw from a CDN, draws the figures, then sets data-am-live=\"ok|error\" on <html> for am bake / am shot to wait on.\n// am bake runs this script in the local Chrome, copies the drawn figures into the page file and drops this script: a single file with no dependencies.\nconst CDN = {\n  mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs',\n  excalidraw: 'https://esm.sh/@excalidraw/excalidraw@0.18.0?bundle-deps',\n};\nconst root = document.documentElement;\nconst $$ = (s, r = document) => [...r.querySelectorAll(s)];\nconst errors = [];\nconst fail = (fig, e) => {\n  let msg = String(e && e.message ? e.message : e).split('\\n').slice(0, 4).join(' ');\n  // Mermaid reports the line inside the figure: turn it into the draft line (fence line + inner line), and cut the long Expecting list.\n  const inner = Number(msg.match(/on line (\\d+)/)?.[1] ?? 0);\n  msg = msg.replace(/(Expecting .{0,90}).*$/, '$1\u2026');\n  errors.push({ fig: fig?.id || '', line: Number(fig?.dataset.line || 0) + inner, kind: fig?.dataset.amLive || '', message: msg });\n};\nconst stage = (s) => { root.dataset.amStage = s; };\n// Research fork: an article page draws its figures flat (no hand-drawn wobble, sans text, the article palette); every other page keeps the sketch.\nconst FLAT = Boolean(document.querySelector('main.am-article'));\nconst canvasOf = (fig) => fig.querySelector('.am-fig-canvas');\nconst done = (fig) => { fig.dataset.amDone = '1'; };\n\n// \u2500\u2500 UML (Mermaid) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nasync function renderUml(figs) {\n  stage('uml:import');\n  let mermaid;\n  try {\n    ({ default: mermaid } = await import(CDN.mermaid));\n  } catch (e) {\n    figs.forEach((f) => fail(f, `cannot load Mermaid (${e.message}): check the network and try again`));\n    return;\n  }\n  const font = getComputedStyle(document.body).fontFamily;\n  const vars = FLAT\n    ? {\n      fontFamily: font, fontSize: '14px', primaryColor: '#fffdf9', primaryBorderColor: '#d3ccbd', primaryTextColor: '#1c2230',\n      secondaryColor: '#eaf0ff', tertiaryColor: '#f1efe9', lineColor: '#3a4254', noteBkgColor: '#fdf3e1',\n      noteBorderColor: '#b4730f', actorBkg: '#fffdf9', actorBorder: '#2d5be3', signalColor: '#1c2230', labelBoxBkgColor: '#f1efe9',\n      clusterBkg: '#f7f5f0', clusterBorder: '#d3ccbd',\n    }\n    : {\n      fontFamily: font, fontSize: '14px', primaryColor: '#ffffff', primaryBorderColor: '#16181d', primaryTextColor: '#16181d',\n      secondaryColor: '#e4ecf8', tertiaryColor: '#f3f5f8', lineColor: '#4b5260', noteBkgColor: '#fdf3e2',\n      noteBorderColor: '#a8620a', actorBkg: '#ffffff', actorBorder: '#16181d', signalColor: '#16181d', labelBoxBkgColor: '#f3f5f8',\n    };\n  mermaid.initialize({\n    startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: font,\n    themeVariables: vars,\n    sequence: { mirrorActors: false, actorMargin: 60, messageMargin: 36 },\n    flowchart: { curve: 'basis', padding: 12 },\n  });\n  let i = 0;\n  for (const fig of figs) {\n    stage(`uml:${fig.id}`);\n    try {\n      const src = JSON.parse(fig.querySelector('script.am-uml-src').textContent);\n      // Each figure renders on its own with a unique id: mermaid.run reuses ids in a batch, which breaks the SVGs.\n      const { svg } = await mermaid.render(`am-mmd-${Date.now().toString(36)}-${i++}`, src);\n      canvasOf(fig).innerHTML = svg;\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 Excalidraw \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst SKETCH = {\n  bg: { blue: '#a5d8ff', green: '#b2f2bb', yellow: '#ffec99', red: '#ffc9c9', violet: '#d0bfff', gray: '#e9ecef', orange: '#ffd8a8', teal: '#96f2d7', white: '#ffffff', none: 'transparent' },\n  stroke: { ink: '#1e1e1e', blue: '#1971c2', red: '#e03131', green: '#2f9e44', gray: '#868e96', violet: '#6741d9', orange: '#e8590c' },\n};\n// The article palette: pale fills, and a coloured node is outlined in its own colour (edge = the fill's strong shade).\nconst FLAT_EX = {\n  bg: { blue: '#eaf0ff', green: '#e6f5ee', yellow: '#fdf3e1', red: '#fdecea', violet: '#f0ebfc', gray: '#f3f4f6', orange: '#fdf3e1', teal: '#e3f4f1', white: '#ffffff', none: 'transparent' },\n  stroke: { ink: '#3a4254', blue: '#2d5be3', red: '#c43d2b', green: '#1d8a5a', gray: '#9aa1ad', violet: '#6a4cc2', orange: '#b4730f', yellow: '#b4730f', teal: '#1f8a7a', white: '#c9cdd5' },\n};\nconst EX = FLAT ? FLAT_EX : SKETCH;\n// A flat node without its own strokeColor takes the strong shade of its fill colour.\nconst nodeStroke = (n) => (FLAT && !n.strokeColor ? (FLAT_EX.stroke[n.color ?? 'white'] ?? FLAT_EX.stroke.white) : undefined);\n// Snap an edge end to the shape outline (rectangle / ellipse / diamond).\nfunction clip(n, tx, ty) {\n  const cx = n.x + n.w / 2;\n  const cy = n.y + n.h / 2;\n  const dx = tx - cx;\n  const dy = ty - cy;\n  if (!dx && !dy) return [cx, cy];\n  const hw = n.w / 2;\n  const hh = n.h / 2;\n  let t;\n  if (n.shape === 'ellipse') t = 1 / Math.sqrt((dx / hw) ** 2 + (dy / hh) ** 2);\n  else if (n.shape === 'diamond') t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);\n  else t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);\n  const gap = 6 / Math.hypot(dx, dy);\n  return [cx + dx * (t + gap), cy + dy * (t + gap)];\n}\nfunction toSkeleton(spec) {\n  const G = { w: 340, h: 150, ...(spec.grid || {}) };\n  const D = { w: 180, h: 70, ...(FLAT ? { fontSize: 16, roughness: 0, strokeWidth: 1.5, fontFamily: 6 } : { fontSize: 18, roughness: 1, strokeWidth: 2, fontFamily: 5 }), ...(spec.defaults || {}) };\n  const nodes = new Map();\n  const out = [];\n  const common = (o) => ({\n    roughness: o.roughness ?? D.roughness, strokeWidth: o.strokeWidth ?? D.strokeWidth,\n    strokeColor: EX.stroke[o.strokeColor] || o.strokeColor || EX.stroke.ink, strokeStyle: o.stroke || 'solid',\n  });\n  for (const n of spec.nodes || []) {\n    const w = n.w ?? D.w;\n    const h = n.h ?? D.h;\n    nodes.set(n.id, { ...n, w, h, shape: n.shape || 'rectangle', x: n.x ?? (n.col ?? 0) * G.w + (n.dx || 0), y: n.y ?? (n.row ?? 0) * G.h + (n.dy || 0) });\n  }\n  for (const b of spec.boxes || []) {\n    let { x, y, w, h } = b;\n    if (b.around) {\n      const ns = b.around.map((id) => nodes.get(id)).filter(Boolean);\n      const p = b.pad ?? 30;\n      x = Math.min(...ns.map((n) => n.x)) - p;\n      y = Math.min(...ns.map((n) => n.y)) - p - (b.label ? 22 : 0);\n      w = Math.max(...ns.map((n) => n.x + n.w)) + p - x;\n      h = Math.max(...ns.map((n) => n.y + n.h)) + p - y;\n    }\n    out.push({ type: 'rectangle', x, y, width: w, height: h, ...common({ stroke: 'dashed', strokeColor: 'gray', ...b }), backgroundColor: EX.bg[b.color] || b.color || 'transparent', fillStyle: b.fill || 'solid', opacity: b.opacity ?? 60, roundness: { type: 3 } });\n    if (b.label) out.push({ type: 'text', x: x + 10, y: y + 6, text: b.label, fontSize: b.fontSize ?? 14, fontFamily: D.fontFamily, strokeColor: EX.stroke[b.labelColor] || b.labelColor || EX.stroke.gray });\n  }\n  for (const n of nodes.values()) {\n    const el = { type: n.shape, id: n.id, x: n.x, y: n.y, width: n.w, height: n.h, ...common({ strokeColor: nodeStroke(n), ...n }), backgroundColor: EX.bg[n.color ?? 'white'] || n.color, fillStyle: n.fill || 'solid' };\n    if (n.shape === 'rectangle' && n.rounded !== false) el.roundness = { type: 3 };\n    if (n.label) el.label = { text: n.label, fontSize: n.fontSize ?? D.fontSize, fontFamily: D.fontFamily, strokeColor: EX.stroke[n.textColor] || n.textColor || EX.stroke.ink };\n    out.push(el);\n  }\n  for (const e of spec.edges || []) {\n    const a = nodes.get(e.from);\n    const b = nodes.get(e.to);\n    const via = e.via || [];\n    const first = via[0] || [b.x + b.w / 2, b.y + b.h / 2];\n    const last = via[via.length - 1] || [a.x + a.w / 2, a.y + a.h / 2];\n    const [sx, sy] = clip(a, ...first);\n    const [ex, ey] = clip(b, ...last);\n    const pts = [[sx, sy], ...via, [ex, ey]].map(([px, py]) => [px - sx, py - sy]);\n    const el = {\n      type: 'arrow', x: sx, y: sy, points: pts, width: Math.abs(ex - sx) || 1, height: Math.abs(ey - sy) || 1,\n      ...common({ ...e, stroke: e.dashed ? 'dashed' : e.dotted ? 'dotted' : 'solid' }),\n      start: { id: a.id }, end: { id: b.id },\n      startArrowhead: e.arrow === 'both' ? (e.head || 'arrow') : null, endArrowhead: e.arrow === 'none' ? null : (e.head || 'arrow'),\n    };\n    if (e.label) el.label = { text: e.label, fontSize: e.fontSize ?? 15, fontFamily: D.fontFamily };\n    out.push(el);\n  }\n  for (const t of spec.texts || []) out.push({ type: 'text', x: t.x, y: t.y, text: t.text, fontSize: t.fontSize ?? 16, fontFamily: D.fontFamily, strokeColor: EX.stroke[t.color] || t.color || EX.stroke.ink, textAlign: t.align || 'left' });\n  for (const r of spec.raw || []) out.push(r);\n  return out;\n}\n// Excalidraw measures text on a canvas; before the hand-drawn font loads it measures too narrow, so labels are cut and edge masks are too small.\n// Export once first, register the fonts embedded in that SVG with the document, then convert for real.\nasync function warmFonts(X, specs) {\n  const warm = [];\n  for (const sp of specs) { try { warm.push(...X.convertToExcalidrawElements(toSkeleton(sp))); } catch { /* reported by the real render */ } }\n  if (!warm.length) return;\n  const svg = await X.exportToSvg({ elements: warm, appState: {}, files: {} });\n  const css = [...svg.querySelectorAll('style')].map((s) => s.textContent).join('\\n');\n  for (const m of css.matchAll(/@font-face\\s*{([^}]*)}/g)) {\n    const fam = /font-family:\\s*[\"']?([^\"';]+)[\"']?/.exec(m[1])?.[1];\n    const src = /src:\\s*url\\(([^)]+)\\)/.exec(m[1])?.[1]?.replace(/^[\"']|[\"']$/g, '');\n    if (!fam || !src) continue;\n    try { const ff = new FontFace(fam, `url(${src})`); document.fonts.add(ff); await ff.load(); } catch { /* a font failure only affects text measuring */ }\n  }\n}\nasync function renderExcalidraw(figs) {\n  stage('excalidraw:import');\n  let X;\n  try {\n    X = await import(CDN.excalidraw);\n  } catch (e) {\n    figs.forEach((f) => fail(f, `cannot load Excalidraw (${e.message}): check the network and try again`));\n    return;\n  }\n  const specs = figs.map((f) => JSON.parse(f.querySelector('script.am-excal-spec').textContent));\n  stage('excalidraw:fonts');\n  try { await warmFonts(X, specs); } catch { /* draw anyway */ }\n  for (const [i, fig] of figs.entries()) {\n    stage(`excalidraw:${fig.id}`);\n    try {\n      const spec = specs[i];\n      const elements = X.convertToExcalidrawElements(toSkeleton(spec), { regenerateIds: false });\n      const svg = await X.exportToSvg({ elements, appState: { exportBackground: false, viewBackgroundColor: '#ffffff', exportPadding: 16 }, files: {} });\n      svg.removeAttribute('width');\n      svg.removeAttribute('height');\n      svg.style.width = `${Math.min(svg.viewBox.baseVal.width * (spec.scale || 1), 1100)}px`;\n      canvasOf(fig).replaceChildren(svg);\n      const file = { type: 'excalidraw', version: 2, source: 'answer-me-with-html', elements, appState: { viewBackgroundColor: '#ffffff', gridSize: 20 }, files: {} };\n      const store = Object.assign(document.createElement('script'), { type: 'application/json', className: 'am-excal-file' });\n      store.textContent = JSON.stringify(file).replace(/</g, '\\\\u003c');\n      const btn = Object.assign(document.createElement('button'), { type: 'button', className: 'am-btn am-fig-dl', textContent: '\u2193 .excalidraw' });\n      btn.dataset.am = 'excal-dl';\n      btn.title = 'excalidraw.com \u2192 Open';\n      btn.addEventListener('click', () => {\n        const url = URL.createObjectURL(new Blob([store.textContent], { type: 'application/json' }));\n        Object.assign(document.createElement('a'), { href: url, download: `${fig.dataset.name || fig.id}.excalidraw` }).click();\n        setTimeout(() => URL.revokeObjectURL(url), 2000);\n      });\n      canvasOf(fig).after(store, btn);\n      done(fig);\n    } catch (e) {\n      fail(fig, e);\n    }\n  }\n}\n\n// \u2500\u2500 boot \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst pending = $$('figure[data-am-live]:not([data-am-done])');\nconst uml = pending.filter((f) => f.dataset.amLive === 'uml');\nconst excal = pending.filter((f) => f.dataset.amLive === 'excalidraw');\nstage('render');\nawait Promise.all([uml.length && renderUml(uml), excal.length && renderExcalidraw(excal)]);\nconst banner = document.getElementById('am-render-errors');\nif (banner) {\n  banner.hidden = !errors.length;\n  banner.textContent = errors.map((e) => `${e.fig} (L${e.line} ${e.kind}): ${e.message}`).join('\\n');\n}\nroot.dataset.amErrors = JSON.stringify(errors);\nstage('done');\nroot.dataset.amLive = errors.length ? 'error' : 'ok';\n";
+var ARTICLE_JS = "// Research fork \u2014 the article template's page script: the contents list follows the reading position, an evidence chip shows its\n// ledger row on hover / focus / tap, and a click on a drawn figure opens it at the width of the window.\n(() => {\n  // Labels in the page language, written by the template (src/languages/research.js).\n  let L = {};\n  try { L = JSON.parse(document.querySelector('main.am-article')?.dataset.amLabels || '{}'); } catch { /* English below */ }\n  const label = (k, en) => L[k] || en;\n\n  // \u2500\u2500 contents: mark the section being read \u2500\u2500\n  const links = [...document.querySelectorAll('.am-article .am-toc a')];\n  const byId = new Map(links.map((a) => [decodeURIComponent(a.getAttribute('href').slice(1)), a]));\n  if (byId.size && 'IntersectionObserver' in window) {\n    const io = new IntersectionObserver((entries) => {\n      for (const e of entries) {\n        if (!e.isIntersecting) continue;\n        links.forEach((a) => a.classList.remove('is-on'));\n        byId.get(e.target.id)?.classList.add('is-on');\n      }\n    }, { rootMargin: '-15% 0px -75% 0px' });\n    byId.forEach((_, id) => { const el = document.getElementById(id); if (el) io.observe(el); });\n  }\n\n  // \u2500\u2500 evidence chips \u2500\u2500\n  const data = document.getElementById('am-evidence');\n  const ledger = data ? JSON.parse(data.textContent) : {};\n  const tip = Object.assign(document.createElement('div'), { className: 'am-ev-tip', hidden: true });\n  tip.setAttribute('role', 'tooltip');\n  document.body.append(tip);\n  const text = (s) => document.createTextNode(String(s ?? ''));\n  const show = (chip) => {\n    const row = ledger[chip.dataset.ev];\n    if (!row) return;\n    const head = Object.assign(document.createElement('div'), { className: 'am-ev-tip-h' });\n    head.append(text(`${chip.dataset.ev} \xB7 ${row.type}`));\n    const ev = Object.assign(document.createElement('div'), { className: 'am-ev-tip-e' });\n    ev.append(text(`${label('evidence', 'Evidence: ')}${row.evidence}`));\n    tip.replaceChildren(head, text(row.claim), ev);\n    tip.hidden = false;\n    const r = chip.getBoundingClientRect();\n    const w = Math.min(420, innerWidth - 24);\n    tip.style.maxWidth = `${w}px`;\n    tip.style.left = `${Math.min(Math.max(12, r.left), innerWidth - w - 12)}px`;\n    tip.style.top = `${r.bottom + 8}px`;\n    if (r.bottom + 8 + tip.offsetHeight > innerHeight - 8) tip.style.top = `${Math.max(8, r.top - tip.offsetHeight - 8)}px`;\n  };\n  const hide = () => { tip.hidden = true; };\n  for (const chip of document.querySelectorAll('.am-ev[data-ev]')) {\n    chip.addEventListener('mouseenter', () => show(chip));\n    chip.addEventListener('mouseleave', hide);\n    chip.addEventListener('focus', () => show(chip));\n    chip.addEventListener('blur', hide);\n    chip.addEventListener('click', (e) => { e.stopPropagation(); if (tip.hidden) show(chip); else hide(); });\n  }\n  document.addEventListener('click', hide);\n  addEventListener('scroll', hide, { passive: true });\n\n  // \u2500\u2500 figure zoom \u2500\u2500\n  const figs = [...document.querySelectorAll('.am-article .am-fig-canvas > svg')];\n  if (!figs.length) return;\n  const zoom = Object.assign(document.createElement('div'), { className: 'am-zoom', hidden: true });\n  zoom.setAttribute('role', 'dialog');\n  zoom.setAttribute('aria-modal', 'true');\n  zoom.setAttribute('aria-label', label('zoom', 'Enlarged figure'));\n  const box = Object.assign(document.createElement('div'), { className: 'am-zoom-box' });\n  const close = Object.assign(document.createElement('button'), { type: 'button', className: 'am-zoom-x', textContent: '\xD7' });\n  close.setAttribute('aria-label', label('close', 'Close'));\n  zoom.append(box, close);\n  document.body.append(zoom);\n  let back = null;\n  const open = (svg) => {\n    back = document.activeElement;\n    const copy = svg.cloneNode(true);\n    copy.removeAttribute('tabindex');\n    copy.removeAttribute('role');\n    copy.removeAttribute('style');\n    box.replaceChildren(copy);\n    zoom.hidden = false;\n    document.documentElement.style.overflow = 'hidden';\n    close.focus({ preventScroll: true });\n  };\n  const shut = () => {\n    if (zoom.hidden) return;\n    zoom.hidden = true;\n    box.replaceChildren();\n    document.documentElement.style.overflow = '';\n    back?.focus?.({ preventScroll: true });\n  };\n  for (const svg of figs) {\n    svg.dataset.zoom = '';\n    svg.setAttribute('tabindex', '0');\n    svg.setAttribute('role', 'button');\n    svg.setAttribute('aria-label', label('enlarge', 'Enlarge this figure'));\n    svg.addEventListener('click', () => open(svg));\n    svg.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(svg); } });\n  }\n  close.addEventListener('click', shut);\n  zoom.addEventListener('click', (e) => { if (e.target === zoom) shut(); });\n  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !zoom.hidden) { e.preventDefault(); e.stopPropagation(); shut(); } }, true);\n})();\n";
 var UPDATE_CSS = "/* New-version button and popover (src/render.js adds this file only to a page that has the button). The popover sits under the\n   toolbar and stays hidden unless open, so a browser without native popovers never shows it. */\n.am-btn--update { color: var(--ok); border-color: var(--ok); white-space: nowrap; }\n.am-update { display: none; }\n.am-update:popover-open {\n  display: block; position: fixed; inset-block: 52px auto; inset-inline: auto 12px; margin: 0; width: min(380px, calc(100vw - 24px));\n  padding: 14px 16px; font-size: 13px; color: var(--ink); background: var(--paper);\n  border: 1px solid var(--line-2); border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0,0,0,.25);\n}\n.am-update p { margin: 0 0 8px; }\n.am-update-title { font-weight: 600; color: var(--ok); }\n.am-update-label { color: var(--ink-2); font-size: 12px; }\n.am-update-notes { margin: 0 0 12px; padding-inline-start: 18px; }\n.am-update-notes li { margin: 2px 0; }\n.am-update-notes code { font-size: 12px; }\n.am-update-row { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }\n.am-update-row > :first-child {\n  flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 12px; padding: 6px 8px;\n  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);\n}\n.am-update a { color: var(--accent); font-size: 12px; }\n/* A phone has no room for the words: the button keeps only its dot, and its aria-label still names the version. */\n@media (max-width: 760px) {\n  .am-btn--update .am-update-text { display: none; }\n}\n@media print {\n  .am-update { display: none !important; }\n}\n";
 var UPDATE_JS = `// Pages with a new-version button only: src/render.js adds this script after the page script.
 // The button shows where the browser has native popovers (they open and close the popover with no script). A page that am serve
@@ -2029,6 +2030,152 @@ var b1b_default = {
   }
 };
 
+// src/themes/article.js
+var article_default = {
+  name: "article",
+  summary: "Article, for long research reports (the article template only)",
+  label: { zh: "\u6587\u7AE0", "zh-Hant": "\u6587\u7AE0", en: "Article", ja: "\u8A18\u4E8B", he: "\u05DE\u05D0\u05DE\u05E8" },
+  // lang-ok: viewer-facing theme labels
+  scope: ["article"],
+  tokens: {
+    common: { "--font-sans": SANS, "--font-mono": MONO, "--radius": "10px", "--shadow": "none", "--bw": "1px", "--head-font": "var(--font-sans)" },
+    light: {
+      "--bg": "#f7f5f0",
+      "--paper": "#fffdf9",
+      "--ink": "#1c2230",
+      "--ink-2": "#3a4254",
+      "--ink-3": "#6b7385",
+      "--line": "#d3ccbd",
+      "--line-2": "#e4dfd3",
+      "--fill": "#f1efe9",
+      "--accent": "#2d5be3",
+      "--accent-bg": "#eaf0ff",
+      "--ok": "#1d8a5a",
+      "--ok-bg": "#e6f5ee",
+      "--err": "#c43d2b",
+      "--err-bg": "#fdecea",
+      "--warn": "#b4730f",
+      "--warn-bg": "#fdf3e1",
+      "--head-bg": "#1c2230",
+      "--head-fg": "#fffdf9",
+      "--violet": "#6a4cc2",
+      "--violet-bg": "#f0ebfc"
+    },
+    dark: {
+      "--bg": "#13161c",
+      "--paper": "#1a1e26",
+      "--ink": "#e8eaf0",
+      "--ink-2": "#c9cdd8",
+      "--ink-3": "#8e96a8",
+      "--line": "#3a4150",
+      "--line-2": "#2b313d",
+      "--fill": "#232833",
+      "--accent": "#7c9cff",
+      "--accent-bg": "#1d2747",
+      "--ok": "#4fc28d",
+      "--ok-bg": "#173327",
+      "--err": "#ff7a66",
+      "--err-bg": "#3a1d1a",
+      "--warn": "#f0b44c",
+      "--warn-bg": "#352a15",
+      "--head-bg": "#e8eaf0",
+      "--head-fg": "#13161c",
+      "--violet": "#a991ff",
+      "--violet-bg": "#2a2245"
+    }
+  },
+  // The layout of the article template; every selector starts with &, the theme's root (themes/index.js), so other pages never carry it.
+  css: `& body { font-size: 17px; line-height: 1.78; text-rendering: optimizeLegibility; }
+& .am-article { display: grid; grid-template-columns: minmax(0, 1fr); max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+& .am-article .am-toc { display: none; }
+@media (min-width: 1180px) {
+  & .am-article { grid-template-columns: 220px minmax(0, 1fr); gap: 56px; }
+  & .am-article .am-toc { display: block; position: sticky; top: 28px; align-self: start; max-height: calc(100vh - 56px); overflow: auto; padding-top: 40px; font-size: 13.5px; line-height: 1.5; }
+}
+& .am-article .am-toc-t { margin: 0 0 10px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+& .am-article .am-toc a { color: var(--ink-3); padding: 5px 0 5px 12px; border-inline-start: 2px solid var(--line-2); }
+& .am-article .am-toc a.am-toc-sub { padding-inline-start: 24px; font-size: 12.5px; }
+& .am-article .am-toc a.is-on { color: var(--ink); border-inline-start-color: var(--accent); font-weight: 600; }
+& .am-article > .am-doc-body { min-width: 0; width: 100%; max-width: 760px; margin: 0 auto; padding-bottom: 120px; }
+/* title block */
+& .am-article .am-head { margin: 0; padding: 64px 0 8px; }
+& .am-article .am-head h1 { font-size: 36px; line-height: 1.22; letter-spacing: -.01em; font-weight: 760; margin: 0 0 12px; }
+& .am-article .am-sub { margin: 0 0 18px; font-size: 19px; line-height: 1.7; color: var(--ink-2); }
+& .am-article .am-head-meta { margin: 0; padding: 10px 0; gap: 2px 20px; font-size: 13.5px; color: var(--ink-3); border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); }
+& .am-article .am-head-meta b { font-family: var(--font-sans); font-weight: 600; color: var(--ink-2); }
+& .am-article .am-intro { max-width: none; margin-top: 22px; font-size: 18px; line-height: 1.75; }
+/* sections */
+& .am-article .am-part { scroll-margin-top: 24px; }
+& .am-article .am-part > h2 { margin: 48px 0 0; padding-top: 14px; border-top: 2px solid var(--ink); font-size: 28px; line-height: 1.3; font-weight: 740; letter-spacing: -.005em; }
+& .am-article .am-sn { font: 700 15px var(--font-mono); color: var(--ink-3); margin-inline-end: 12px; vertical-align: 2px; }
+& .am-article .am-part > * + * { margin-top: 14px; }
+& .am-article .am-md p { margin: 12px 0; }
+& .am-article .am-md li + li { margin-top: 6px; }
+& .am-article .am-md h3 { margin: 44px 0 8px; padding-top: 14px; border-top: 1px solid var(--line-2); font-size: 21px; line-height: 1.4; font-weight: 700; scroll-margin-top: 24px; }
+& .am-article .am-md h4 { margin: 26px 0 6px; font-size: 16px; }
+& .am-article .am-md blockquote { border-inline-start-color: var(--line); font-size: 17px; }
+& .am-article .am-md :not(pre) > code { font-size: .86em; overflow-wrap: anywhere; }
+& .am-article .am-md table { font-size: 15px; }
+& .am-article .am-md th { font: 600 12.5px/1.4 var(--font-sans); color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+& .am-article .am-md td { padding: 9px 10px; }
+& .am-article .am-md tbody tr:nth-child(even) td { background: none; }
+& .am-article .am-code { font-size: 13.5px; border-radius: 8px; }
+/* callouts and cards */
+& .am-article .am-callout { border-radius: var(--radius); padding: 14px 18px; font-size: 15.5px; }
+& .am-article .am-finding, & .am-article .am-prereq { border-color: var(--line-2); border-radius: 12px; }
+& .am-article .am-finding + .am-finding { margin-top: 18px; }
+& .am-article .am-finding > header, & .am-article .am-prereq > header { padding: 14px 20px; gap: 12px; }
+& .am-article .am-finding > header h3 { font-size: 18px; line-height: 1.45; }
+& .am-article .am-prereq > header h3 { font-size: 17px; }
+& .am-article .am-finding-id { border-radius: 6px; }
+& .am-article .am-finding dl { grid-template-columns: 84px minmax(0, 1fr); padding: 12px 20px 14px; font-size: 15.5px; }
+& .am-article .am-prereq dl { padding: 10px 20px 14px; font-size: 15.5px; }
+& .am-article .am-finding dt, & .am-article .am-prereq dt { font: 600 12px var(--font-sans); letter-spacing: .04em; }
+& .am-article .am-prereq + .am-prereq { margin-top: 16px; }
+& .am-article .am-glossary { grid-template-columns: minmax(120px, 170px) minmax(0, 1fr); font-size: 15px; border-top-color: var(--line-2); }
+/* figures */
+& .am-article .am-fig { margin: 28px 0; padding: 18px 18px 14px; border-radius: 12px; }
+& .am-article .am-fig-q { padding: 0 0 10px; border: 0; font: 13px/1.5 var(--font-sans); color: var(--ink-3); }
+& .am-article .am-fig-q span { font-size: 13px; color: var(--ink-3); }
+& .am-article .am-fig-q i { display: none; }
+& .am-article .am-fig-canvas { padding: 0; }
+& .am-article .am-fig-canvas svg[data-zoom] { cursor: zoom-in; }
+& .am-article .am-fig-cap { margin-top: 10px; padding: 10px 0 0; border-top: 1px dashed var(--line-2); font-size: 14px; }
+& .am-article .am-fig-dl { display: none; }
+/* evidence chips */
+& .am-ev { font: 500 10.5px/1 var(--font-mono); color: var(--ink-3); padding: 0 1px; margin: 0 1px; border-radius: 3px; cursor: help; white-space: nowrap; }
+& .am-ev:hover, & .am-ev:focus-visible { color: var(--accent); outline: none; }
+& .am-ev--speculative { color: var(--err); border: 1px dashed var(--err); padding: 0 2px; }
+& .am-ev-tip { position: fixed; z-index: 2147483200; max-width: 420px; padding: 10px 12px; border-radius: 8px; background: var(--head-bg); color: var(--head-fg);
+  font: 13px/1.55 var(--font-sans); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+& .am-ev-tip[hidden] { display: none; }
+& .am-ev-tip-h { font: 600 11px var(--font-mono); opacity: .75; margin-bottom: 4px; }
+& .am-ev-tip-e { margin-top: 6px; font-size: 12px; opacity: .75; word-break: break-all; }
+/* figure zoom */
+& .am-zoom { position: fixed; inset: 0; z-index: 2147483100; display: flex; align-items: center; justify-content: center; padding: 52px 16px 16px; background: rgba(0, 0, 0, .72); cursor: zoom-out; }
+& .am-zoom[hidden] { display: none; }
+& .am-zoom-box { max-width: 100%; max-height: 100%; overflow: auto; padding: 16px; border-radius: 12px; background: var(--paper); cursor: default; -webkit-overflow-scrolling: touch; }
+& .am-zoom-box svg { display: block; width: max(720px, calc(100vw - 64px)); max-width: 1600px; height: auto; }
+& .am-zoom-x { position: fixed; top: 10px; inset-inline-end: 14px; width: 36px; height: 36px; border: 0; border-radius: 99px; background: rgba(255, 255, 255, .16); color: #fff; font: 22px/36px var(--font-sans); cursor: pointer; }
+& .am-art-foot { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--line-2); }
+& .am-art-foot .am-colophon { margin: 0; }
+@media (max-width: 760px) {
+  & body { font-size: 16px; }
+  & .am-article { padding: 0 16px; }
+  & .am-article .am-head { padding: 40px 0 8px; }
+  & .am-article .am-head h1 { font-size: 28px; }
+  & .am-article .am-sub { font-size: 17px; }
+  & .am-article .am-intro { font-size: 16.5px; }
+  & .am-article .am-part > h2 { font-size: 23px; }
+  & .am-article .am-md h3 { font-size: 19px; }
+  & .am-article .am-finding dl { grid-template-columns: minmax(0, 1fr); padding: 10px 16px 12px; font-size: 15px; }
+  & .am-article .am-finding > header, & .am-article .am-prereq > header { padding: 12px 16px; }
+  & .am-article .am-fig { padding: 14px 12px 12px; }
+  & .am-article .am-glossary { grid-template-columns: minmax(0, 1fr); }
+}
+@media print { & .am-article .am-toc, & .am-ev-tip, & .am-zoom { display: none !important; } }`
+};
+
 // src/themes/user.js
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -2228,7 +2375,7 @@ function readUserThemes(home, builtinNames) {
 }
 
 // src/themes/registry.js
-var ALL = Object.freeze([blueprint_default, shadcn_default, paper_default, b1b_default]);
+var ALL = Object.freeze([blueprint_default, shadcn_default, paper_default, b1b_default, article_default]);
 var BUILTIN_NAMES = ALL.map((t) => t.name);
 var themes = (scope) => ALL.filter((t) => t.scope.includes(scope));
 var themeNames = (scope) => themes(scope).map((t) => t.name);
@@ -2281,7 +2428,7 @@ var ParseError = class extends Error {
   }
 };
 var CHOICES = Object.freeze({
-  template: ["sheet", "doc", "research", "video"],
+  template: ["sheet", "doc", "research", "article", "video"],
   theme: [AUTO, ...themeNames("page")],
   style: ["off", "80", "strict"],
   mode: ["auto", "light", "dark"]
@@ -4284,11 +4431,41 @@ function linkTerms(text) {
     return `<a class="am-term" href="#${escAttr(entry.slug)}" data-tip="${escAttr(entry.tip)}">${escAttr(shown2)}</a>`;
   })).join("");
 }
+var EV_ID = "[A-Za-z]{1,4}-?\\d+[a-z]?";
+var EVIDENCE = new RegExp(`\\{(${EV_ID}(?:\\s*,\\s*${EV_ID})*)\\}`, "g");
+var EV_KINDS = /* @__PURE__ */ new Set(["observed", "inferred", "speculative"]);
+var evidence = null;
+function withEvidence(ledger, fn3) {
+  if (!ledger) return { value: fn3(), missing: [], used: null };
+  const prev = evidence;
+  evidence = { map: ledger, missing: /* @__PURE__ */ new Set(), used: {} };
+  try {
+    const value = fn3();
+    return { value, missing: [...evidence.missing], used: evidence.used };
+  } finally {
+    evidence = prev;
+  }
+}
+function linkEvidence(text) {
+  if (!evidence) return text;
+  return text.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`|\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/).map((part, i) => i % 2 ? part : part.replace(EVIDENCE, (_2, ids) => ids.split(",").map((raw) => {
+    const id = raw.trim();
+    const row = evidence.map[id];
+    if (!row) {
+      evidence.missing.add(id);
+      return "";
+    }
+    evidence.used[id] = row;
+    const kind2 = EV_KINDS.has(row.type) ? row.type : "observed";
+    return `<sup class="am-ev am-ev--${kind2}" data-ev="${escAttr(id)}" tabindex="0">${escAttr(id)}</sup>`;
+  }).join(""))).join("");
+}
+var prepare = (text) => linkTerms(linkEvidence(wrapSpacedImages(String(text ?? ""))));
 function md(text) {
-  return decorate(marked.parse(linkTerms(wrapSpacedImages(String(text ?? "")))));
+  return decorate(marked.parse(prepare(text)));
 }
 function mdInline(text) {
-  return inline.parseInline(linkTerms(wrapSpacedImages(String(text ?? ""))));
+  return inline.parseInline(prepare(text));
 }
 
 // src/components/error.js
@@ -7679,35 +7856,40 @@ var LABELS = {
     overview: "\u603B\u89C8",
     fig: { n: "\u56FE {n}", q: "\u95EE\uFF1A", read: "\u8BFB\u6CD5\uFF1A", takeaway: "\u8981\u70B9\uFF1A", pending: "\u56FE\u5F62\u6E32\u67D3\u4E2D\u2026\uFF08\u79BB\u7EBF\u67E5\u770B\u524D\u9700\u8FD0\u884C am bake\uFF09" },
     prereq: { what: "\u662F\u4EC0\u4E48", why: "\u4E3A\u4EC0\u4E48\u8FD9\u91CC\u9700\u8981", example: "\u6700\u5C0F\u4F8B\u5B50", misconception: "\u5E38\u89C1\u8BEF\u89E3", deeper: "\u6DF1\u5165", needs: "\u4F9D\u8D56" },
-    finding: { claim: "\u8BBA\u65AD", evidence: "\u8BC1\u636E", implication: "\u5F71\u54CD", confidence: "\u7F6E\u4FE1\u5EA6" }
+    finding: { claim: "\u8BBA\u65AD", evidence: "\u8BC1\u636E", implication: "\u5F71\u54CD", confidence: "\u7F6E\u4FE1\u5EA6" },
+    article: { evidence: "\u8BC1\u636E\uFF1A", zoom: "\u653E\u5927\u7684\u56FE", enlarge: "\u653E\u5927\u8FD9\u5F20\u56FE", close: "\u5173\u95ED" }
   },
   "zh-Hant": {
     paths: { label: "\u95B1\u8B80\u8DEF\u5F91", short: "5 \u5206\u9418 \xB7 \u7E3D\u89BD", medium: "30 \u5206\u9418 \xB7 + \u80CC\u666F\u8207\u767C\u73FE", deep: "\u5B8C\u6574" },
     overview: "\u7E3D\u89BD",
     fig: { n: "\u5716 {n}", q: "\u554F\uFF1A", read: "\u8B80\u6CD5\uFF1A", takeaway: "\u8981\u9EDE\uFF1A", pending: "\u5716\u5F62\u7E6A\u88FD\u4E2D\u2026\uFF08\u96E2\u7DDA\u67E5\u770B\u524D\u9700\u57F7\u884C am bake\uFF09" },
     prereq: { what: "\u662F\u4EC0\u9EBC", why: "\u70BA\u4EC0\u9EBC\u9019\u88E1\u9700\u8981", example: "\u6700\u5C0F\u4F8B\u5B50", misconception: "\u5E38\u898B\u8AA4\u89E3", deeper: "\u6DF1\u5165", needs: "\u4F9D\u8CF4" },
-    finding: { claim: "\u8AD6\u65B7", evidence: "\u8B49\u64DA", implication: "\u5F71\u97FF", confidence: "\u4FE1\u5FC3\u5EA6" }
+    finding: { claim: "\u8AD6\u65B7", evidence: "\u8B49\u64DA", implication: "\u5F71\u97FF", confidence: "\u4FE1\u5FC3\u5EA6" },
+    article: { evidence: "\u8B49\u64DA\uFF1A", zoom: "\u653E\u5927\u7684\u5716", enlarge: "\u653E\u5927\u9019\u5F35\u5716", close: "\u95DC\u9589" }
   },
   en: {
     paths: { label: "Reading path", short: "5 min \xB7 overview", medium: "30 min \xB7 + background + findings", deep: "Deep \xB7 everything" },
     overview: "Overview",
     fig: { n: "Fig {n}", q: "Q: ", read: "Read: ", takeaway: "Takeaway: ", pending: "Drawing\u2026 (run am bake for an offline copy)" },
     prereq: { what: "What it is", why: "Why it matters here", example: "Minimal example", misconception: "Common misconception", deeper: "Go deeper", needs: "Needs" },
-    finding: { claim: "Claim", evidence: "Evidence", implication: "Implication", confidence: "confidence" }
+    finding: { claim: "Claim", evidence: "Evidence", implication: "Implication", confidence: "confidence" },
+    article: { evidence: "Evidence: ", zoom: "Enlarged figure", enlarge: "Enlarge this figure", close: "Close" }
   },
   ja: {
     paths: { label: "\u8AAD\u307F\u65B9", short: "5 \u5206 \xB7 \u6982\u8981", medium: "30 \u5206 \xB7 + \u80CC\u666F\u3068\u767A\u898B", deep: "\u3059\u3079\u3066" },
     overview: "\u6982\u8981",
     fig: { n: "\u56F3 {n}", q: "\u554F\u3044\uFF1A", read: "\u8AAD\u307F\u65B9\uFF1A", takeaway: "\u8981\u70B9\uFF1A", pending: "\u56F3\u3092\u63CF\u753B\u4E2D\u2026\uFF08\u30AA\u30D5\u30E9\u30A4\u30F3\u3067\u898B\u308B\u306B\u306F am bake \u3092\u5B9F\u884C\uFF09" },
     prereq: { what: "\u3053\u308C\u306F\u4F55\u304B", why: "\u3053\u3053\u3067\u5FC5\u8981\u306A\u7406\u7531", example: "\u6700\u5C0F\u306E\u4F8B", misconception: "\u3088\u304F\u3042\u308B\u8AA4\u89E3", deeper: "\u3055\u3089\u306B\u8A73\u3057\u304F", needs: "\u524D\u63D0" },
-    finding: { claim: "\u4E3B\u5F35", evidence: "\u6839\u62E0", implication: "\u5F71\u97FF", confidence: "\u78BA\u5EA6" }
+    finding: { claim: "\u4E3B\u5F35", evidence: "\u6839\u62E0", implication: "\u5F71\u97FF", confidence: "\u78BA\u5EA6" },
+    article: { evidence: "\u6839\u62E0\uFF1A", zoom: "\u62E1\u5927\u3057\u305F\u56F3", enlarge: "\u3053\u306E\u56F3\u3092\u62E1\u5927", close: "\u9589\u3058\u308B" }
   },
   he: {
     paths: { label: "\u05DE\u05E1\u05DC\u05D5\u05DC \u05E7\u05E8\u05D9\u05D0\u05D4", short: "5 \u05D3\u05E7\u05D5\u05EA \xB7 \u05E1\u05E7\u05D9\u05E8\u05D4", medium: "30 \u05D3\u05E7\u05D5\u05EA \xB7 + \u05E8\u05E7\u05E2 \u05D5\u05DE\u05DE\u05E6\u05D0\u05D9\u05DD", deep: "\u05D4\u05DB\u05D5\u05DC" },
     overview: "\u05E1\u05E7\u05D9\u05E8\u05D4",
     fig: { n: "\u05D0\u05D9\u05D5\u05E8 {n}", q: "\u05E9\u05D0\u05DC\u05D4: ", read: "\u05D0\u05D9\u05DA \u05DC\u05E7\u05E8\u05D5\u05D0: ", takeaway: "\u05D4\u05E9\u05D5\u05E8\u05D4 \u05D4\u05EA\u05D7\u05EA\u05D5\u05E0\u05D4: ", pending: "\u05DE\u05E6\u05D9\u05D9\u05E8\u2026 (\u05D4\u05E8\u05D9\u05E6\u05D5 am bake \u05DC\u05E2\u05D5\u05EA\u05E7 \u05DC\u05D0 \u05DE\u05E7\u05D5\u05D5\u05DF)" },
     prereq: { what: "\u05DE\u05D4 \u05D6\u05D4", why: "\u05DC\u05DE\u05D4 \u05D6\u05D4 \u05D7\u05E9\u05D5\u05D1 \u05DB\u05D0\u05DF", example: "\u05D3\u05D5\u05D2\u05DE\u05D4 \u05DE\u05D9\u05E0\u05D9\u05DE\u05DC\u05D9\u05EA", misconception: "\u05D8\u05E2\u05D5\u05EA \u05E0\u05E4\u05D5\u05E6\u05D4", deeper: "\u05DC\u05D4\u05E2\u05DE\u05E7\u05D4", needs: "\u05D3\u05D5\u05E8\u05E9" },
-    finding: { claim: "\u05D8\u05E2\u05E0\u05D4", evidence: "\u05E8\u05D0\u05D9\u05D5\u05EA", implication: "\u05D4\u05E9\u05DC\u05DB\u05D4", confidence: "\u05D5\u05D3\u05D0\u05D5\u05EA" }
+    finding: { claim: "\u05D8\u05E2\u05E0\u05D4", evidence: "\u05E8\u05D0\u05D9\u05D5\u05EA", implication: "\u05D4\u05E9\u05DC\u05DB\u05D4", confidence: "\u05D5\u05D3\u05D0\u05D5\u05EA" },
+    article: { evidence: "\u05E8\u05D0\u05D9\u05D5\u05EA: ", zoom: "\u05D0\u05D9\u05D5\u05E8 \u05DE\u05D5\u05D2\u05D3\u05DC", enlarge: "\u05D4\u05D2\u05D3\u05DC\u05EA \u05D4\u05D0\u05D9\u05D5\u05E8", close: "\u05E1\u05D2\u05D9\u05E8\u05D4" }
   }
 };
 var researchLabels = (id) => LABELS[id] ?? LABELS.en;
@@ -8246,8 +8428,37 @@ ${bodyPanels.map((p) => panelHtml(p, { grid: false, depth: depthOf(p) })).join("
 </main>`;
 }
 
+// src/templates/article.js
+var CARD = /(<article\b[\s\S]*?<\/article>)/;
+function numberSubheads(html, n, id) {
+  const subs = [];
+  const body = html.split(CARD).map((part, i) => i % 2 ? part : part.replace(/<h3>([\s\S]*?)<\/h3>/g, (_2, inner) => {
+    const no = `${n}.${subs.length + 1}`;
+    const anchor = `panel-${id}-${subs.length + 1}`;
+    subs.push({ no, anchor, text: inner.replace(/<[^>]+>/g, "") });
+    return `<h3 id="${esc(anchor)}"><span class="am-sn">${no}</span>${inner}</h3>`;
+  })).join("");
+  return { body, subs };
+}
+function article({ meta, introHtml, panels, ui, language }) {
+  const parts = panels.map((p, i) => ({ p, n: i + 1, ...numberSubheads(p.html, i + 1, p.id) }));
+  const link = (href, text, cls = "") => `<a href="#${esc(href)}"${cls ? ` class="${cls}"` : ""}>${text}</a>`;
+  const toc = `<nav class="am-toc" aria-label="${esc(ui?.toc ?? "Contents")}"><p class="am-toc-t">${esc(ui?.toc ?? "Contents")}</p>${parts.map(({ p, n, subs }) => link(`panel-${p.id}`, `${n} ${esc(p.title)}`) + subs.map((s) => link(s.anchor, `${s.no} ${esc(s.text)}`, "am-toc-sub")).join("")).join("")}</nav>`;
+  const sections = parts.map(({ p, n, body }) => `<section class="am-part" id="panel-${esc(p.id)}">
+<h2><span class="am-sn">${n}</span>${esc(p.title)}</h2>
+${body}
+</section>`).join("\n");
+  const labels2 = esc(JSON.stringify(ui?.research?.article ?? {}));
+  return `<main class="am-article" data-am-labels="${labels2}">
+${toc}<div class="am-doc-body">
+${headHtml(meta, introHtml, language)}
+${sections}
+</div>
+</main>`;
+}
+
 // src/templates/index.js
-var TEMPLATES = { sheet, doc, research };
+var TEMPLATES = { sheet, doc, research, article };
 
 // src/themes/index.js
 var block = (selector, vars) => `${selector} {
@@ -8436,6 +8647,7 @@ function lintDoc(doc2, language) {
     else if (COMPONENTS.get(b.lang)?.lint) lintMarkdown(COMPONENTS.get(b.lang).lint(b.text), b.line + 1, warnings, family);
   }
   if (doc2.meta.template === "research") lintResearch(doc2, blocks, warnings);
+  if (doc2.meta.template === "article") lintFigureQuestions(blocks, warnings);
   return warnings;
 }
 var FIELD_KEY = /^\s*[^:：\s#~`][^:：]{0,15}?[:：]\s?/;
@@ -8459,13 +8671,16 @@ function lintFields(text, startLine, out, family) {
   });
   flush();
 }
-function lintResearch(doc2, blocks, out) {
-  const fences = blocks.filter((b) => b.type === "fence");
-  for (const b of fences) {
-    if (FIG_FENCES.has(b.lang) && !/\bq=/.test(b.args)) {
+function lintFigureQuestions(blocks, out) {
+  for (const b of blocks) {
+    if (b.type === "fence" && FIG_FENCES.has(b.lang) && !/\bq=/.test(b.args)) {
       out.push({ line: b.line, rule: "research", message: `${b.lang} figure has no q="the question this figure answers"`, suggestion: "add q=\u2026 and takeaway=\u2026" });
     }
   }
+}
+function lintResearch(doc2, blocks, out) {
+  const fences = blocks.filter((b) => b.type === "fence");
+  lintFigureQuestions(blocks, out);
   const has = (lang) => fences.some((b) => b.lang === lang);
   const first = doc2.panels[0]?.line ?? 1;
   if (!has("prereq")) out.push({ line: first, rule: "research", message: "no prerequisite cards (prereq)", suggestion: "write one card for each key concept outside the reader's baseline" });
@@ -8587,7 +8802,7 @@ function readPage(html) {
     source: m ? unescapeHtml(m[1]) : null,
     video,
     // A <main class="am-doc"> in the body does not count; the template's <main> always comes before the body.
-    template: video ? "video" : s.match(/<main class="am-(doc|sheet|research)\b/)?.[1],
+    template: video ? "video" : s.match(/<main class="am-(doc|sheet|research|article)\b/)?.[1],
     theme: attr("data-theme"),
     mode: attr("data-mode"),
     style: attr("data-style"),
@@ -9031,12 +9246,13 @@ var LintError = class extends Error {
     this.warnings = warnings;
   }
 };
-function renderDoc(source, overrides = {}, defaults2 = {}, { themes: themes2 = BUILTIN, previousLanguage, baseDir, codeDir, knownImages, knownCode, update } = {}) {
-  const choices = { theme: themes2.choices("page") };
+function renderDoc(source, overrides = {}, defaults2 = {}, { themes: themes2 = BUILTIN, previousLanguage, baseDir, codeDir, knownImages, knownCode, update, evidence: evidence2 } = {}) {
+  const choices = { theme: [...themes2.choices("page"), ARTICLE] };
   const parsed = canonicalLangs(parseDoc(source, { defaults: defaults2, choices }));
-  const meta = applyOverrides(parsed.meta, overrides, { ...CHOICES, ...choices });
-  if (meta.template === "video") throw new ParseError("template: video is a video draft; render it with am video", 0);
-  const problem = themes2.problem(meta.theme, "page");
+  const given = applyOverrides(parsed.meta, overrides, { ...CHOICES, ...choices });
+  if (given.template === "video") throw new ParseError("template: video is a video draft; render it with am video", 0);
+  const meta = given.template === ARTICLE ? { ...given, theme: ARTICLE } : given;
+  const problem = meta.template === ARTICLE ? null : themes2.problem(meta.theme, "page");
   if (problem) throw new ParseError(problem, 0);
   const doc2 = { ...parsed, meta: meta.theme === AUTO ? { ...meta, theme: pickTheme({ scope: "page", template: meta.template, visuals: hasVisuals(parsed) }) } : meta };
   const language = resolveLanguage({ declared: doc2.meta.lang, previous: previousLanguage, text: source });
@@ -9048,15 +9264,17 @@ function renderDoc(source, overrides = {}, defaults2 = {}, { themes: themes2 = B
   const loose = doc2.intro.find((b) => b.type === "fence" && COMPONENTS.get(b.lang)?.panelOnly);
   if (loose) throw new RenderError(`${loose.lang} belongs in a panel: put it under the ## heading of the panel the answer changes`, { line: loose.line, component: loose.lang, example: COMPONENTS.get(loose.lang).example });
   const glossary2 = collectGlossary(doc2);
-  const { value: page, missing } = withTerms(glossary2, () => {
+  const { value: { value: page, missing }, missing: missingEvidence, used: usedEvidence } = withEvidence(evidence2, () => withTerms(glossary2, () => {
     const introHtml = renderBlocks(doc2.intro, ctx);
     const panels = doc2.panels.map((p) => ({ ...p, html: renderBlocks(p.blocks, ctx) }));
     return TEMPLATES[doc2.meta.template]({ meta: doc2.meta, introHtml, panels, ui, language });
-  });
+  }));
   if (missing.length) throw missingTerms(missing, source);
+  if (missingEvidence.length) throw missingIds(missingEvidence, source);
   const body = language.dir === "rtl" ? isolateLtrRuns(page) : page;
   const live = [...ctx.live];
-  const html = shell({ meta: doc2.meta, language, body, source, embedded: themes2.embedFor(doc2.meta.theme, "page"), live, update });
+  const embedded = doc2.meta.template === ARTICLE ? [getTheme(ARTICLE)] : themes2.embedFor(doc2.meta.theme, "page");
+  const html = shell({ meta: doc2.meta, language, body, source, embedded, live, update, evidence: usedEvidence });
   return { html, warnings, stats, meta: doc2.meta, language, live };
 }
 function canonicalLangs(doc2) {
@@ -9081,6 +9299,16 @@ function collectGlossary(doc2) {
     }
   }
   return map;
+}
+var ARTICLE = "article";
+function missingIds(missing, source) {
+  const [id, ...more] = missing;
+  const idx = String(source).split("\n").findIndex((l3) => new RegExp(`[{,\\s]${id}[},\\s]`).test(l3));
+  return new RenderError(`evidence {${id}} is not in the claim ledger${more.length ? ` (also: ${more.join(", ")})` : ""}`, {
+    line: idx + 1,
+    component: "evidence",
+    example: "Add a ledger row with this ID (# column), or cite an existing one: the claim holds {K2}."
+  });
 }
 function missingTerms(missing, source) {
   const [term, ...more] = missing;
@@ -9184,7 +9412,9 @@ function colophon(language) {
   if (language.dir === "rtl") return `<p class="am-colophon">${label} <bdi>${link} ${VERSION}</bdi> \xB7 <bdi>${time}</bdi> \xB7 <bdi>${star}</bdi></p>`;
   return `<p class="am-colophon">${label} ${link} ${VERSION} \xB7 ${time} \xB7 ${star}</p>`;
 }
-var withColophon = (body, language) => body.replace('<header class="am-head">', (head) => `${head}${colophon(language)}`);
+var withColophon = (body, language) => body.startsWith('<main class="am-article"') ? body.replace(/<\/div>\n<\/main>$/, () => `<footer class="am-art-foot">${colophon(language)}</footer>
+</div>
+</main>`) : body.replace('<header class="am-head">', (head) => `${head}${colophon(language)}`);
 function updateNotice(ui, update, labelKey) {
   if (!update) return { button: "", popover: "" };
   const t = ui.update;
@@ -9233,7 +9463,9 @@ function lightboxShell(ui, hasDiagrams) {
 </div>
 `;
 }
-function shell({ meta, language, body, source, embedded, live = [], update }) {
+var evidenceScript = (used) => used && Object.keys(used).length ? `<script type="application/json" id="am-evidence">${JSON.stringify(used).replace(/</g, "\\u003c")}</script>
+` : "";
+function shell({ meta, language, body, source, embedded, live = [], update, evidence: evidence2 }) {
   const { ui, labelKey } = language;
   const notice = updateNotice(ui, update, labelKey);
   const pick = (name, label, values, current) => `<label class="am-pick">${esc(label)}<select data-am="${name}">${values.map(([value, text]) => `<option value="${esc(value)}"${value === current ? " selected" : ""}>${esc(text)}</option>`).join("")}</select></label>`;
@@ -9251,17 +9483,17 @@ ${pageCss(embedded, { diff: body.includes('class="am-codeblock am-codeblock--dif
 </style>
 </head>
 <body>
-<div class="am-toolbar"${rootCarrierAttrs(root)}>
+${meta.template === ARTICLE ? "" : `<div class="am-toolbar"${rootCarrierAttrs(root)}>
 ${notice.button}${pick("theme", ui.theme, embedded.map((t) => [t.name, t.label[labelKey]]), meta.theme)}
 ${pick("mode", ui.modeLabel, Object.entries(ui.mode), meta.mode)}
 <button class="am-btn am-btn--reply" type="button" data-am="reply" data-ui="${esc(JSON.stringify({ ...ui.reply, done: ui.done, remarks: ui.remark.section, kinds: ui.remark.kinds }))}">${esc(ui.reply.button)}</button>
 <button class="am-btn am-btn--remark" type="button" data-am="remark" data-ui="${esc(JSON.stringify(ui.remark))}">${esc(ui.remark.button)}</button>
 <button class="am-btn" type="button" data-am="copy" data-done="${esc(ui.done)}">${esc(ui.copy)}</button>
 </div>
-${notice.popover}${withColophon(body, language)}
-${lightboxShell(ui, body.includes('class="am-diagram'))}${sourceTag(source)}
+`}${notice.popover}${withColophon(body, language)}
+${lightboxShell(ui, body.includes('class="am-diagram'))}${evidenceScript(evidence2)}${sourceTag(source)}
 <script>
-${RUNTIME_JS}${language.dir === "rtl" ? RTL_JS : ""}${hasDelta(body) ? DELTA_JS : ""}${update ? UPDATE_JS : ""}</script>
+${RUNTIME_JS}${language.dir === "rtl" ? RTL_JS : ""}${hasDelta(body) ? DELTA_JS : ""}${update ? UPDATE_JS : ""}${meta.template === ARTICLE ? ARTICLE_JS : ""}</script>
 ${live.length ? `<div id="am-render-errors" hidden></div>
 <script type="module" id="am-diagram-runtime">
 ${DIAGRAM_JS}</script>
@@ -10976,7 +11208,7 @@ var USAGE = `Answer me with HTML ${VERSION} \u2014 renders a Markdown draft into
 
 Usage:
   am render <file|->  [-o <path>] [--replace <page>] [--no-open] [--no-bake] [--theme ${["auto", ...themeNames("page")].join("|")}]
-                      [--template sheet|doc|research] [--style off|80|strict] [--mode auto|light|dark]
+                      [--template sheet|doc|research|article] [--style off|80|strict] [--mode auto|light|dark] [--evidence <ledger.json>]
   am patch  <html> --panel <title> [file|-] [--from file] [--theme \u2026] [--no-open]
                                                   replace one ## panel of an existing page and overwrite that HTML in place
   am video  <file|->  [-o <path>] [--voice auto|elevenlabs|local|system|off] [--mp4] [--webm] [--no-open]
@@ -11038,6 +11270,8 @@ A -> B
 - Any other fence language is a code block; \`\`\`ts src=path lines=18-30 quotes real code from a file; see am help code.
 - research template: {sheet} puts a panel in the overview sheet at the top; {depth=1|2|3} sets a body panel's reading depth
   (1 = 5-minute path, 2 = 30 minutes, 3 = everything; default 2).
+- article template: each ## panel is a numbered section and each ### heading in its text a numbered sub-section, listed in the contents;
+  {sheet} and depth are ignored. With --evidence <ledger.json>, {K2} or {K2, K5} cites claim-ledger rows as chips (an unknown ID is an error).
 - [[term]] in the text links to a glossary entry (the definition shows on hover); [F1](#F1) links to a finding card.
 - For the component list see am list; for one component's syntax see am help <component>.`;
 var IMAGE_HELP = `Images: a screenshot, photo or render that already exists as a file
@@ -11158,6 +11392,7 @@ async function main(argv, io = {}) {
         replace: { type: "string" },
         "no-open": { type: "boolean" },
         "no-bake": { type: "boolean" },
+        evidence: { type: "string" },
         only: { type: "string" },
         width: { type: "string" },
         open: { type: "boolean" },
@@ -11256,6 +11491,22 @@ function shouldOpen(opts, env, config) {
   if (env.CI) return false;
   return config.open !== false;
 }
+function readEvidence(file, ctx) {
+  if (file === void 0) return void 0;
+  let data;
+  try {
+    data = JSON.parse(readFileSync9(resolve5(ctx.io.cwd ?? process.cwd(), file), "utf8"));
+  } catch (e) {
+    throw new ParseError(`--evidence: cannot read ${file}: ${e.message}`, 0);
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new ParseError('--evidence: the file must hold one JSON object, { "K2": { "claim", "evidence", "type" } }', 0);
+  for (const [id, row] of Object.entries(data)) {
+    if (!row || typeof row.claim !== "string" || typeof row.evidence !== "string" || !["observed", "inferred", "speculative"].includes(row.type)) {
+      throw new ParseError(`--evidence: row "${id}" needs claim and evidence (strings) and type observed | inferred | speculative`, 0);
+    }
+  }
+  return data;
+}
 async function cmdRender(src, opts, ctx, baseDir) {
   const { fail, print } = ctx;
   const replaced = opts.replace === void 0 ? null : pagePath(opts.replace, ctx);
@@ -11268,7 +11519,8 @@ async function cmdRender(src, opts, ctx, baseDir) {
   await loadMath(src);
   let result;
   try {
-    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style }, { themes: ctx.themes, baseDir, codeDir: ctx.io.cwd ?? process.cwd(), update: updateFor(config, ctx) });
+    const evidence2 = readEvidence(opts.evidence, ctx);
+    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style }, { themes: ctx.themes, baseDir, codeDir: ctx.io.cwd ?? process.cwd(), update: updateFor(config, ctx), evidence: evidence2 });
   } catch (e) {
     return reportError(e, fail);
   }
@@ -11459,7 +11711,7 @@ async function cmdPatch(htmlArg, fromArg, opts, ctx) {
       if (!validVoice(voice, fail)) return 2;
       result = await buildVideo(patched, voice, { ...opts, theme: overrides.theme, mode: overrides.mode, style: overrides.style, previousLanguage: page.lang }, config, ctx);
     } else {
-      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html), update: updateFor(config, ctx) });
+      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html), update: updateFor(config, ctx), evidence: readEvidence(opts.evidence, ctx) });
     }
   } catch (e) {
     if (e instanceof TtsError) {
@@ -11724,6 +11976,7 @@ function cmdList({ print, fail, themes: themes2 }) {
   print("  sheet   blueprint board: a grid of letter-numbered panels, for a one-screen overview (default)");
   print("  doc     linear explainer: one-column reading, with contents when there are 3+ panels");
   print("  research research explainer: overview sheet + body + contents + reading paths (5 / 30 min / everything)");
+  print("  article  long-form report: title block, contents, numbered sections, flat figures, {ID} evidence chips (--evidence)");
   print("  video   explainer video: render with am video, see am help video");
   print("\nThemes (theme):");
   const note2 = (t) => t.user ? " (yours)" : t.scope.includes("page") ? "" : " (video only)";

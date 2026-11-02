@@ -38,7 +38,7 @@ const USAGE = `Answer me with HTML ${VERSION} — renders a Markdown draft into 
 
 Usage:
   am render <file|->  [-o <path>] [--replace <page>] [--no-open] [--no-bake] [--theme ${['auto', ...themeNames('page')].join('|')}]
-                      [--template sheet|doc|research] [--style off|80|strict] [--mode auto|light|dark]
+                      [--template sheet|doc|research|article] [--style off|80|strict] [--mode auto|light|dark] [--evidence <ledger.json>]
   am patch  <html> --panel <title> [file|-] [--from file] [--theme …] [--no-open]
                                                   replace one ## panel of an existing page and overwrite that HTML in place
   am video  <file|->  [-o <path>] [--voice auto|elevenlabs|local|system|off] [--mp4] [--webm] [--no-open]
@@ -101,6 +101,8 @@ A -> B
 - Any other fence language is a code block; \`\`\`ts src=path lines=18-30 quotes real code from a file; see am help code.
 - research template: {sheet} puts a panel in the overview sheet at the top; {depth=1|2|3} sets a body panel's reading depth
   (1 = 5-minute path, 2 = 30 minutes, 3 = everything; default 2).
+- article template: each ## panel is a numbered section and each ### heading in its text a numbered sub-section, listed in the contents;
+  {sheet} and depth are ignored. With --evidence <ledger.json>, {K2} or {K2, K5} cites claim-ledger rows as chips (an unknown ID is an error).
 - [[term]] in the text links to a glossary entry (the definition shows on hover); [F1](#F1) links to a finding card.
 - For the component list see am list; for one component's syntax see am help <component>.`;
 
@@ -226,6 +228,7 @@ export async function main(argv, io = {}) {
         replace: { type: 'string' },
         'no-open': { type: 'boolean' },
         'no-bake': { type: 'boolean' },
+        evidence: { type: 'string' },
         only: { type: 'string' },
         width: { type: 'string' },
         open: { type: 'boolean' },
@@ -316,6 +319,24 @@ export function shouldOpen(opts, env, config) {
   return config.open !== false;
 }
 
+// Research fork: --evidence <file.json> is the claim ledger of the page, { "K2": { "claim", "evidence", "type" } }; {K2} in the text cites a row.
+export function readEvidence(file, ctx) {
+  if (file === undefined) return undefined;
+  let data;
+  try {
+    data = JSON.parse(readFileSync(resolve(ctx.io.cwd ?? process.cwd(), file), 'utf8'));
+  } catch (e) {
+    throw new ParseError(`--evidence: cannot read ${file}: ${e.message}`, 0);
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new ParseError('--evidence: the file must hold one JSON object, { "K2": { "claim", "evidence", "type" } }', 0);
+  for (const [id, row] of Object.entries(data)) {
+    if (!row || typeof row.claim !== 'string' || typeof row.evidence !== 'string' || !['observed', 'inferred', 'speculative'].includes(row.type)) {
+      throw new ParseError(`--evidence: row "${id}" needs claim and evidence (strings) and type observed | inferred | speculative`, 0);
+    }
+  }
+  return data;
+}
+
 async function cmdRender(src, opts, ctx, baseDir) {
   const { fail, print } = ctx;
   const replaced = opts.replace === undefined ? null : pagePath(opts.replace, ctx);
@@ -328,7 +349,8 @@ async function cmdRender(src, opts, ctx, baseDir) {
   await loadMath(src);
   let result;
   try {
-    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style }, { themes: ctx.themes, baseDir, codeDir: ctx.io.cwd ?? process.cwd(), update: updateFor(config, ctx) });
+    const evidence = readEvidence(opts.evidence, ctx);
+    result = renderDoc(src, { theme: opts.theme, template: opts.template, style: opts.style, mode: opts.mode }, { theme, mode, style }, { themes: ctx.themes, baseDir, codeDir: ctx.io.cwd ?? process.cwd(), update: updateFor(config, ctx), evidence });
   } catch (e) {
     return reportError(e, fail);
   }
@@ -542,7 +564,7 @@ async function cmdPatch(htmlArg, fromArg, opts, ctx) {
       // Video pages also keep the original page's theme, mode and STE strictness (e.g. 3b1b / --style off); this command's arguments win.
       result = await buildVideo(patched, voice, { ...opts, theme: overrides.theme, mode: overrides.mode, style: overrides.style, previousLanguage: page.lang }, config, ctx);
     } else {
-      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html), update: updateFor(config, ctx) });
+      result = renderDoc(patched, overrides, { theme, mode, style }, { themes: ctx.themes, previousLanguage: page.lang, baseDir: cwd, codeDir: cwd, knownImages: readEmbeddedImages(html), knownCode: readEmbeddedCode(html), update: updateFor(config, ctx), evidence: readEvidence(opts.evidence, ctx) });
     }
   } catch (e) {
     if (e instanceof TtsError) {
@@ -848,6 +870,7 @@ function cmdList({ print, fail, themes }) {
   print('  sheet   blueprint board: a grid of letter-numbered panels, for a one-screen overview (default)');
   print('  doc     linear explainer: one-column reading, with contents when there are 3+ panels');
   print('  research research explainer: overview sheet + body + contents + reading paths (5 / 30 min / everything)');
+  print('  article  long-form report: title block, contents, numbered sections, flat figures, {ID} evidence chips (--evidence)');
   print('  video   explainer video: render with am video, see am help video');
   print('\nThemes (theme):');
   const note = (t) => (t.user ? ' (yours)' : t.scope.includes('page') ? '' : ' (video only)');

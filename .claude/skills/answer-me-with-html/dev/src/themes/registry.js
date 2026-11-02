@@ -7,9 +7,10 @@ import blueprint from './blueprint.js';
 import shadcn from './shadcn.js';
 import paper from './paper.js';
 import b3 from './3b1b.js';
+import article from './article.js';
 import { readUserThemes, readThemeFile } from './user.js';
 
-const ALL = Object.freeze([blueprint, shadcn, paper, b3]);
+const ALL = Object.freeze([blueprint, shadcn, paper, b3, article]);
 const BUILTIN_NAMES = ALL.map((t) => t.name);
 
 export const themes = (scope) => ALL.filter((t) => t.scope.includes(scope));

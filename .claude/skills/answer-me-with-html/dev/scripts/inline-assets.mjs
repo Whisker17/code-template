@@ -23,6 +23,7 @@ export const inlineAssets = {
         `export const MATH_CSS = ${JSON.stringify(composeMathCss(read('../src/themes/math.css')))};`,
         `export const DELTA_JS = ${JSON.stringify(read('../src/runtime/delta.js'))};`,
         `export const DIAGRAM_JS = ${JSON.stringify(read('../src/runtime/diagrams.js'))};`,
+        `export const ARTICLE_JS = ${JSON.stringify(read('../src/runtime/article.js'))};`,
         `export const UPDATE_CSS = ${JSON.stringify(read('../src/themes/update.css'))};`,
         `export const UPDATE_JS = ${JSON.stringify(read('../src/runtime/update.js'))};`,
         `export const VIDEO_CSS = ${JSON.stringify(read('../src/themes/video.css'))};`,

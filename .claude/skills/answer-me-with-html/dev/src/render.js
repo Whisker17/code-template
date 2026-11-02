@@ -2,16 +2,16 @@
 // Research fork: fence aliases (```mermaid), [[term]] glossary links, numbered figures, and the diagram runtime for excalidraw / uml (baked later by am bake).
 
 import { parseDoc, ParseError, applyOverrides, CHOICES } from './parse.js';
-import { md, collectHtmlNotes, withTerms } from './markdown.js';
+import { md, collectHtmlNotes, withTerms, withEvidence } from './markdown.js';
 import { COMPONENTS, ALIASES, LIVE, RAW_LANGS, ComponentError } from './components/index.js';
 import { parseGlossary } from './components/research.js';
 import { researchLabels } from './languages/research.js';
 import { TEMPLATES } from './templates/index.js';
 import { pageCss } from './themes/index.js';
-import { BUILTIN, AUTO, pickTheme } from './themes/registry.js';
+import { BUILTIN, AUTO, pickTheme, getTheme } from './themes/registry.js';
 import { lintDoc } from './lint/ste.js';
 import { esc } from './svg/text.js';
-import { VERSION, RUNTIME_JS, RTL_JS, DELTA_JS, DIAGRAM_JS, UPDATE_JS } from './assets.js';
+import { VERSION, RUNTIME_JS, RTL_JS, DELTA_JS, DIAGRAM_JS, UPDATE_JS, ARTICLE_JS } from './assets.js';
 import { rootTag, rootCarrierAttrs, sourceTag } from './page.js';
 import { resolveLanguage } from './language.js';
 import { inlineImages, ImageError, IMAGE_EXAMPLE } from './images.js';
@@ -43,12 +43,15 @@ export class LintError extends Error {
 // baseDir: where relative image paths are read from; codeDir: where relative code paths are read from (the folder the agent works in).
 // knownImages / knownCode: what the page already embeds, the fallback when a file is gone.
 // update: { latest, current, command, highlights } from pageUpdate in src/update.js when a newer version is known; the page then has a new-version button.
-export function renderDoc(source, overrides = {}, defaults = {}, { themes = BUILTIN, previousLanguage, baseDir, codeDir, knownImages, knownCode, update } = {}) {
-  const choices = { theme: themes.choices('page') };
+// evidence (research fork): { id: { claim, evidence, type } } from a claim ledger; {ID} in the text then becomes an evidence chip.
+export function renderDoc(source, overrides = {}, defaults = {}, { themes = BUILTIN, previousLanguage, baseDir, codeDir, knownImages, knownCode, update, evidence } = {}) {
+  const choices = { theme: [...themes.choices('page'), ARTICLE] };
   const parsed = canonicalLangs(parseDoc(source, { defaults, choices }));
-  const meta = applyOverrides(parsed.meta, overrides, { ...CHOICES, ...choices });
-  if (meta.template === 'video') throw new ParseError('template: video is a video draft; render it with am video', 0);
-  const problem = themes.problem(meta.theme, 'page');
+  const given = applyOverrides(parsed.meta, overrides, { ...CHOICES, ...choices });
+  if (given.template === 'video') throw new ParseError('template: video is a video draft; render it with am video', 0);
+  // Research fork: the article template always uses the article theme, and no other page can use it.
+  const meta = given.template === ARTICLE ? { ...given, theme: ARTICLE } : given;
+  const problem = meta.template === ARTICLE ? null : themes.problem(meta.theme, 'page');
   if (problem) throw new ParseError(problem, 0);
   // theme: auto becomes a real theme here, so the page, the summary and later patches name the theme that was used.
   const doc = { ...parsed, meta: meta.theme === AUTO ? { ...meta, theme: pickTheme({ scope: 'page', template: meta.template, visuals: hasVisuals(parsed) }) } : meta };
@@ -63,16 +66,18 @@ export function renderDoc(source, overrides = {}, defaults = {}, { themes = BUIL
   const loose = doc.intro.find((b) => b.type === 'fence' && COMPONENTS.get(b.lang)?.panelOnly);
   if (loose) throw new RenderError(`${loose.lang} belongs in a panel: put it under the ## heading of the panel the answer changes`, { line: loose.line, component: loose.lang, example: COMPONENTS.get(loose.lang).example });
   const glossary = collectGlossary(doc);
-  const { value: page, missing } = withTerms(glossary, () => {
+  const { value: { value: page, missing }, missing: missingEvidence, used: usedEvidence } = withEvidence(evidence, () => withTerms(glossary, () => {
     const introHtml = renderBlocks(doc.intro, ctx);
     const panels = doc.panels.map((p) => ({ ...p, html: renderBlocks(p.blocks, ctx) }));
     return TEMPLATES[doc.meta.template]({ meta: doc.meta, introHtml, panels, ui, language });
-  });
+  }));
   if (missing.length) throw missingTerms(missing, source);
+  if (missingEvidence.length) throw missingIds(missingEvidence, source);
   // A right-to-left page isolates each run of text with no right-to-left letter as left to right (src/bidi.js).
   const body = language.dir === 'rtl' ? isolateLtrRuns(page) : page;
   const live = [...ctx.live];
-  const html = shell({ meta: doc.meta, language, body, source, embedded: themes.embedFor(doc.meta.theme, 'page'), live, update });
+  const embedded = doc.meta.template === ARTICLE ? [getTheme(ARTICLE)] : themes.embedFor(doc.meta.theme, 'page');
+  const html = shell({ meta: doc.meta, language, body, source, embedded, live, update, evidence: usedEvidence });
   return { html, warnings, stats, meta: doc.meta, language, live };
 }
 
@@ -101,6 +106,19 @@ function collectGlossary(doc) {
     }
   }
   return map;
+}
+
+const ARTICLE = 'article';
+
+// Research fork: an {ID} that the claim ledger does not have. The line is the first draft line that names it.
+function missingIds(missing, source) {
+  const [id, ...more] = missing;
+  const idx = String(source).split('\n').findIndex((l) => new RegExp(`[{,\\s]${id}[},\\s]`).test(l));
+  return new RenderError(`evidence {${id}} is not in the claim ledger${more.length ? ` (also: ${more.join(', ')})` : ''}`, {
+    line: idx + 1,
+    component: 'evidence',
+    example: 'Add a ledger row with this ID (# column), or cite an existing one: the claim holds {K2}.',
+  });
 }
 
 function missingTerms(missing, source) {
@@ -228,7 +246,10 @@ function colophon(language) {
 
 // The colophon opens the page header. It goes in after src/bidi.js has run over the body, since it isolates its own runs. The
 // template's header is the first one in the body: the intro and the panels come after it.
-const withColophon = (body, language) => body.replace('<header class="am-head">', (head) => `${head}${colophon(language)}`);
+// Research fork: an article page keeps its title block clean; the colophon closes the reading column instead.
+const withColophon = (body, language) => (body.startsWith('<main class="am-article"')
+  ? body.replace(/<\/div>\n<\/main>$/, () => `<footer class="am-art-foot">${colophon(language)}</footer>\n</div>\n</main>`)
+  : body.replace('<header class="am-head">', (head) => `${head}${colophon(language)}`));
 
 // The new-version button and its popover (a native popover, so it opens, closes on Esc and on a click outside with no script). The
 // button starts hidden; src/runtime/update.js shows it where the browser has popovers. withoutUpdateNotice takes both out again.
@@ -290,7 +311,12 @@ function lightboxShell(ui, hasDiagrams) {
 `;
 }
 
-function shell({ meta, language, body, source, embedded, live = [], update }) {
+// Research fork: the evidence an article page cites, for the hover box of each chip (only the IDs the page uses).
+const evidenceScript = (used) => (used && Object.keys(used).length
+  ? `<script type="application/json" id="am-evidence">${JSON.stringify(used).replace(/</g, '\\u003c')}</script>\n`
+  : '');
+
+function shell({ meta, language, body, source, embedded, live = [], update, evidence }) {
   const { ui, labelKey } = language;
   const notice = updateNotice(ui, update, labelKey);
   const pick = (name, label, values, current) => `<label class="am-pick">${esc(label)}<select data-am="${name}">${values
@@ -310,17 +336,17 @@ ${pageCss(embedded, { diff: body.includes('class="am-codeblock am-codeblock--dif
 </style>
 </head>
 <body>
-<div class="am-toolbar"${rootCarrierAttrs(root)}>
+${meta.template === ARTICLE ? '' : `<div class="am-toolbar"${rootCarrierAttrs(root)}>
 ${notice.button}${pick('theme', ui.theme, embedded.map((t) => [t.name, t.label[labelKey]]), meta.theme)}
 ${pick('mode', ui.modeLabel, Object.entries(ui.mode), meta.mode)}
 <button class="am-btn am-btn--reply" type="button" data-am="reply" data-ui="${esc(JSON.stringify({ ...ui.reply, done: ui.done, remarks: ui.remark.section, kinds: ui.remark.kinds }))}">${esc(ui.reply.button)}</button>
 <button class="am-btn am-btn--remark" type="button" data-am="remark" data-ui="${esc(JSON.stringify(ui.remark))}">${esc(ui.remark.button)}</button>
 <button class="am-btn" type="button" data-am="copy" data-done="${esc(ui.done)}">${esc(ui.copy)}</button>
 </div>
-${notice.popover}${withColophon(body, language)}
-${lightboxShell(ui, body.includes('class="am-diagram'))}${sourceTag(source)}
+`}${notice.popover}${withColophon(body, language)}
+${lightboxShell(ui, body.includes('class="am-diagram'))}${evidenceScript(evidence)}${sourceTag(source)}
 <script>
-${RUNTIME_JS}${language.dir === 'rtl' ? RTL_JS : ''}${hasDelta(body) ? DELTA_JS : ''}${update ? UPDATE_JS : ''}</script>
+${RUNTIME_JS}${language.dir === 'rtl' ? RTL_JS : ''}${hasDelta(body) ? DELTA_JS : ''}${update ? UPDATE_JS : ''}${meta.template === ARTICLE ? ARTICLE_JS : ''}</script>
 ${live.length ? `<div id="am-render-errors" hidden></div>\n<script type="module" id="am-diagram-runtime">\n${DIAGRAM_JS}</script>\n` : ''}</body>
 </html>
 `;
