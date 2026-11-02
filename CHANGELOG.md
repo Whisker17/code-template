@@ -82,6 +82,23 @@ Format: date — what changed and why — which project surfaced it (if any).
     replay them once (recall goes here). Project-specific ignored paths and nit limits go
     in `docs/REVIEW.md`.
 
+- **Fast minimal CI and a CI-unavailable rule (WHI-2198).** `.github/workflows/ci.yml`:
+  `changes` (docs-only = every path `*.md` or `docs/**`; any error fails) → `lint` (ruff +
+  mypy) and `smoke-e2e` (`scripts/e2e.sh --smoke`, artifact uploaded), both skipped on
+  docs-only PRs; `ci-ok` directly needs all three and is the only required check (fails if
+  `changes` fails, is skipped or cancelled; passes docs-only). `workflow_dispatch` runs
+  `--full` or `--release <version>` as `manual-e2e`. PR runs cancel superseded runs.
+  `docs/CI.md` documents the design and a 10-step tuning checklist; `docs/GIT_WORKFLOW.md`
+  § 2 and the PR template add the `CI unavailable: <reason>` rule (same commands run locally
+  on the final SHA, never disable the required check). `SETUP.md` §2 now greps the eight named
+  bootstrap markers instead of any `{{` (so `${{ … }}` passes, `.github/workflows/` stays in
+  scope) and §3 requires `ci-ok`.
+  - **Downstream migration:** copy `.github/workflows/ci.yml` and `docs/CI.md`, port the
+    GIT_WORKFLOW/PR-template/README edits, replace the lint/type commands in `ci.yml` and the
+    `scripts/e2e.sh` suites with the project's own, replace the `SETUP`-style placeholder grep
+    in any local checklist with the named-marker form, and require `ci-ok` (not `lint` or
+    `smoke-e2e`) in branch protection once it has run once.
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0
