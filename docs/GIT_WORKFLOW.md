@@ -36,7 +36,8 @@ live. Treat `origin/main` as the definition of "the code currently running".
 ## Two `release/` lifecycles
 
 Same prefix, different job. The rule **never merge `release/*` → `main` without
-human approval** applies to both.
+human approval** applies to both (except what an owner-invoked `--through tag` covers,
+[§ 4](#unattended-promotion---through-tag)).
 
 | | Temporary cut | Long-lived version integration |
 |---|---|---|
@@ -44,7 +45,7 @@ human approval** applies to both.
 | Cut from | `dev`. A multi-commit hotfix *batch* may also cut from `main`. That is not the `hotfix/*` lane — a single `hotfix/*` PR still goes straight to `main` per [§ Hotfix](#hotfix). | `dev` |
 | Receives feature PRs? | **No** | **Yes** — this is the version's integration branch. It may hold work that has not passed release review yet, so it is **not releasable** until it does |
 | Lifetime | Until the `main` PR merges, then deleted | The whole version's development |
-| When done | PR → `main` (human gate), delete | Once the **current** SHA passed release E2E and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
+| When done | PR → `main` (human gate), delete | Once the **current** SHA passed release E2E and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk — unless the owner invoked `--through tag`, [§ 4](#unattended-promotion---through-tag)). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
 
 Cutting a version-integration branch is a **deliberate act** (it comes with the
 merge-back decision above). An agent must not create `release/v*` as a side
@@ -302,12 +303,13 @@ PR fits no row, or fits a row whose conditions you cannot show, it stays at `In 
 | --- | --- | --- |
 | Ordinary version issue → an existing version-integration `release/v*`, under `/orchestrate` | The issue's acceptance, the required project checks, the relevant issue checks and smoke E2E pass on the final HEAD; PR MERGEABLE/CLEAN; the orchestrator has verified the evidence | **Yes** (the orchestrator). Independent review is deferred to the release review of the whole version |
 | Bootstrap issue → `dev`, before the first production tag, under `/orchestrate` | Same as above; `dev` is explicitly the first version's integration branch | **Yes**. The first release still needs a full release review |
-| Repo-wide governance → `dev` | Required project checks, relevant checks and full E2E, plus **one independent PR review** (`/code-review`, `REVIEWER`) that passed on the final commit | **Yes**, then fan out |
+| Repo-wide governance → `dev` | Required project checks, relevant checks and full E2E, plus **one independent PR review** (`/code-review`, `REVIEWER`) that passed on the final commit | **Yes**, then fan out, unless a human-gated row below applies |
 | Standalone `/implement`, no release orchestration taking over | Required project checks, relevant checks and full E2E, plus **one independent PR review** that passed on the final commit | **Yes**, unless a human-gated row below applies. A promised future review does not count |
 | Anything touching **{{HIGH_RISK_PATHS}}** | The checks of its lane, plus a documented verification approach | **No** — human |
+| Anything touching a **mandatory human path** — `.github/workflows/**` or the project's release/promotion scripts (`{{RELEASE_SCRIPT_PATHS}}`) — in every lane, whatever `{{HIGH_RISK_PATHS}}` says | The checks of its lane, plus a documented verification approach | **No** — human. No waiver and no `--through tag` scope covers it |
 | `hotfix/*` → `main` | Required project checks, relevant checks, full E2E and one independent review, then a human | **No** — every production entry is human-approved |
-| Finished version-integration `release/v*` → `dev` | Release E2E (complete acceptance) and a passed release review on the **current** SHA (`/orchestrate` § Release review), then a human | **No** |
-| Temporary `release/*` cut → `main` | Existing release flow ([§ Releasing to `main`](#releasing-to-main)) | **No** — human |
+| Finished version-integration `release/v*` → `dev` | Release E2E (complete acceptance) and a passed release review on the **current** SHA (`/orchestrate` § Release review), then a human | **No**, unless the owner invoked `--through tag` ([below](#unattended-promotion---through-tag)) |
+| Temporary `release/*` cut → `main` | Existing release flow ([§ Releasing to `main`](#releasing-to-main)) | **No**, unless the owner invoked `--through tag` ([below](#unattended-promotion---through-tag)) — human otherwise |
 
 - "Passed" means no unresolved blocking finding and acceptance valid on the reviewed SHA
   — not zero suggestions (`/code-review` § Findings). A review of an earlier commit does not
@@ -319,9 +321,45 @@ PR fits no row, or fits a row whose conditions you cannot show, it stays at `In 
   in standalone `/implement`, the implementing agent. Either way, run the post-merge
   cleanup below.
 
+#### Unattended promotion: `--through tag`
+
+By default `/orchestrate` stops at every human-gated row above. The owner may instead invoke
+`/orchestrate <Release> --through tag`: an authorization scope that lets the orchestrator
+carry **that Release** through promotion in one session. It applies only after a passed
+release review of the **current** candidate H and a passed `scripts/e2e.sh --release <X.Y.Z>`
+on H, and it follows the normal routing ([§ Two `release/` lifecycles](#two-release-lifecycles),
+[§ Releasing to `main`](#releasing-to-main)). It covers **only**:
+
+1. merging the finished `release/v*` into `dev` (merge commit);
+2. the temporary `release/vX.Y.Z` cut from `dev` (deleting the merged integration branch of
+   that name first), its PR and its merge into `main` (merge commit), with `ci-ok` green (or
+   the `CI unavailable` evidence) and MERGEABLE/CLEAN;
+3. the annotated tag `vX.Y.Z` and the GitHub Release with the release E2E artifact of H
+   attached;
+4. the tracker Release's `commitSha` and released stage;
+5. post-merge cleanup, fan-out and `scripts/wt-gc.sh`.
+
+It never covers: a mandatory human path (`.github/workflows/**`, the project's
+release/promotion scripts) or a high-risk path — a promotion step whose
+`git diff --name-only origin/<target>...<source>` lists one stops for a human, and the
+agent neither edits nor runs those scripts; deploy; `hotfix/*` → `main`; any promotion merge
+whose result differs from H (`git diff --quiet <H> <merge-result>` fails), which needs
+verification and review first.
+
+`--through tag` is not a waiver of the table: it is the standing authorization defined here,
+invoked per Release. Before the first covered step the orchestrator records it in the
+`Authorization scope` section of the `Release X.Y.Z — orchestration` document in the shape
+of [§ Waiving an exception](#waiving-an-exception-owner-decision): (1) scope — Release
+`X.Y.Z` by title prefix + tracker Release + the invocation; (2) expiry — the tag `vX.Y.Z`
+exists and the tracker Release is released; (3) not relaxed — everything in the paragraph
+above, the release review, the release E2E and CI; (4) compensating control — every covered
+step has a machine-checkable precondition whose command and output go in the `Decision log`;
+(5) rationale — this section. Anything outside the scope is a human-gated step: stop.
+
 #### Waiving an exception (owner decision)
 
-An owner may waive one human-gated row of the table above for a bounded issue set. A waiver that
+An owner may waive one human-gated row of the table above for a bounded issue set. No waiver
+covers a mandatory human path. A waiver that
 lives only in tracker labels does not work — agents obey these docs, not labels —
 so a waiver is a **PR against every doc site that states the rule it overrides**,
 and it must carry, explicitly: **(1) scope** recognized by the same
@@ -571,14 +609,16 @@ on the open PR into `main` — and a concurrent fan-out in that window would mer
 `dev`'s unreleased work into the branch you are about to ship.
 
 After the PR reads MERGEABLE/CLEAN and a human has approved it (`release/*` → `main` is
-**always** a human gate):
+**always** a human gate, except under `--through tag`, [§ 4](#unattended-promotion---through-tag)):
 
 1. **Merge with a merge commit, not squash** (see
    [§ Merge strategy](#merge-strategy-per-lane))
 2. Create the annotated tag and the GitHub Release: `git tag -a v0.1.0 -m "v0.1.0"` +
-   `git push origin v0.1.0`
+   `git push origin v0.1.0`, then `gh release create v0.1.0 --verify-tag --notes-file <notes>
+   <release E2E artifact of the candidate>` (notes in English)
 3. **Deploy from the tag**, never from a branch
-4. Backfill the tracker Release's `commitSha` (see [§ Version axis](#version-axis))
+4. Backfill the tracker Release's `commitSha` (see [§ Version axis](#version-axis)) and move it
+   to its released stage
 
 Temporary `release/*` branches may be auto-deleted; `dev` lives forever.
 
@@ -775,15 +815,19 @@ Implementing agents (including unattended ones) **must**:
    without a merged PR is not `Done`
 5. Respect module isolation when several issues run in parallel (see
    [§ Parallel issues](#parallel-issues))
-6. **Never** self-merge or deploy a change touching **{{HIGH_RISK_PATHS}}**, even with a
+6. **Never** self-merge or deploy a change touching **{{HIGH_RISK_PATHS}}**, a mandatory
+   human path (`.github/workflows/**`, the project's release/promotion scripts
+   `{{RELEASE_SCRIPT_PATHS}}`), even with a
    green test run — stop at `In Review` for human confirmation. This gate **overrides every
-   agent-merge row in #4.** No waiver of it is in force; if the owner ever
+   agent-merge row in #4**, `--through tag` included. No waiver of it is in force; if the
+   owner ever
    grants one it must take the shape in
    [§ Waiving an exception](#waiving-an-exception-owner-decision) and amend this rule
-   here, not merely a tracker label
-7. Never merge `release/*` → `main` or `hotfix/*` → `main` without human approval.
-   Never merge a finished version-integration branch into `dev` without human approval
-   and a passed release review on its current SHA.
+   here, not merely a tracker label — and none can cover a mandatory human path
+7. Never merge `release/*` → `main` or `hotfix/*` → `main` without human approval, and never
+   merge a finished version-integration branch into `dev` without human approval and a passed
+   release review on its current SHA — except what the owner's recorded `--through tag` scope
+   covers ([§ 4](#unattended-promotion---through-tag)); a hotfix is never covered.
 
 ## Branch protection
 

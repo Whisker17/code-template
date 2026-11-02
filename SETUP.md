@@ -30,6 +30,13 @@ Ask **one at a time** ([interview]):
    key handling). Push the user to actually think about this; "none" is an acceptable
    answer only for throwaway projects → `HIGH_RISK_PATHS` (a short comma-separated
    phrase, e.g. `order placement, key handling`)
+   Then ask for the **release/promotion scripts**: the concrete paths of every script that
+   cuts, tags, publishes or deploys a release (e.g. `scripts/release.sh`, `deploy/**`).
+   Together with `.github/workflows/**` they are the **mandatory human paths** — all lanes,
+   whatever `HIGH_RISK_PATHS` says, and no waiver or `--through tag` scope covers them
+   (`AGENTS.md` § Merge authorization). Ask for the paths, not a description; answer `none`
+   only if the project has no such script → `RELEASE_SCRIPT_PATHS` (a short comma-separated
+   list of paths)
 6. **Stack** — keep the default Python/uv layer, or replace it? If replacing, agree on
    the equivalents (package manager, lint, typecheck, test commands) and rewrite the
    stack-specific files (`pyproject.toml`, `main.py`, `tests/`, the Build/test/run
@@ -60,12 +67,12 @@ tracked files:
 
 - `{{PROJECT_NAME}}`, `{{PROJECT_DESCRIPTION}}`, `{{LINEAR_PROJECT}}`,
   `{{LINEAR_TEAM}}`, `{{ISSUE_PREFIX}}`, `{{ISSUE_PREFIX_LOWER}}`,
-  `{{HIGH_RISK_PATHS}}`, `{{TEMPLATE_REPO_URL}}`
+  `{{HIGH_RISK_PATHS}}`, `{{RELEASE_SCRIPT_PATHS}}`, `{{TEMPLATE_REPO_URL}}`
 
 Then verify (SETUP.md itself is exempt — it gets deleted in step 6):
 
 ```bash
-grep -rnE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|TEMPLATE_REPO_URL)\}\}' \
+grep -rnE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}' \
   --include='*.md' --include='*.toml' --include='*.yml' --include='*.py' \
   --exclude=SETUP.md --exclude-dir=.git .
 ```

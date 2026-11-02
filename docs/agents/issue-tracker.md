@@ -202,10 +202,17 @@ Release-level state lives in **one** Linear project document named
 linked from the issues it concerns. It records:
 
 - workflow contract version (`v0.2`), and which issues, if any, started under an older one;
+- the actual model and effort of the orchestrating session, when it is not `ORCHESTRATOR_MODEL`;
 - the planned issue set, the fixed review baseline **B** and the integration branch;
 - each review round: candidate SHA **H**, reviewer role/model/effort, outcome;
 - every finding id → the fix issue that owns it (or its disposition), including
   governance fixes tracked as external blockers (no Release, routed to `dev`);
+- `Authorization scope`: written only when the owner invoked `--through tag`, before the first
+  covered step, in the shape of `docs/GIT_WORKFLOW.md` § Waiving an exception (scope, expiry,
+  what is not relaxed, the compensating checks) — `docs/GIT_WORKFLOW.md` § 4 *Unattended
+  promotion* defines what it may cover; absent means the default human gates;
+- `Decision log`: every decision the orchestrator made without asking, appended as it is made
+  (what, the rule or evidence behind it, the command and output of any gate check);
 - current blocker, if any.
 
 Look it up first with `list_documents({ projectId, query: "Release X.Y.Z — orchestration" })`.

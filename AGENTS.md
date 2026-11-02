@@ -94,6 +94,7 @@ issue fits not exactly one row, **stop and surface it**.
   (commit SHA, commands, results) and the role/model/effort used.
 - Tracker moves with the PR: `In Progress` → `In Review` (PR open) → `Done` (merged and
   cleaned up). A report of "done" is not `Done`.
+- Releases stay small (0.1.0, 0.1.1, …); Release notes are written in English.
 
 ### Merge authorization
 
@@ -101,14 +102,24 @@ issue fits not exactly one row, **stop and surface it**.
 | --- | --- | --- |
 | Ordinary version issue → existing integration branch, under `/orchestrate` | Issue acceptance, required project checks, relevant issue checks and smoke E2E on the final HEAD; orchestrator verified the evidence | Yes — review happens at release level |
 | Bootstrap issue → `dev` (no production tag yet), under `/orchestrate` | Same | Yes — first release still gets a full release review |
-| Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and full E2E, plus one independent PR review passed on the final commit | Yes, then fan out |
+| Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and full E2E, plus one independent PR review passed on the final commit | Yes, then fan out (unless a human row below applies) |
 | Touches **{{HIGH_RISK_PATHS}}** | Its lane's checks + documented verification | **No** — human |
+| Touches a **mandatory human path**: `.github/workflows/**` or the project's release/promotion scripts (`{{RELEASE_SCRIPT_PATHS}}`), in every lane, whatever `{{HIGH_RISK_PATHS}}` says | Its lane's checks + documented verification | **No** — human; no waiver and no `--through tag` scope covers it |
 | `hotfix/*` → `main` | Required and relevant checks, full E2E, independent review | **No** — human |
-| Finished `release/v*` → `dev` | Release E2E (complete acceptance) + passed release review on the current SHA | **No** — human |
-| `release/*` → `main` | Release flow | **No** — human |
+| Finished `release/v*` → `dev` | Release E2E (complete acceptance) + passed release review on the current SHA | **No** — human, unless `/orchestrate <Release> --through tag` |
+| `release/*` → `main` | Release flow | **No** — human, unless `/orchestrate <Release> --through tag` |
+
+`/orchestrate <Release> --through tag` is the owner's declared scope for one Release: after a
+passed release review and release E2E on the current SHA it covers only the merge into `dev`,
+the temporary cut and its merge into `main`, the annotated tag, the GitHub Release with the
+release E2E artifact, the tracker Release `commitSha`/stage and post-merge cleanup. It never
+covers a mandatory human path (`.github/workflows/**`, the project's release/promotion
+scripts) or a high-risk path, running those scripts, deploy or a hotfix. The recorded scope
+and the rule are `docs/GIT_WORKFLOW.md` § 4 *Unattended promotion*.
 
 No waiver of the human rows is in force; a waiver takes the shape in
-`docs/GIT_WORKFLOW.md` § Waiving an exception. A tracker label alone waives nothing.
+`docs/GIT_WORKFLOW.md` § Waiving an exception, and none can cover a mandatory human path.
+A tracker label alone waives nothing.
 
 ### No worktree left behind
 
@@ -169,7 +180,7 @@ Skills live in `.claude/skills/<name>/SKILL.md`. Runtimes that auto-discover the
 | `/to-spec` | Turn the discussion into a spec (`docs/DESIGN.md` by default) |
 | `/to-tickets` | Publish issues from `docs/agents/issue-template.md`, with complexity, scope and native dependencies |
 | `/implement` | One issue: worktree, ponytail, relevant checks, PR, handoff |
-| `/orchestrate` | A release: schedule, integrate, release review, bounded fixes |
+| `/orchestrate` | A release, unattended in-session (`<Release> [--through tag]`): schedule, integrate, release review, bounded fixes; `--through tag` completes promotion |
 | `/code-review` | Multi-angle adversarial review of a PR range or a release snapshot: parallel bug hunters plus a verifier (modes Quick, Standard, Deep) |
 | `/handoff` | Short handoff that points at durable evidence |
 | `/ponytail` | Write the least code that meets the spec |
