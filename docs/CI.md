@@ -81,3 +81,4 @@ Ten steps for keeping CI fast and cheap. Apply them in order; stop when the run 
    ones. Cache less, key narrowly.
 10. Set `timeout-minutes` on every job and upload only the artifacts you will read, so a hung
     run cannot burn the quota.
+scratch docs-only change
