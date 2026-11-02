@@ -44,6 +44,9 @@ htmlcov/
 # E2E run artifacts (scripts/e2e.sh)
 artifacts/
 
+# Claude Code sub-agent worktrees (scripts/wt-gc.sh cleans them up)
+.claude/worktrees/
+
 # Docker
 docker-compose.override.yml
 

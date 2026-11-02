@@ -364,7 +364,7 @@ documented exceptions — they are not PR-gated and they push with
    --delete-branch` into `dev` or a long-lived `release/v*`; `--merge` (a merge commit)
    for `hotfix/*` or `release/*` → `main` and a finished integration branch → `dev`
 2. **Remove the worktree:** `git worktree remove <worktree-path>` then
-   `git worktree prune`
+   `git worktree prune`. Never `--force` a dirty or locked worktree
 3. **Delete the local branch:** `git branch -D feat/{{ISSUE_PREFIX_LOWER}}-123-topic`
    (fails while the worktree still holds the branch — do step 2 first)
 4. **Fast-forward the resolved base:** `git fetch origin --prune` then
@@ -378,6 +378,38 @@ documented exceptions — they are not PR-gated and they push with
    the query; it is not a shorter list than that one.
 6. **Tracker → `Done`**
 
+#### No worktree left behind
+
+Every worktree an agent creates — including `.claude/worktrees/agent-*` and pi sub-agent
+worktrees — is removed, with its local branch and private build dirs, when its task ends,
+whether it was merged or abandoned. The session that spawned it cleans it up (the
+orchestrator owns its implementers' worktrees). A worktree kept on purpose is named, with
+path and reason, in the final reply.
+
+Before deleting, either the work is merged into the target branch, or its uncommitted
+changes are committed, tagged `archive/<worktree-name>` and the tag **pushed**; only after
+the push succeeded run `git worktree remove` + `git branch -D`. If the push fails, keep the
+worktree and branch and report it.
+
+`scripts/wt-gc.sh` is the safe sweep (dry run by default; `--apply` acts, `--select <path>`
+marks one worktree finished):
+
+- It classifies every worktree and local branch. `done` means `--select`ed, or every PR for
+  the branch is merged or closed per a **successful** `gh` query. Everything else is
+  `active-or-unknown`: `gh` errors, no PR, an open PR, a detached HEAD, a branch equal to its
+  base, a missing upstream. Location or ancestry alone never make a worktree `done`.
+- Locked, conflicted (merge/rebase in progress) and trunk-named (`main`, `dev`, `release/*`)
+  items, the primary clone and the current worktree are never touched, even with `--select`;
+  a dirty worktree is preserved unless `--select`ed.
+- `--apply` removes a clean worktree fully contained in a merged PR. Anything else it
+  commits, tags `archive/<name>`, pushes the tag, verifies it on `origin`, and only then
+  removes; any failure leaves worktree and branch intact (reported, exit 1). Never `--force`.
+  `prunable` entries are pruned.
+- Exit 0: nothing `done` left; 1: something is left or failed.
+
+Run it from a worktree or the primary clone at three points: `/orchestrate` preflight and
+release close, the end of `/implement`, and once in `SETUP.md`.
+
 ### State mapping (tracker ↔ git)
 
 | Stage | Tracker state | Git |
@@ -387,7 +419,10 @@ documented exceptions — they are not PR-gated and they push with
 | PR open, awaiting verification / merge | **`In Review`** | open PR → resolved base |
 | Waiting for a human, or verification failed | **`In Review`**, reason recorded on the issue | open PR, not merged |
 | Merged | **`Done`** | merged into the resolved base with the lane's strategy, cleanup done, fan-out done if that base was `dev`, worktree removed |
-| Abandoned | `Canceled` | PR closed, worktree removed, not merged |
+| Abandoned | `Canceled` | PR closed, not merged, worktree removed (archived with a pushed tag first if it holds unmerged work) |
+
+`Done` **and** `Canceled` both require the worktree and its local branch to be gone
+(`scripts/wt-gc.sh` shows leftovers); until then the issue is not closed.
 
 Triage labels (`ready-for-agent` / `ready-for-human` / …) are **orthogonal** to workflow
 state: labels say *who* does the work, state says *how far along* it is.
@@ -669,15 +704,19 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 
 ```text
 ~/Work/src/.../
-  {{PROJECT_NAME}}/              # primary clone (stays on dev)
+  {{PROJECT_NAME}}/                  # primary clone (stays on dev)
   {{PROJECT_NAME}}-wt/
-    {{ISSUE_PREFIX_LOWER}}-101/  # worktree
+    {{ISSUE_PREFIX_LOWER}}-101/      # issue worktree: ../<repo>-wt/<issue-id>
+    {{ISSUE_PREFIX_LOWER}}-101-verify/  # verification worktree: ../<repo>-wt/<issue-id>-verify
     {{ISSUE_PREFIX_LOWER}}-105/
     hotfix-…/
 ```
 
 - Worktree directories go **outside** the primary repo (avoid nested-git confusion)
-- The primary repo's `.gitignore` does not need to ignore sibling worktrees
+- The primary repo's `.gitignore` does not need to ignore sibling worktrees, but it does
+  ignore `.claude/worktrees/` (Claude Code's own sub-agent worktrees live inside the clone)
+- Every worktree, wherever it lives, is deleted when its task ends — see
+  [No worktree left behind](#no-worktree-left-behind)
 
 ## Forbidden
 
@@ -690,6 +729,10 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 - Leaving the tracker un-`Done` after the PR merges
 - Continuing work on a branch not based on latest `origin/<resolved-base>`
   (drop the worktree, re-branch from the fresh resolved base)
+- Leaving a worktree behind: one whose task ended and that was neither removed nor named,
+  with its path and reason, in the final reply (see
+  [No worktree left behind](#no-worktree-left-behind)); removing a dirty or locked worktree
+  with `--force`; deleting unmerged work before an `archive/<name>` tag was pushed
 - **Defaulting a version-scoped issue to `dev`** because the release field is
   empty or the release branch does not exist — refuse and surface it
 - **Creating `release/v*` as a side effect of picking up a ticket**

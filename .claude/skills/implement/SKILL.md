@@ -14,7 +14,8 @@ Implement one issue (or the bounded work the user describes) end to end. You are
    scope is missing, get it fixed before starting.
 2. Resolve the base and create the worktree exactly as `docs/GIT_WORKFLOW.md`
    § Resolving the base branch says — fail closed, never a defaulted `dev`, never create
-   `release/v*`. Assert the base, enable hooks in the worktree.
+   `release/v*`. Assert the base, enable hooks in the worktree. The worktree lives at
+   `../<repo>-wt/<issue-id>` (a verification worktree at `../<repo>-wt/<issue-id>-verify`).
 3. Tracker → `In Progress` (standalone). Under `/orchestrate` the orchestrator owns the
    tracker; you report facts.
 
@@ -50,6 +51,12 @@ Implement one issue (or the bounded work the user describes) end to end. You are
    you ran as, and why any new dependency or significant abstraction is needed. Tracker →
    `In Review` (standalone).
 2. Write a handoff with `/handoff`: its durable facts belong in the PR or issue.
+3. **No worktree left behind** (`docs/GIT_WORKFLOW.md` § No worktree left behind). Before
+   you finish, remove every worktree you created for helpers or verification (sub-agent
+   worktrees, `<issue-id>-verify`), then run `scripts/wt-gc.sh` (dry run) and deal with what
+   it reports for your work. Under `/orchestrate` your own issue worktree stays until the
+   orchestrator has merged the PR and cleans it up; say so in the handoff. A worktree you
+   keep on purpose is named, with path and reason, in the final reply.
 
 ## Merge
 
@@ -65,7 +72,7 @@ Authority comes only from `docs/GIT_WORKFLOW.md` § Merge authorization.
   reviewer checks the final commit before merge. Then, unless a human-gated row applies:
   PR MERGEABLE/CLEAN, checks green on the final HEAD, `gh pr merge <N> --squash
   --delete-branch`, post-merge cleanup and fan-out per `docs/GIT_WORKFLOW.md`, tracker →
-  `Done`.
+  `Done` (the worktree and local branch are removed first: § Post-merge cleanup).
 - **Human-gated** (high-risk paths, hotfix → `main`, `release/*` → `main`, finished
   `release/v*` → `dev`): stop at `In Review`.
 - `REVIEWER` unavailable or a dispatch failed: follow `docs/agents/runtime.md` § Reviewer
