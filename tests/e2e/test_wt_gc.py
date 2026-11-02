@@ -126,7 +126,7 @@ class Scratch:
         return path
 
     def pr(self, branch: str, state: str, head: str, row_tail: str | None = None) -> None:
-        """Fake gh row; `row_tail` replaces the identity columns (default: this repo, same branch)."""
+        """Fake gh row; `row_tail` replaces the identity columns (default: this repo and branch)."""
         tail = f"false\t{branch}" if row_tail is None else row_tail
         row = "\t".join(filter(None, ["1", state, head, tail]))
         (self.gh_dir / branch.replace("/", "_")).write_text(row + "\n")
