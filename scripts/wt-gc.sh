@@ -17,9 +17,12 @@
 #      with --select. A dirty worktree is preserved unless it is --select'ed.
 #   2. `done` = selected, or every PR for its branch is merged/closed per a SUCCESSFUL `gh` query
 #      (`gh` errors, no PR, an open PR, a detached HEAD, "branch equals base" and ancestry or a
-#      missing upstream alone are all active-or-unknown). gh honours GH_REPO / GH_HOST / GH_TOKEN.
+#      missing upstream alone are all active-or-unknown). Only a PR whose head is the same-named
+#      branch of THIS repository counts (a fork's PR, or a row without those fields, does not).
+#      An item whose HEAD/branch tip changed while `gh` was queried is preserved. gh honours
+#      GH_REPO / GH_HOST / GH_TOKEN.
 #   3. --apply on a done item: clean and fully contained in a merged PR's head -> remove worktree
-#      + `git branch -D`. Anything else -> commit dirty changes, tag `archive/<name>`, push the
+#      + delete the branch only if it still sits at the validated tip. Anything else -> commit dirty changes, tag `archive/<name>`, push the
 #      tag to `origin`, verify it on the remote, and only then remove. Any failure leaves the
 #      worktree and branch in place and is reported. Never `--force`, never a force-push.
 #   `prunable` worktrees (directory gone) are pruned with --apply.
@@ -34,7 +37,7 @@ set -u -o pipefail
 
 REMOTE=origin
 PROTECTED_RE='^(main|master|dev|develop|release/.*)$'
-PR_ROW_RE='^[0-9]+'$'\t''(OPEN|MERGED|CLOSED)'$'\t''[0-9a-f]{40,64}$'
+PR_ROW_RE='^[0-9]+'$'\t''(OPEN|MERGED|CLOSED)'$'\t''[0-9a-f]{40,64}'$'\t''(true|false)'$'\t''.+$'
 
 APPLY=0
 SELECTS=()
@@ -102,25 +105,28 @@ is_selected() { # <phys path or ""> <branch or "">
 
 # --- PR query ---------------------------------------------------------------------------------
 # Sets PR_VERDICT: unknown (gh failed) | none | open | merged | closed, and PR_NOTE.
+# Only PRs headed by <branch> of this repository count: `gh pr list --head` matches the branch name
+# across forks, so a row must carry isCrossRepository=false and headRefName=<branch>.
 # merged = some MERGED PR whose head contains <tip>; a merged PR with extra local commits is
 # `closed` (done, but archived rather than removed).
 pr_verdict() { # <branch> <tip>
     PR_VERDICT=unknown; PR_NOTE="gh unavailable or failed; not treated as closed"
     command -v gh >/dev/null 2>&1 || return
-    local rows row n state oid any=0 merged="" open="" last=""
-    rows=$(gh pr list --head "$1" --state all --limit 100 --json number,state,headRefOid \
-        --jq '.[] | [.number, .state, .headRefOid] | @tsv' 2>/dev/null) || return
+    local rows row n state oid cross ref any=0 merged="" open="" last=""
+    rows=$(gh pr list --head "$1" --state all --limit 100 --json number,state,headRefOid,isCrossRepository,headRefName \
+        --jq '.[] | [.number, .state, .headRefOid, .isCrossRepository, .headRefName] | @tsv' 2>/dev/null) || return
     while IFS= read -r row; do
         [ -n "$row" ] || continue
         [[ $row =~ $PR_ROW_RE ]] || { PR_NOTE="unparseable gh output; not treated as closed"; return; }
-        IFS=$'\t' read -r n state oid <<<"$row"
+        IFS=$'\t' read -r n state oid cross ref <<<"$row"
+        { [ "$cross" = false ] && [ "$ref" = "$1" ]; } || continue
         any=1; last=$n
         case "$state" in
             OPEN) open=$n ;;
             MERGED) git merge-base --is-ancestor "$2" "$oid" 2>/dev/null && merged=$n ;;
         esac
     done <<<"$rows"
-    if [ "$any" -eq 0 ]; then PR_VERDICT=none; PR_NOTE="no PR for this branch"
+    if [ "$any" -eq 0 ]; then PR_VERDICT=none; PR_NOTE="no PR from this repository for this branch"
     elif [ -n "$open" ]; then PR_VERDICT=open; PR_NOTE="PR #$open is open"
     elif [ -n "$merged" ]; then PR_VERDICT=merged; PR_NOTE="PR #$merged merged"
     else PR_VERDICT=closed; PR_NOTE="PR #$last closed, or merged without all local commits"
@@ -182,18 +188,28 @@ archive() {
         rsha=$(remote_tag_sha "$tag") || { fail "$name" "cannot verify $tag on $REMOTE"; return 1; }
     fi
     [ "$rsha" = "$sha" ] || { fail "$name" "$REMOTE has $tag at ${rsha:-nothing}, expected $sha"; return 1; }
+    ARCHIVED_SHA=$sha
     echo "wt-gc: archived $name as $tag ($sha)"
 }
 
-# remove_item <name> <path|""> <branch|"">: never forced; git itself refuses dirty or locked trees.
+# remove_item <name> <path|""> <branch|""> <expected-tip>: never forced; git itself refuses dirty or
+# locked trees, and the branch goes only if it is still at <expected-tip> (a later commit survives).
 remove_item() {
     if [ -n "$2" ]; then
         git worktree remove "$2" 2>/dev/null || { fail "$1" "git worktree remove refused"; return 1; }
     fi
     if [ -n "$3" ]; then
-        git branch -D "$3" >/dev/null 2>&1 || { fail "$1" "git branch -D failed (worktree already removed)"; return 1; }
+        git update-ref -d "refs/heads/$3" "$4" 2>/dev/null \
+            || { fail "$1" "branch $3 is no longer at $4 or could not be deleted (kept; worktree already removed)"; return 1; }
+        git config --remove-section "branch.$3" 2>/dev/null
     fi
     echo "wt-gc: removed $1"
+}
+
+# <path|""> <branch|"">: the HEAD sha and symbolic ref as they are now.
+head_key() {
+    if [ -n "$1" ]; then printf '%s %s' "$(git -C "$1" rev-parse HEAD 2>/dev/null)" "$(git -C "$1" symbolic-ref -q HEAD 2>/dev/null)"
+    else printf '%s refs/heads/%s' "$(git rev-parse "refs/heads/$2" 2>/dev/null)" "$2"; fi
 }
 
 # process <kind wt|branch> <path|""> <branch|""> <tip>
@@ -202,6 +218,7 @@ process() {
     target=${path:-$branch}
     if [ "$kind" = wt ]; then name=${path##*/}; else name=${branch//\//-}; fi
     is_selected "$path" "$branch" && sel=1
+    local key0="$tip ${branch:+refs/heads/$branch}"
 
     # 1. Preservation rules win over everything, including --select.
     if [ "$kind" = wt ] && conflicted "$path"; then reason="merge/rebase/cherry-pick in progress or unreadable"
@@ -215,7 +232,8 @@ process() {
     PR_VERDICT=unknown
     if [ -z "$reason" ]; then
         if [ -n "$branch" ]; then pr_verdict "$branch" "$tip"; else PR_VERDICT=none; PR_NOTE="detached HEAD"; fi
-        if [ "$sel" -eq 1 ]; then class="done"; reason="selected ($PR_NOTE)"
+        if [ "$(head_key "$path" "$branch")" != "$key0" ]; then reason="HEAD or branch tip changed during the check; preserved"
+        elif [ "$sel" -eq 1 ]; then class="done"; reason="selected ($PR_NOTE)"
         else case "$PR_VERDICT" in
             merged|closed) class="done"; reason=$PR_NOTE ;;
             *) reason=$PR_NOTE ;;
@@ -229,9 +247,9 @@ process() {
     fi
     [ "$APPLY" -eq 1 ] || { DONE_LEFT=1; return; }
     if [ "$PR_VERDICT" = merged ] && [ "$dirty_now" -eq 0 ]; then
-        remove_item "$name" "$path" "$branch"
+        remove_item "$name" "$path" "$branch" "$tip"
     else
-        archive "$name" "$path" "$branch" && remove_item "$name" "$path" "$branch"
+        archive "$name" "$path" "$branch" && remove_item "$name" "$path" "$branch" "$ARCHIVED_SHA"
     fi
 }
 

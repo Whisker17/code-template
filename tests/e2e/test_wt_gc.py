@@ -9,11 +9,16 @@ per AGENTS.md § Testing / the issue's `## Failure modes`):
 * the archive tag push is rejected and the worktree is deleted anyway;
 * a dirty or locked worktree is removed with --force;
 * the current worktree or the primary clone is removed;
-* a merged PR hides local commits that never reached it.
+* a merged PR hides local commits that never reached it;
+* a commit lands while `gh` is being queried and the branch is deleted at the older tip;
+* a PR from a fork (or without identity fields) that shares the branch name counts as this
+  branch's PR.
 
 Real `git` is used throughout, including a bare `origin` whose `pre-receive` hook can reject tags.
 `gh` is replaced by a fake on PATH (the script itself always calls plain `gh`): it answers
-`gh pr list --head <branch> ...` from per-branch files, or fails on demand. A fake is used instead
+`gh pr list --head <branch> ...` from per-branch files (tab-separated number, state, head sha,
+isCrossRepository, headRefName), commits into $FAKE_GH_COMMIT_IN first when set, or fails on
+demand. A fake is used instead
 of a bad GH_HOST because the scratch remote is a local path, so real gh cannot resolve a repo at
 all; one extra test still runs the real `gh` (if installed) against an unresolvable host.
 Every scenario runs under the PATH bash and, when different, /bin/bash (3.2 on macOS).
@@ -34,6 +39,7 @@ BASHES = sorted({b for b in (shutil.which("bash"), "/bin/bash") if b and Path(b)
 FAKE_GH = """#!/bin/sh
 [ -z "$FAKE_GH_FAIL" ] || { echo "error connecting to api.github.com" >&2; exit 1; }
 [ "$1 $2" = "pr list" ] || exit 64
+[ -z "$FAKE_GH_COMMIT_IN" ] || git -C "$FAKE_GH_COMMIT_IN" commit -q --allow-empty -m "late commit"
 head=
 while [ $# -gt 0 ]; do [ "$1" = --head ] && head=$2; shift; done
 f="$FAKE_GH_DIR/$(printf %s "$head" | tr / _)"
@@ -119,8 +125,11 @@ class Scratch:
             self.pr(branch, pr, git(path, "rev-parse", "HEAD"))
         return path
 
-    def pr(self, branch: str, state: str, head: str, number: int = 1) -> None:
-        (self.gh_dir / branch.replace("/", "_")).write_text(f"{number}\t{state}\t{head}\n")
+    def pr(self, branch: str, state: str, head: str, row_tail: str | None = None) -> None:
+        """Fake gh row; `row_tail` replaces the identity columns (default: this repo, same branch)."""
+        tail = f"false\t{branch}" if row_tail is None else row_tail
+        row = "\t".join(filter(None, ["1", state, head, tail]))
+        (self.gh_dir / branch.replace("/", "_")).write_text(row + "\n")
 
     def run(
         self, *args: str, cwd: Path | None = None, **env: str
@@ -429,3 +438,44 @@ def test_select_that_matches_nothing_is_a_usage_error_and_changes_nothing(scratc
 
     assert result.returncode == 2
     assert scratch.state() == before
+
+
+def test_commit_landing_during_the_gh_query_is_preserved(scratch: Scratch) -> None:
+    wt = scratch.worktree(scratch.layout / "WHI-1", "feat/whi-1", "MERGED")
+    pushed = git(wt, "rev-parse", "HEAD")
+
+    result = scratch.run("--apply", FAKE_GH_COMMIT_IN=str(wt))
+
+    late = git(wt, "rev-parse", "HEAD")
+    assert late != pushed
+    row = scratch.rows(result)["WHI-1"]
+    assert row.cls == "active-or-unknown" and "preserved" in row.reason
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert wt.is_dir() and git(scratch.primary, "rev-parse", "feat/whi-1") == late
+    assert scratch.remote_tags() == []
+
+    # next run (no further commit): the PR head misses the late commit -> archived, not dropped
+    again = scratch.run("--apply")
+
+    assert again.returncode == 0, again.stdout + again.stderr
+    assert not wt.exists() and scratch.remote_tags() == ["refs/tags/archive/WHI-1"]
+    assert git(scratch.primary, "rev-parse", "archive/WHI-1") == late
+
+
+@pytest.mark.parametrize(
+    "row_tail",
+    ["true\tpatch-1", "false\tother-branch", ""],
+    ids=["fork-pr", "other-head-branch", "no-identity-fields"],
+)
+def test_a_pr_that_is_not_this_repos_same_named_branch_never_counts(
+    scratch: Scratch, row_tail: str
+) -> None:
+    wt = scratch.worktree(scratch.layout / "WHI-8", "patch-1")
+    scratch.pr("patch-1", "CLOSED", git(wt, "rev-parse", "HEAD"), row_tail=row_tail)
+    before = scratch.state()
+
+    result = scratch.run("--apply")
+
+    assert scratch.rows(result)["WHI-8"].cls == "active-or-unknown"
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert wt.is_dir() and scratch.state() == before
