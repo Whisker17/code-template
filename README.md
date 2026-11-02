@@ -25,6 +25,14 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
    - verifies the skeleton, the role config (with a real call per role) and that
      `AGENTS.md` actually loads;
    - deletes `SETUP.md`.
+
+   For an **existing repo**, say *"Read SETUP.md and execute it in adopt mode"* instead: only
+   `SETUP.md` § A runs. It copies the process layer (skills, `docs/agents/`, workflow docs,
+   `config/agent-roles.conf`, `scripts/`, `.githooks/`, `.github/`, the dispatch E2E) and merges
+   the `AGENTS.md` sections, maps the repo's own lint/type/smoke/full commands into
+   `scripts/e2e.sh`, and records the template version. It never overwrites an existing file
+   (conflicts are listed for manual merge), never touches business code, remotes or branches,
+   and leaves its changes uncommitted.
 3. Produce the spec of record: `/grill-me <your idea>` → `/to-spec` fills `docs/DESIGN.md`.
 4. Break it down: `/to-tickets` publishes Linear issues from `docs/agents/issue-template.md`,
    each with complexity (`medium` | `high`), expected scope and native blocking relations.
@@ -62,7 +70,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 
 | Layer | Contents |
 |-------|----------|
-| **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively) |
+| **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively); `TEMPLATE_VERSION` (the template version a repo follows, also recorded in its `AGENTS.md`) |
 | **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; shipped defaults SETUP re-verifies, optional `REVIEWER_FALLBACK`, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
 | **CI** | `.github/workflows/ci.yml` (fast lint/type + smoke E2E, docs-only PRs skip them, single required check `ci-ok`, manual full/release E2E), `docs/CI.md` (design, CI-unavailable rule, tuning checklist) |
 | **Skills** (9) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html + `skills-lock.json` |

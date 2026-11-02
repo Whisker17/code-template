@@ -13,7 +13,8 @@
 #
 # Exit code: the worst (highest) exit code of any suite; 2 for a usage error or refusal.
 #
-# Downstream: edit SUITES (and INPUTS) below to map the project's own E2E commands in.
+# Downstream: edit only the block between the `E2E SUITES` markers to map the project's own
+# E2E commands in (SETUP.md § A).
 
 set -euo pipefail
 
@@ -34,24 +35,27 @@ case "$MODE" in
 esac
 MODE="${MODE#--}"
 
+# >>> E2E SUITES: the project's own commands; the only block a downstream repo edits >>>
+# SUITES: one command per entry, run in order, every one runs even if an earlier one fails.
+# INPUTS: every fixture/config file the suites read, hashed into the manifest.
 # shortcut: an unfilled template (pyproject name is still a placeholder) is not a valid uv
-# project, so run without it; after SETUP the project environment is used. Drop once filled.
-if grep -q '{{PROJECT_NAME}}' pyproject.toml; then
+# project, so run without it; after SETUP the project environment is used. The pattern is
+# split so SETUP's marker substitution does not rewrite it. Drop once the project is filled.
+if grep -qE '[{][{]PROJECT_NAME' pyproject.toml; then
     PY=(uv run --no-project --with pytest --with pytest-asyncio python)
 else
     PY=(uv run python)
 fi
 
-# One suite = one command, run in order; every suite runs even if an earlier one fails.
 case "$MODE" in
     smoke) SUITES=("${PY[*]} -m pytest tests/e2e -m smoke") ;;
     *) SUITES=("${PY[*]} -m pytest tests/e2e" "${PY[*]} -m pytest tests/test_agent_dispatch.py") ;;
 esac
 
-# Every fixture/config file the suites read, hashed into the manifest.
 INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh)
 while IFS= read -r f; do INPUTS+=("$f"); done < <(find tests/e2e -type f ! -path '*/__pycache__/*' | sort)
 [ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py)
+# <<< E2E SUITES <<<
 
 SHA="$(git rev-parse HEAD)"
 if [ -z "$(git status --porcelain --untracked-files=no)" ]; then CLEAN=true; else CLEAN=false; fi
@@ -80,10 +84,11 @@ for cmd in "${SUITES[@]}"; do
 done
 FINISHED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-"${PY[@]}" - "$OUT" "$SHA" "$MODE" "$VERSION" "$STARTED" "$FINISHED" "$CLEAN" "${INPUTS[@]}" <<'PYEOF'
+python3 - "$OUT" "$SHA" "$MODE" "$VERSION" "$STARTED" "$FINISHED" "$CLEAN" "${INPUTS[@]}" <<'PYEOF'
 import hashlib
 import json
 import platform
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -115,7 +120,9 @@ manifest = {
     "inputs": [{"path": p, "sha256": sha256(Path(p))} for p in inputs if Path(p).is_file()],
     "env": {
         "python": platform.python_version(),
-        "uv": subprocess.run(["uv", "--version"], capture_output=True, text=True).stdout.strip(),
+        "uv": subprocess.run(["uv", "--version"], capture_output=True, text=True).stdout.strip()
+        if shutil.which("uv")
+        else "",
         "os": platform.platform(),
     },
 }

@@ -203,7 +203,10 @@ worth knowing, read on demand: `docs/TRAPS.md`.
 
 ## Template feedback loop
 
-This repo was bootstrapped from the shared project template (`{{TEMPLATE_REPO_URL}}`).
+This repo follows the shared project template (`{{TEMPLATE_REPO_URL}}`), set up from it via
+`SETUP.md` (bootstrap or adopt).
 When work here surfaces a **template-layer** improvement — a workflow rule that bit us, a
 skill or config fix, a doc convention worth standardizing — tell the user so they can port
 it back (and record it in the template's `CHANGELOG.md`). Project-specific learnings stay.
+
+Template version: 0.3.0
