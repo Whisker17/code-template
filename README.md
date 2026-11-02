@@ -7,7 +7,8 @@ and a small set of core skills**.
 
 **Runtime-neutral by design.** Skills name a *role* (`ORCHESTRATOR`, `IMPLEMENTER`,
 `REVIEWER`) and an effort (`medium` | `high`), never a model. `config/agent-roles.conf`
-maps each role to a runtime, an exact model ID and effort values, and
+ships verified defaults (Opus 5.5 / Sonnet 5.5 / GPT-6 Astra on pi) and an optional
+`REVIEWER_FALLBACK`, maps each role to a runtime, an exact model ID and effort values, and
 `scripts/agent-dispatch.sh` dispatches it. The same process runs under Claude Code, Codex,
 pi, or an agent that only has a terminal. See `docs/agents/runtime.md`.
 
@@ -49,7 +50,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 | Layer | Contents |
 |-------|----------|
 | **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively) |
-| **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; ships unconfigured, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
+| **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; shipped defaults SETUP re-verifies, optional `REVIEWER_FALLBACK`, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
 | **Skills** (9) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
 | **Git workflow** | See below |

@@ -126,15 +126,18 @@ cut), with `ALLOW_DIRECT_PUSH=1`.
 
 ## Agent runtime
 
-Runtime-neutral: skills name a **role** — `ORCHESTRATOR`, `IMPLEMENTER`, `REVIEWER` — and
-an effort (`medium` | `high`); `config/agent-roles.conf` maps each to a runtime, an exact
-model ID and effort values, and `scripts/agent-dispatch.sh` dispatches them. Contract:
+Runtime-neutral: skills name a **role** — `ORCHESTRATOR`, `IMPLEMENTER`, `REVIEWER`
+(plus an optional `REVIEWER_FALLBACK`) — and an effort (`medium` | `high`);
+`config/agent-roles.conf` ships verified defaults and maps each role to a runtime, an exact
+model ID and effort values; `scripts/agent-dispatch.sh` dispatches them. Contract:
 **`docs/agents/runtime.md`**.
 
 - Independent review runs in a **different context** from the implementation, preferably
   another vendor. Self-review in the implementing context never satisfies a review rule.
 - `--probe` checks configuration only; a real one-line call proves a role works.
-- A failed or missing role fails closed — no model substitution, no lower effort.
+- A failed or missing role fails closed — no model substitution, no lower effort — except
+  the declared `REVIEWER_FALLBACK` under `docs/agents/runtime.md` § Reviewer unavailable
+  (only after a real `REVIEWER` call failed; never for exit 2/3).
 - When a model generation turns over, edit `config/agent-roles.conf` and nothing else.
 
 ## Agent skills

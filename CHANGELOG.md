@@ -35,6 +35,25 @@ Format: date — what changed and why — which project surfaced it (if any).
     > Then add these rules to AGENTS.md so future agents stop writing them. [the three
     > rules of `AGENTS.md` § Testing]
 
+- **Default model roles and an optional reviewer fallback (WHI-2197).**
+  `config/agent-roles.conf` ships verified defaults on `pi` (each confirmed with a real
+  `DISPATCH-OK` call): `ORCHESTRATOR` `claude/claude-opus-5-5`, `IMPLEMENTER`
+  `claude/claude-sonnet-5-5`, `REVIEWER` `magpie/codex/gpt-6-astra`, `medium` and `high`
+  mapped as themselves. A new optional role `REVIEWER_FALLBACK` (empty by default) is validated
+  like any role (`agent-dispatch.sh REVIEWER_FALLBACK` → exit 3 when undeclared); `--probe`
+  reports it `unset` without failing and warns if it shares `IMPLEMENTER`'s model. It is
+  usable only after a real `REVIEWER` call failed (non-zero exit, empty output or transport
+  error), never for exit 2/3, at most once per review step, both outcomes recorded
+  (`docs/agents/runtime.md` § Reviewer unavailable); the dispatcher never selects it.
+  `AGENTS.md` carries the exception to "fails closed", `SETUP.md` 1.9 asks to keep or change
+  the defaults and §4 proves the fallback by a real call when declared.
+  - **Downstream migration:** copy `scripts/agent-dispatch.sh` and
+    `tests/test_agent_dispatch.py`, then merge the new keys into the project's
+    `config/agent-roles.conf` (keep its own model IDs; add `REVIEWER_FALLBACK_*`, empty),
+    re-run the real-call loop from `SETUP.md` §4, and port the `docs/agents/runtime.md`
+    and `AGENTS.md` wording. A project already setting `REVIEWER_EFFORT_HIGH="medium"`
+    (research-hub) should re-verify `high` before keeping it.
+
 ---
 
 ## 2026-10-10 — answer-me-with-html 0.5.0-research.1: sync with upstream v0.5.0
