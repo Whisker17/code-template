@@ -23,18 +23,21 @@ Implement one issue (or the bounded work the user describes) end to end. You are
 - Apply `.claude/skills/ponytail/SKILL.md` while writing.
 - Stay inside the issue's expected scope. If the work needs more, stop and report
   instead of widening it.
-- Fix the acceptance target before coding; you do not have to write every test first.
-- While working, run the affected tests, lint/type checks and any targeted E2E. Do not
-  rerun the full E2E suite over and over.
-- Changes with branching, parsing, concurrency, money or security logic leave a runnable
-  check that would fail if the behaviour broke. Prefer checks of external behaviour over
-  assertions that restate the implementation. E2E and module tests are both fine.
-- On the final HEAD, use the three tiers of `docs/GIT_WORKFLOW.md` § 2 Implement:
+- Testing follows `AGENTS.md` § Testing. Write or extend E2E scenarios for the acceptance
+  criteria (Given → When → observable Then) and have them leave an artifact. Never write
+  unit tests after the code. Test a system in isolation only when the issue has a
+  `## Failure modes` section: write those failure cases first, then the code.
+- While working, run the relevant E2E scenarios and lint/type checks. Do not rerun the
+  full E2E over and over.
+- On the final HEAD, use the tiers of `docs/GIT_WORKFLOW.md` § 2 Implement:
   - the **required project checks** (CI, and what `AGENTS.md` marks for every merge)
     always;
   - the **relevant issue checks** always;
-  - the **full suite** for standalone, governance and hotfix work. Only an ordinary
-    version or bootstrap issue under `/orchestrate` defers it to the release candidate.
+  - **smoke E2E** (`scripts/e2e.sh --smoke`) always;
+  - **full E2E** (`scripts/e2e.sh --full`) for standalone, governance and hotfix work.
+    Only an ordinary version or bootstrap issue under `/orchestrate` skips it; the
+    release E2E covers it at the candidate;
+  - **long-run acceptance** never, unless the owner scheduled it. Do not run it yourself.
 - If the base advanced, update the branch and rerun the affected checks. An earlier
   HEAD's pass does not count.
 
@@ -42,7 +45,8 @@ Implement one issue (or the bounded work the user describes) end to end. You are
 
 1. Commit, `git push -u origin HEAD`, `gh pr create --base <resolved-base>`. The body
    (`.github/pull_request_template.md`) carries the issue id, the resolved base and its
-   signals, the evidence (SHA, commands, real results, artifacts), the role/model/effort
+   signals, the evidence (SHA, commands, real results, the smoke E2E output — or full E2E
+   for standalone, governance and hotfix work — and artifact paths), the role/model/effort
    you ran as, and why any new dependency or significant abstraction is needed. Tracker →
    `In Review` (standalone).
 2. Write a handoff with `/handoff`: its durable facts belong in the PR or issue.
