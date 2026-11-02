@@ -15,7 +15,7 @@ is `ci-ok`**.
 
 Triggers: `pull_request`; `push` on `main`, `dev`, `release/v*`; `workflow_dispatch` with
 `mode: full|release` and `version` (required for release). Pull-request runs are cancelled
-when a newer push arrives (`concurrency` group per PR number); push and dispatch runs are not.
+when a newer push arrives (`concurrency` group per PR number); push runs are not, and each dispatch run has its own group so manual runs never cancel each other.
 PR and push events never run `manual-e2e`.
 
 ### Why `ci-ok` exists
