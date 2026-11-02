@@ -148,6 +148,16 @@ Format: date — what changed and why — which project surfaced it (if any).
     release/promotion script, or `none`) next to `HIGH_RISK_PATHS` in `AGENTS.md` and
     `docs/GIT_WORKFLOW.md`, and add its marker to the placeholder grep. Existing open Releases
     keep the default human gates unless the owner invokes `--through tag`.
+- **Design review before Linear writes, safe batch publishing (WHI-2201).** `/to-spec` and
+  `/to-tickets` dispatch `REVIEWER` (`scripts/agent-dispatch.sh`, effort high) on the draft
+  with the source discussion and repo docs, for at most 3 rounds; disputes go to "Open
+  questions" and, after round 3, to the owner; only then do they write. The consensus
+  (rounds, changes, open disagreements) is recorded in a Linear project document.
+  `docs/agents/issue-tracker.md` § Publishing ticket sets: one writer, one issue at a time
+  with its id recorded, query by title before retrying a timeout, relations wired after all
+  issues exist, an unconfirmed write is never reported as done.
+  - **Downstream migration:** copy the two skill edits and the § Publishing ticket sets
+    section; no config change.
 
 ---
 
