@@ -57,7 +57,8 @@ test('article: title block, contents and numbered sections in one reading column
   const { html, meta } = page();
   assert.equal(meta.template, 'article');
   assert.match(html, /<main class="am-article" data-am-labels="[^"]*">/);
-  assert.match(html, /<nav class="am-toc"[^>]*><p class="am-toc-t">Contents<\/p><a href="#panel-A">1 Paths<\/a><a href="#panel-A-1" class="am-toc-sub">1\.1 Block loop<\/a><a href="#panel-B">2 Terms<\/a><\/nav>/);
+  // One group per section; its sub-sections sit in a box the page script folds. A section without sub-sections has no box.
+  assert.match(html, /<nav class="am-toc"[^>]*><p class="am-toc-t">Contents<\/p><div class="am-toc-g"><a href="#panel-A">1 Paths<\/a><div class="am-toc-subs"><div><a href="#panel-A-1" class="am-toc-sub">1\.1 Block loop<\/a><\/div><\/div><\/div><div class="am-toc-g"><a href="#panel-B">2 Terms<\/a><\/div><\/nav>/);
   assert.match(html, /<section class="am-part" id="panel-A">\n<h2><span class="am-sn">1<\/span>Paths<\/h2>/);
   assert.match(html, /<h3 id="panel-A-1"><span class="am-sn">1\.1<\/span>Block loop<\/h3>/);
   assert.equal(html.match(/class="am-doc-body"/g).length, 1, 'one comment root');

@@ -32,8 +32,23 @@ export default {
 & .am-article .am-toc { display: none; }
 @media (min-width: 1180px) {
   & .am-article { grid-template-columns: 220px minmax(0, 1fr); gap: 56px; }
-  & .am-article .am-toc { display: block; position: sticky; top: 28px; align-self: start; max-height: calc(100vh - 56px); overflow: auto; padding-top: 40px; font-size: 13.5px; line-height: 1.5; }
+  & .am-article .am-toc { display: block; position: sticky; top: 28px; align-self: start; max-height: calc(100vh - 56px); overflow: auto; overscroll-behavior: contain; padding-top: 40px; font-size: 13.5px; line-height: 1.5; }
 }
+/* The contents scroll only when even the folded list is taller than the window; the bar shows only while the pointer is on it. */
+& .am-article .am-toc { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+& .am-article .am-toc:hover { scrollbar-color: var(--line-2) transparent; }
+& .am-article .am-toc::-webkit-scrollbar { width: 6px; }
+& .am-article .am-toc::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+& .am-article .am-toc:hover::-webkit-scrollbar-thumb { background: var(--line-2); }
+/* Sub-sections fold: the box animates its real height (grid rows 0fr <-> 1fr) and fades; a closed box is hidden, so Tab skips its links.
+   Folding starts only when the page script sets data-fold, so without the script every box stays open. */
+& .am-article .am-toc-subs { display: grid; grid-template-rows: 1fr; }
+& .am-article .am-toc-subs > div { min-height: 0; overflow: hidden; }
+& .am-article .am-toc[data-fold] .am-toc-subs { grid-template-rows: 0fr; opacity: 0; visibility: hidden;
+  transition: grid-template-rows .34s cubic-bezier(.22, .61, .36, 1), opacity .2s ease, visibility 0s linear .34s; }
+& .am-article .am-toc[data-fold] .am-toc-g.is-open > .am-toc-subs { grid-template-rows: 1fr; opacity: 1; visibility: visible;
+  transition: grid-template-rows .34s cubic-bezier(.22, .61, .36, 1), opacity .26s ease .06s, visibility 0s; }
+@media (prefers-reduced-motion: reduce) { & .am-article .am-toc .am-toc-subs { transition: none !important; } }
 & .am-article .am-toc-t { margin: 0 0 10px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
 & .am-article .am-toc a { color: var(--ink-3); padding: 5px 0 5px 12px; border-inline-start: 2px solid var(--line-2); }
 & .am-article .am-toc a.am-toc-sub { padding-inline-start: 24px; font-size: 12.5px; }
