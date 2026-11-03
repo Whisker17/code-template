@@ -8,18 +8,46 @@
   try { L = JSON.parse(main.dataset.amLabels || '{}'); } catch { /* English below */ }
   const label = (k, en) => L[k] || en;
 
-  // ── contents: mark the section being read ──
+  // ── contents: mark the section being read; only its sub-sections are unfolded (all folded before the first section) ──
+  const toc = main.querySelector('.am-toc');
   const links = [...main.querySelectorAll('.am-toc a')];
   const byId = new Map(links.map((a) => [decodeURIComponent(a.getAttribute('href').slice(1)), a]));
-  if (byId.size && 'IntersectionObserver' in window) {
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue;
-        links.forEach((a) => a.classList.remove('is-on'));
-        byId.get(e.target.id)?.classList.add('is-on');
-      }
-    }, { rootMargin: '-15% 0px -75% 0px' });
-    byId.forEach((_, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  if (toc && byId.size) {
+    toc.dataset.fold = '';
+    let follow = 0;
+    // Keep the marked link inside the contents box once the fold has settled (the box scrolls only when it is taller than the window).
+    const keepInView = (a) => {
+      clearTimeout(follow);
+      follow = setTimeout(() => {
+        if (toc.scrollHeight <= toc.clientHeight) return;
+        const r = a.getBoundingClientRect();
+        const box = toc.getBoundingClientRect();
+        if (r.top < box.top + 40 || r.bottom > box.bottom - 24) toc.scrollTo({ top: toc.scrollTop + r.top - box.top - box.height / 3, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      }, 420); // after the .34 s fold, so the box has its final height
+    };
+    // The section or sub-section being read = the last one (in page order) that starts above a line at 25% of the window; at the end of
+    // the page, where a short last section can never reach that line, the last one that starts inside the window. Measured once per frame
+    // while scrolling, so a jump (a contents link, an #anchor) lands on the right entry too.
+    const targets = [...byId.keys()].map((id) => document.getElementById(id)).filter(Boolean);
+    let current = null;
+    const mark = () => {
+      const end = scrollY + innerHeight >= document.documentElement.scrollHeight - 2;
+      const line = end ? innerHeight : innerHeight * 0.25;
+      let hit = null;
+      for (const el of targets) if (el.getBoundingClientRect().top <= line) hit = el;
+      const a = hit ? byId.get(hit.id) : null;
+      if (a === current) return;
+      current = a;
+      links.forEach((x) => x.classList.toggle('is-on', x === a));
+      const group = a?.closest('.am-toc-g');
+      toc.querySelectorAll('.am-toc-g').forEach((g) => g.classList.toggle('is-open', g === group));
+      if (a) keepInView(a);
+    };
+    let frame = 0;
+    const later = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; mark(); }); };
+    addEventListener('scroll', later, { passive: true });
+    addEventListener('resize', later);
+    mark();
   }
 
   // ── evidence chips: one shared tooltip, described-by the chip it belongs to ──

@@ -22,8 +22,12 @@ export function numberSubheads(html, n, id) {
 export function article({ meta, introHtml, panels, ui, language }) {
   const parts = panels.map((p, i) => ({ p, n: i + 1, ...numberSubheads(p.html, i + 1, p.id) }));
   const link = (href, text, cls = '') => `<a href="#${esc(href)}"${cls ? ` class="${cls}"` : ''}>${text}</a>`;
+  // One group per section: its link, then its sub-sections in a box the page script folds (only the section being read is open;
+  // without the script every box stays open, so no link is out of reach).
   const toc = `<nav class="am-toc" aria-label="${esc(ui?.toc ?? 'Contents')}"><p class="am-toc-t">${esc(ui?.toc ?? 'Contents')}</p>${parts
-    .map(({ p, n, subs }) => link(`panel-${p.id}`, `${n} ${esc(p.title)}`) + subs.map((s) => link(s.anchor, `${s.no} ${esc(s.text)}`, 'am-toc-sub')).join(''))
+    .map(({ p, n, subs }) => `<div class="am-toc-g">${link(`panel-${p.id}`, `${n} ${esc(p.title)}`)}${subs.length
+      ? `<div class="am-toc-subs"><div>${subs.map((s) => link(s.anchor, `${s.no} ${esc(s.text)}`, 'am-toc-sub')).join('')}</div></div>`
+      : ''}</div>`)
     .join('')}</nav>`;
   const sections = parts.map(({ p, n, body }) => `<section class="am-part" id="panel-${esc(p.id)}">
 <h2><span class="am-sn">${n}</span>${esc(p.title)}</h2>
