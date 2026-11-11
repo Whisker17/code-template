@@ -8,6 +8,21 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
+## Unreleased
+
+- **Sync Matt Pocock skills without overwriting template contracts (WHI-2275).** Reviewed
+  all six vendored skills and their agent metadata against `mattpocock/skills` commit
+  `4ae2317ddb22b046e26455e4f9c9b3aaaf62212d`. `grill-me` folds in upstream's dependency-aware
+  interview rounds; `implement` confirms a fetched ticket's title; `to-spec` uses glossary,
+  ADR and highest-seam context; `to-tickets` creates confirmed native sub-issues;
+  `code-review` explicitly assesses Standards and Spec, discovers standards files and
+  carries a suggestion-only Fowler smell baseline; `handoff` resolves portable temp paths
+  and reports the saved path. E2E-first testing, Linear publishing safeguards, stable spec
+  sections, verified independent review and durable next-session handoffs remain in force.
+  `.claude/skills/UPSTREAM.md` records the sync revision and retained overrides;
+  `skills-lock.json` stays the historical installer baseline, not a local-content checksum.
+  Downstream projects can merge these six skill files and the provenance record directly.
+
 ## Unreleased — v0.3.0
 
 - **E2E replaces after-the-fact unit tests (WHI-2195).** `AGENTS.md` opens with

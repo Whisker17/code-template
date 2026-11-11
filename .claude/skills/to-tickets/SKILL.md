@@ -18,7 +18,7 @@ Work from what is already in the conversation. If the user passes a reference (a
 
 ### 2. Explore the codebase (optional)
 
-If you have not explored it yet, do so now. Use the spec's domain vocabulary and respect ADRs. Look for prefactoring that would make the implementation easier: "make the change easy, then make the easy change."
+If you have not explored it yet, do so now. Use the project's domain glossary vocabulary (`docs/agents/domain.md`) and respect ADRs. Look for prefactoring that would make the implementation easier: "make the change easy, then make the easy change."
 
 ### 3. Draft vertical slices
 
@@ -74,9 +74,13 @@ Follow `docs/agents/issue-tracker.md` § Publishing ticket sets:
 
 - One writer, one issue at a time, blockers first; record each created id. On a timeout, query by title before retrying. Wire the relations only after all issues exist. Never report an unconfirmed write as done (`docs/agents/issue-tracker.md` § Publishing ticket sets).
 - Wire **native** `blocked-by` relations and mirror them in the body.
+- If the source is an existing issue, create each ticket as its native sub-issue (Linear's
+  `parentId`, using the discovered schema). Re-read each ticket to confirm the parent and
+  blocking relations; a parent link is not a blocking edge.
 - Use the template skeleton, including `## Execution`.
 - Version-scoped tickets carry the `[X.Y.Z]` title prefix **and** the matching Release. The two must agree. Milestone plays no part in routing.
 - Governance tickets carry neither.
 - Reach the tracker via MCP first, then the API fallback. If no tracker is reachable, report that publishing is blocked. Do not write local files as a stand-in.
 
-Do NOT close or modify any parent issue.
+Do NOT close or otherwise modify the source parent issue; setting `parentId` on the new
+child tickets is required.
