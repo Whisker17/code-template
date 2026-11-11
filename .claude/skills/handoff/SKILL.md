@@ -5,7 +5,9 @@ argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
 ---
 
-Write a handoff so a fresh agent can continue the work. Save it in the OS temporary directory (or the output path your caller binds), not in the workspace.
+Write a handoff so a fresh agent can continue the work. Save it in the OS temporary
+directory (`$TMPDIR`, else `/tmp`; `%TEMP%` on Windows), or the output path your caller
+binds, not in the workspace. Report the saved document's absolute path.
 
 A temporary handoff is a courier, never the only record. Before writing it, make sure the facts a resume depends on already live somewhere durable: the PR body or issue comments for issue-level results, and the `Release X.Y.Z — orchestration` document (`docs/agents/issue-tracker.md`) for release-level state (baseline B, round, reviewed SHAs, finding → fix mapping).
 
@@ -17,7 +19,7 @@ Include only:
 - open questions, failed or not-run checks, and the next step;
 - effects on dependent tasks, with evidence for any corrected conclusion;
 - the role, model and effort actually used;
-- suggested skills for the next session.
+- suggested skills for the next session, naming the exact invocation and its purpose.
 
 Reference specs, plans, issues, commits and diffs by path or URL; do not copy them. Redact secrets and personal data.
 

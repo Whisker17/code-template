@@ -109,8 +109,10 @@ discovers a template-layer improvement, port it back here and record it in
 auto-sync). Projects that want skills outside the core set install them themselves; the
 template does not maintain an optional skill pack.
 
-Vendored skills are pinned by `skills-lock.json`; upgrade them here deliberately, not
-per-project.
+Vendored skills retain their historical installer hashes in `skills-lock.json`. The current
+manual sync revision and the per-skill upstream/local decisions are recorded in
+[`.claude/skills/UPSTREAM.md`](.claude/skills/UPSTREAM.md); upgrade them here deliberately,
+not per-project. The lock file is not a checksum of local adaptations.
 
 > ⚠️ **Locally customized skills** — `skills-lock.json` records the *upstream* hash, so it
 > cannot detect these edits, and **re-vendoring from `mattpocock/skills` will silently
@@ -128,9 +130,12 @@ per-project.
 > - `to-tickets/SKILL.md` — uses `docs/agents/issue-template.md` (complexity, scope,
 >   native relations); `REVIEWER` design review (max 3 rounds) before any Linear write;
 >   single-writer, query-before-retry, relations-last publishing; no local-file fallback
-> - `grill-me/SKILL.md` — self-contained (the separate `grilling` skill is gone)
-> - `handoff/SKILL.md` — fixed field list; durable state lives in the PR, issue and
->   orchestration document
+> - `grill-me/SKILL.md` — self-contained (upstream `grilling` is folded in); rounds ask
+>   independent frontier questions together and defer dependent questions until prerequisites
+>   settle; respects a user's one-question preference
+> - `handoff/SKILL.md` — portable temporary directory and absolute saved path, fixed field
+>   list and next-session prompt; durable state lives in the PR, issue and orchestration
+>   document
 > - `orchestrate/` — first-party, not vendored; do not add it to `skills-lock.json`
 >   (unattended in-session; `--through tag` scope and mandatory human paths must stay
 >   identical to `docs/GIT_WORKFLOW.md` § 4)

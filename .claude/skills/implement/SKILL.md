@@ -9,7 +9,9 @@ Implement one issue (or the bounded work the user describes) end to end. You are
 
 ## Start
 
-1. Read the whole issue, including amendments and its `## Execution` section, the spec
+1. If the user passed a ticket reference, fetch it via `docs/agents/issue-tracker.md` and
+   state its title before starting. Resolve an ambiguous reference with the user. Read the
+   whole issue, including comments, amendments and its `## Execution` section, the spec
    sections it cites, and only the other docs the task needs. If complexity or expected
    scope is missing, get it fixed before starting.
 2. Resolve the base and create the worktree exactly as `docs/GIT_WORKFLOW.md`

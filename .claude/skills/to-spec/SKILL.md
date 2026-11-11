@@ -6,6 +6,12 @@ disable-model-invocation: true
 
 This skill turns the current conversation and your understanding of the codebase into a spec (you may know it as a PRD). Do NOT interview the user — synthesize what you already know. Use `/grill-me` first if the goal, constraints or acceptance are still unclear.
 
+Explore the repo first if its current state is not already known. Use the project's domain
+glossary vocabulary (`docs/agents/domain.md`) and respect relevant ADRs. Identify the
+highest existing seam that can verify the external behaviour; prefer one shared seam over
+several new ones. Carry previously agreed testing decisions into the draft. If a new seam
+needs a user decision, resolve it with `/grill-me` before continuing.
+
 ## Project spec (default): `docs/DESIGN.md`
 
 `docs/DESIGN.md` is the spec of record, and its numbered sections are stable references. Issues cite `§2.x`, `[Component]` comes from `§4.2`, milestones from `§6`, and agents check `§7` and `§8` (`AGENTS.md`, `docs/agents/issue-template.md`, `docs/agents/domain.md`). So:

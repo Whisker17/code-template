@@ -44,12 +44,46 @@ here — it is never a pass.
 - The diff (inline it in every prompt; do not rely on the reviewer running git) and the
   commit list. A reviewer may read the full tree at the head to check interactions.
 - The spec and **every** acceptance criterion in scope: the PR's issue, or every issue in
-  the Release. Fetch them via `docs/agents/issue-tracker.md`, or ask the user where the
-  spec is.
+  the Release. Fetch them via `docs/agents/issue-tracker.md`, including comments and
+  amendments. For an ad hoc range, look for issue references in commit messages, a path the
+  user supplied, then a matching spec under `docs/` or `specs/`. If no source is found, ask
+  the user. If they confirm none exists, explicitly report "no spec available"; do not
+  invent acceptance criteria or waive the lane's required issue acceptance.
 - The verification artifacts (commands, results, logs, the manifest) and, in later
   rounds, the findings so far with their dispositions.
-- `docs/REVIEW.md` and the repo's documented standards (`CONTRIBUTING.md`,
-  `CODING_STANDARDS.md`, …), if any.
+- `docs/REVIEW.md` and **every** file documenting coding standards. Search the tree;
+  include `CONTRIBUTING.md` and `CODING_STANDARDS.md` wherever present, plus applicable
+  agent instructions. Give reviewers the source list so a documented violation can cite
+  its file and rule.
+
+Carry two explicit axes through the hunt and report: **Standards** (documented repo rules)
+and **Spec** (missing, partial, incorrect or unrequested behaviour). Assess each separately
+so one passing axis cannot hide a failure in the other; keep the verified finding ids and
+combined blocking verdict of § 5.
+
+For Standards, also pass this Fowler smell baseline to the hunter covering simplicity.
+Each is a **possible** smell, a judgement call, never a hard violation. Repo rules override
+it; skip checks already enforced by tooling. Do not create an abstraction merely to remove
+a smell: `/ponytail` and actual requirements decide whether a change helps.
+
+| Possible smell | Look for; smallest useful remedy |
+| --- | --- |
+| Mysterious Name | A name hides its purpose; rename it clearly. |
+| Duplicated Code | Repeated logic; reuse the shared shape when warranted. |
+| Feature Envy | Logic mostly uses another object's data; move it nearer that data. |
+| Data Clumps | The same fields travel together; consider one domain type. |
+| Primitive Obsession | A primitive obscures a domain concept; consider a small domain type. |
+| Repeated Switches | Repeated dispatch on the same type; consider one shared map or polymorphism. |
+| Shotgun Surgery | One change scatters edits; gather what changes together. |
+| Divergent Change | A module changes for unrelated reasons; separate responsibilities. |
+| Speculative Generality | Unrequested hooks or abstractions; delete them. |
+| Message Chains | Callers navigate internals; hide the walk behind a useful operation. |
+| Middle Man | A wrapper only delegates; call the target directly. |
+| Refused Bequest | An implementation discards most inherited behaviour; consider composition. |
+
+Baseline smells remain `suggestion` only after verification. Pure style findings are still
+dropped under § 4; a documented breach blocks only if it meets `docs/REVIEW.md`'s failure
+definition.
 
 ## 3. Hunt
 
@@ -65,15 +99,19 @@ candidate findings in the schema of § 5 with a concrete trigger each. Breadth o
 certainty: a hunter reports every plausible failure it can articulate and says whether it
 reproduced it; deciding is the verifier's job (§ 4). The angles:
 
-1. **Spec & acceptance.** Does each acceptance criterion hold? Find the input where it does not.
+1. **Spec & acceptance.** Does each acceptance criterion hold? Find missing, partial,
+   incorrect and unrequested behaviour, citing the spec for each finding.
+   If no spec is available under § 2, report that this axis was skipped.
 2. **Failure paths.** Errors, recovery, concurrency, data loss.
 3. **Security & trust boundaries.** Untrusted input, paths, secrets, permissions.
 4. **Cross-issue integration.** Interfaces, config, schema and generated files that two
    changes both touch.
 5. **Verification validity.** Would the E2E still pass with the feature reverted? Is the
    artifact reproducible from its manifest? Is any gate vacuous?
-6. **Simplicity** per `/ponytail`: existing capability re-implemented, an unneeded
-   dependency or abstraction. Its findings are `suggestion` only.
+6. **Simplicity & standards** per `/ponytail`: documented-rule violations, the smell
+   baseline in § 2, existing capability re-implemented, an unneeded dependency or
+   abstraction. Simplicity and baseline-smell findings are `suggestion` only; documented
+   violations use the failure definition in `docs/REVIEW.md`.
 
 Quick gives one hunter all six angles. Deep gives each angle to two hunters.
 
@@ -133,6 +171,11 @@ criterion, and the precondition of § 1 valid on **that** SHA. Suggestions may r
 open `unverified` is shown as open and is never rendered as PASS; it clears only by a
 fix, or by a fresh verifier call that refutes it with evidence in a later round. A later
 commit needs its own check.
+
+After the counts and verdict, report **Standards** and **Spec** separately, each with its
+counts and worst finding (or explicit "no findings" / "no spec available"). Reference the
+stable finding ids rather than duplicating findings. Keep other defect angles visible in
+the report too. Neither axis passing overrides a blocking finding on the other.
 
 ## 6. Rounds
 
