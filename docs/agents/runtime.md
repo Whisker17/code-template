@@ -135,8 +135,8 @@ The template ships these **defaults**, all on `pi`, each confirmed with a real
 
 | Role | Model (pi registry ID) | Note |
 | --- | --- | --- |
-| `ORCHESTRATOR` | `claude/claude-opus-5-5` | `medium` and `high` mapped as themselves |
-| `IMPLEMENTER` | `claude/claude-sonnet-5-5` | `medium` or `high` from the issue's `Complexity` |
+| `ORCHESTRATOR` | `mantle-gateway/claude-opus-5-5` | `medium` and `high` mapped as themselves |
+| `IMPLEMENTER` | `mantle-gateway/claude-sonnet-5-5` | `medium` or `high` from the issue's `Complexity` |
 | `REVIEWER` | `magpie/codex/gpt-6-astra` | A different vendor than `IMPLEMENTER` |
 | `REVIEWER_FALLBACK` | none (empty) | Declare one deliberately; see § Reviewer unavailable |
 
