@@ -215,6 +215,10 @@ reach it. No tracker reachable = stop and report; never a shadow tracker. Issue 
 `docs/agents/issue-template.md` (English).
 Access, release binding and state ownership: `docs/agents/issue-tracker.md`. Triage labels:
 `docs/agents/triage-labels.md`.
+Every open issue has exactly one home (version, `governance`, `backlog` or a project-defined
+non-code type); on GitHub `scripts/issue-audit.sh --repo o/r` checks it. A UI/UX issue is
+refused until the owner approves its `## Design` (the `needs-design` gate); both rules are in
+`docs/agents/issue-tracker.md` (§ Issue homes, § UI/UX design gate).
 
 ### Domain docs
 
@@ -231,4 +235,4 @@ When work here surfaces a **template-layer** improvement — a workflow rule tha
 skill or config fix, a doc convention worth standardizing — tell the user so they can port
 it back (and record it in the template's `CHANGELOG.md`). Project-specific learnings stay.
 
-Template version: 0.3.0
+Template version: 0.3.1

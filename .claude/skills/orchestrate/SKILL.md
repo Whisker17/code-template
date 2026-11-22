@@ -59,7 +59,11 @@ a Linear Release or a GitHub milestone `vX.Y.Z` (`docs/agents/issue-tracker.md` 
    the blocker to report; the Release itself stays owner-created.
 3. Check for external blockers, dependency cycles, unmeetable acceptance criteria and
    missing `## Execution` data. A cycle or a version-signal mismatch blocks those issues;
-   fix the issue set, do not pick an order anyway.
+   fix the issue set, do not pick an order anyway. **Design gate:** an issue labelled
+   `needs-design`, or whose body has a `## Design Draft` heading but no `## Design` heading, is
+   refused: it is not scheduled or dispatched, and the owner is told its design needs approval
+   (`docs/agents/issue-tracker.md` § UI/UX design gate). Issues whose home is a project-defined
+   non-code type (e.g. `topic`) are skipped.
 4. Mark issues that hit high-risk paths, and pairs whose expected scopes share a module,
    schema, public interface or generated file.
 5. Check GitHub, the tracker and the project's real verification commands. Make one real
@@ -79,6 +83,11 @@ a Linear Release or a GitHub milestone `vX.Y.Z` (`docs/agents/issue-tracker.md` 
    progress, establish B from the record — never from today's HEAD, which would hide work
    already merged. If you cannot establish it, recover that evidence first. Issues already
    running under an older contract finish or pause with a handoff before the switch.
+8. Run the issue home audit (`docs/agents/issue-tracker.md` § Issue home audit): GitHub
+   `scripts/issue-audit.sh --repo o/r`, Linear the same rules by hand with `list_issues` and
+   `get_issue`. Report the findings to the owner and record them in the `Decision log`; a read
+   that fails (exit 2) is a blocker, never "clean". The audit must be **clean** before you open
+   the release PR (§ 3 "Release ready") and before the milestone / Release is closed (§ 4 step 5).
 
 A canceled blocker is not a satisfied one: an issue that needed its output needs an
 explicit substitute or a corrected relation. An unfinished external blocker blocks only
@@ -216,7 +225,8 @@ scope error, not a pass.
   `REVIEWER_FALLBACK` is eligible only as it defines. If no review can be completed, the
   release is blocked and never advances.
 
-Release ready = the evidence is bound to H. Before declaring it, run `scripts/wt-gc.sh`:
+Release ready = the evidence is bound to H. Before declaring it, run the home audit (step 8 of
+§ 1; it must be clean) and `scripts/wt-gc.sh`:
 no worktree of this release (implementers', verification, review) may remain, and every
 leftover is removed or named with path and reason in the orchestration document. Without
 `--through tag`, stop here: merging the integration branch into `dev`, the cut, the `main`
@@ -245,7 +255,8 @@ log`:
    `dev` (merge commit). A difference is a new resolution or code change that needs
    verification and review, so stop.
 3. Cut the temporary `release/vX.Y.Z` from `dev` (deleting the merged integration branch of
-   that name first) and commit nothing on it. Open its PR into `main` at once. Require
+   that name first) and commit nothing on it. Run the home audit (§ 1 step 8): it must be clean
+   before the PR into `main` is opened. Open that PR at once. Require
    `git diff --quiet <H> origin/release/vX.Y.Z` and
    `git diff --quiet <H> "$(git merge-tree --write-tree origin/main origin/release/vX.Y.Z)"`
    to pass, `ci-ok` green (or the `CI unavailable` evidence) and MERGEABLE/CLEAN, then merge
@@ -256,8 +267,8 @@ log`:
    notes and the release E2E artifact of H attached (`artifacts/e2e/release/<X.Y.Z>/<H>/`).
 5. The tracker's Release → Released step (`docs/agents/issue-tracker.md` § Operations; Linear:
    `commitSha` = `git rev-parse 'vX.Y.Z^{commit}'` and the released stage; GitHub: close the
-   milestone, description `released at <sha>`, and close the orchestration issue); re-read to
-   confirm.
+   milestone, description `released at <sha>`, and close the orchestration issue); the home audit
+   must be clean first; re-read to confirm.
 6. Post-merge cleanup and fan-out (`docs/GIT_WORKFLOW.md` § Post-merge cleanup), then
    `scripts/wt-gc.sh`: remove or name every leftover with path and reason in the
    orchestration document, and report them.

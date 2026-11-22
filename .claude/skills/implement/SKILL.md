@@ -14,6 +14,11 @@ Implement one issue (or the bounded work the user describes) end to end. You are
    whole issue, including comments, amendments and its `## Execution` section, the spec
    sections it cites, and only the other docs the task needs. If complexity or expected
    scope is missing, get it fixed before starting.
+   **Design gate:** refuse an issue labelled `needs-design`, or whose body has a
+   `## Design Draft` heading but no `## Design` heading. Report that the owner's approval is
+   missing and stop; do not resolve a base or create a worktree
+   (`docs/agents/issue-tracker.md` § UI/UX design gate). An issue whose home is a project-defined
+   non-code type (e.g. `topic`) is not code work: stop and report it too.
 2. Resolve the base and create the worktree exactly as `docs/GIT_WORKFLOW.md`
    § Resolving the base branch says — fail closed, never a defaulted `dev`. A standalone run
    may cut a missing `release/v{version}` with `scripts/cut-release.sh`, only under the four

@@ -14,6 +14,24 @@ actual label strings used in this repo's issue tracker (Linear or GitHub labels)
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the
 corresponding label string from this table.
 
+## State, home and type labels (not triage)
+
+Besides the five triage roles, an issue carries labels that are not triage roles. Each is an
+**issue label** in either tracker; create a missing one before applying it.
+
+| Label | Kind | Meaning |
+| ----- | ---- | ------- |
+| `todo` / `in-progress` / `in-review` | state (GitHub only) | Workflow state; exactly one on an open work issue. Linear uses workflow states instead |
+| `governance` | home | Repo-wide governance: carve-out files only, no `[X.Y.Z]` prefix, no milestone / Release, goes to `dev` |
+| `backlog` | home | Parked work, only with the owner's agreement and a reason in the body; no prefix, no milestone / Release |
+| `orchestration` | type | The `Release X.Y.Z — orchestration` issue (GitHub); homed by its milestone alone, no state label |
+| `needs-design` | gate | UI/UX issue without an owner-approved `## Design`; never together with `ready-for-agent`. `/implement` and `/orchestrate` refuse it (`docs/agents/issue-tracker.md` § UI/UX design gate) |
+| `hotfix` | routing | Branches off `origin/main` (section below) |
+
+A version-scoped issue has no label for its home: its `[X.Y.Z]` prefix plus milestone / Release is
+the home. `needs-triage` is a state, not a home. Every open issue has exactly one home
+(`docs/agents/issue-tracker.md` § Issue homes); `scripts/issue-audit.sh` checks it on GitHub.
+
 ## The `hotfix` label (routing, not triage)
 
 `hotfix` is a **type** label, not one of the five triage roles, but it is the one type

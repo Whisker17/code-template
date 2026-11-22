@@ -23,7 +23,45 @@ Format: date — what changed and why — which project surfaced it (if any).
   `skills-lock.json` stays the historical installer baseline, not a local-content checksum.
   Downstream projects can merge these six skill files and the provenance record directly.
 
-## Unreleased — v0.3.1
+## v0.3.1
+
+- **Issue homes with `scripts/issue-audit.sh`, a UI/UX design gate, and the 0.3.1 version bump (WHI-2631).**
+  Every open issue has exactly one home: version (`[X.Y.Z]` prefix, three or four segments, plus
+  milestone / Release `vX.Y.Z`, equal), `governance` (carve-out files only, no version), `backlog`
+  (owner's agreement) or a project-defined non-code type (`topic` is the shipped example); an
+  `orchestration` issue is homed by its milestone alone. New read-only `scripts/issue-audit.sh
+  --repo o/r` (`gh api --paginate --slurp`, `python3` stdlib, bash 3.2-safe) prints `#<n> <reason>`
+  for: no home, two or more homes, prefix without milestone or milestone without prefix, prefix
+  version ≠ milestone version, a work issue without exactly one of `todo` / `in-progress` /
+  `in-review`, and `ready-for-agent` together with `needs-design`. It ignores pull requests and
+  closed issues, exempts `orchestration` issues and `NON_CODE_HOMES` from the state-label rule, and
+  exits 0 clean / 1 findings / 2 `gh` failed or JSON invalid (never "clean"). The Linear binding
+  has the same rules, applied by `/orchestrate` with `list_issues` + `get_issue` (documented, not
+  scripted). `/orchestrate` runs the audit at preflight (findings go to the owner) and it must be
+  clean before the release PR and before the milestone / Release is closed. UI/UX design gate
+  (both trackers): `todo` + `needs-design` with `## Design Draft v1` (ASCII wireframes, state
+  matrix, breakpoints, accessibility; a self-contained HTML sketch in the session, no design
+  branch, no PNG, no image host) → `v2`, `v3` → owner approval writes `## Design`, removes
+  `needs-design`, adds `ready-for-agent`; `/implement` and `/orchestrate` refuse an issue labelled
+  `needs-design` or with a `## Design Draft` and no `## Design`. A `needs-design` issue without a
+  draft is not an audit finding (the gate is enforced at pickup, so it cannot deadlock a release).
+  `/to-tickets` assigns a home to every ticket (follow-ups default to the next open version,
+  carve-out-only → `governance`, listed in the handoff). `docs/agents/trackers/{github,linear}.md`
+  and the byte-identical `docs/agents/issue-tracker.md` gain § Issue homes, § Issue home audit and
+  § UI/UX design gate; `triage-labels.md` documents the state, home, `orchestration`,
+  `needs-design` and `hotfix` labels; `issue-template.md` gains `## Design Draft vN` / `## Design`
+  and the homes; `docs/GIT_WORKFLOW.md` puts the design gate in the lifecycle and adds
+  `docs/agents/trackers/`, `config/content-roles.conf`, `scripts/roles.sh`,
+  `scripts/cut-release.sh` and `scripts/issue-audit.sh` to the carve-out list. Version bump:
+  `TEMPLATE_VERSION` and `AGENTS.md` are `0.3.1`. E2E: `tests/e2e/test_issue_audit.py` (smoke;
+  fake `gh` emitting two-page `--slurp` output, one fixture per failure mode, a clean fixture
+  with a PR / orchestration / custom-home / four-segment hotfix issue, `gh` failure and invalid
+  JSON → exit 2); `scripts/issue-audit.sh` and the files it reads join the `scripts/e2e.sh`
+  inputs. Downstream migration: merge `scripts/issue-audit.sh`, the docs and skills above and the
+  test file, add `scripts/issue-audit.sh` to your e2e inputs, create the `governance`, `backlog`,
+  `orchestration`, `needs-design` labels (GitHub) and set `NON_CODE_HOMES` to your own non-code
+  homes (clear `topic` if you have none), then run the audit once and fix what it lists. For
+  research-hub the change is naming alignment only: it already runs these rules (#145, #164).
 
 - **Optional GitHub Issues tracker binding; tracker-neutral SETUP, skills and docs (WHI-2630).**
   The tracker is now a choice made at SETUP: Linear or GitHub Issues. New
@@ -122,7 +160,7 @@ Format: date — what changed and why — which project surfaced it (if any).
   风格" if affected) per the slide skill's sync rule: the review step now names `DECK_REVIEWER`
   instead of a model.
 
-## Unreleased — v0.3.0
+## v0.3.0
 
 - **E2E replaces after-the-fact unit tests (WHI-2195).** `AGENTS.md` opens with
   `## Testing (read first)` (never write unit tests after code; prefer E2E and end each run
