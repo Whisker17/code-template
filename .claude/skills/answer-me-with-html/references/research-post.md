@@ -80,7 +80,7 @@ scope: <scope>
 ## 5. Bilingual and tweet card *(research-hub specific)*
 
 - The Chinese `explainer.md` is the main draft; the English `explainer.en.md` has the same meaning, is not word for word, and is reviewed by sol until PASS.
-- The tweet card `card.yml`: background / status / Excalidraw figure / 2–3 findings / conclusion / tweet. English only, only `observed` / `inferred` claims, written as a neutral researcher, mention Mantle as little as possible. Reviewed by Astra until PASS.
+- The tweet card `card.yml`: background / status / Excalidraw figure / 2–3 findings / conclusion / tweet. English only, only `observed` / `inferred` claims, written as a neutral researcher, mention Mantle as little as possible. Reviewed by `DECK_REVIEWER` (`scripts/roles.sh get DECK_REVIEWER`) until PASS.
 - For a private report, the owner confirms what may go public before the tweet; the owner posts the tweet by hand.
 
 ## 6. Delivery checklist
@@ -91,7 +91,7 @@ scope: <scope>
 - [ ] The prerequisites are enough for the target reader to follow "How it works".
 - [ ] The render has no `✗`, figures are baked; only STE warnings with a reason to stay remain.
 - [ ] Phone check (390×844) passes: no horizontal overflow, body width ≥ 300px, font size ≥ 14px; every figure was seen at 1280 and 390 width.
-- [ ] *(research-hub specific)* English version has sol PASS, tweet card has Astra PASS.
+- [ ] *(research-hub specific)* English version has sol PASS, tweet card has `DECK_REVIEWER` PASS.
 - [ ] *(research-hub specific)* After publishing, Notion is back-filled (report link, status "published").
 
 ## 7. Coverage of the ten common content rules
@@ -107,6 +107,6 @@ The ten rules come from the Notion page "内容输出模板" §2 (shared by rese
 | 5 | Humanize, keep it technical | Applies: STE rules plus no filler, details kept (section 4) |
 | 6 | Chinese and English | Applies *(research-hub specific)*: two editions with the same meaning, not word for word; tweet card in English only (section 5) |
 | 7 | Work private, Mantle colours; personal colours for personal | Not in this file: visibility and colours are set at publishing by research-hub; the page template does not choose them |
-| 8 | Cross-vendor review | Applies *(research-hub specific)*: sol and Astra reviews are gates in the checklist (sections 5 and 6); in other repos review the draft with a model from another vendor |
+| 8 | Cross-vendor review | Applies *(research-hub specific)*: sol and `DECK_REVIEWER` reviews are gates in the checklist (sections 5 and 6); in other repos review the draft with a model from another vendor |
 | 9 | Self-check before delivery | Applies: render check, phone and desktop screenshots (section 6) |
 | 10 | Discussion phase edits only the draft | Applies: while discussing, change only the draft; do not run the full render / publish flow each time. The research-hub flow of section 3 in the Notion page is out of scope |
