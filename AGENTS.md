@@ -76,9 +76,10 @@ issue fits not exactly one row, **stop and surface it**.
 | Version-scoped work | everything else | `origin/release/v{version}` | `release/v{version}` |
 | Quick-fix | the owner says "just change it" **and names an existing `dev` or `release/v*`** | `origin/<named base>` | `<named base>` |
 
-- **Version:** the title prefix `[X.Y.Z]`, cross-checked against the tracker Release. If
-  they disagree, or one is missing while the other exists, refuse. Never infer it from a
-  milestone. Before the first production tag the version-scoped row resolves to `dev`
+- **Version:** the title prefix `[X.Y.Z]`, cross-checked against the tracker Release (GitHub: the
+  milestone `vX.Y.Z`). If they disagree, or one is missing while the other exists, refuse.
+  Never infer it from a Linear milestone (a capability stage) or a similar title. Before the
+  first production tag the version-scoped row resolves to `dev`
   (bootstrap — a resolved value, not a default).
 - A missing `origin/release/v{version}` is cut only by `scripts/cut-release.sh`, from the trunk
   tip, when four conditions hold (title prefix and milestone/Release agree, the milestone/Release
@@ -124,7 +125,7 @@ issue fits not exactly one row, **stop and surface it**.
 `/orchestrate <Release> --through tag` is the owner's declared scope for one Release: after a
 passed release review and release E2E on the current SHA it covers only the merge into `dev`,
 the temporary cut and its merge into `main`, the annotated tag, the GitHub Release with the
-release E2E artifact, the tracker Release `commitSha`/stage and post-merge cleanup. It never
+release E2E artifact, the tracker's Release → Released step and post-merge cleanup. It never
 covers a mandatory human path (`.github/workflows/**`, the project's release/promotion
 scripts) or a high-risk path, running those scripts, deploy or a hotfix. The recorded scope
 and the rule are `docs/GIT_WORKFLOW.md` § 4 *Unattended promotion*.
@@ -148,7 +149,7 @@ ends. Layout: `../<repo>-wt/<issue-id>`; verification worktrees
 - `scripts/wt-gc.sh` reports leftovers (dry run) and, with `--apply`, removes only items it
   can prove `done`. It never deletes active or unknown-state work: `gh` errors, a branch equal
   to its base, a missing upstream, a locked, conflicted or (unless `--select`ed) dirty
-  worktree are all preserved. Linear `Done` **and** `Canceled` require the worktree removed.
+  worktree are all preserved. Tracker `Done` **and** `Canceled` require the worktree removed.
   Details: `docs/GIT_WORKFLOW.md` § Post-merge cleanup.
 
 ### After a merge
@@ -208,9 +209,10 @@ Skills live in `.claude/skills/<name>/SKILL.md`. Runtimes that auto-discover the
 
 ### Issue tracker
 
-Issues and specs live in **Linear** (project `{{LINEAR_PROJECT}}`, team `{{LINEAR_TEAM}}`),
-reached via MCP, else the GraphQL API with `LINEAR_API_KEY`. No tracker reachable = stop
-and report; never a shadow tracker. Issue shape: `docs/agents/issue-template.md` (English).
+Issues and specs live in the tracker this project chose at setup — **Linear** or
+**GitHub Issues** — bound by `docs/agents/issue-tracker.md`, the one file that says how to
+reach it. No tracker reachable = stop and report; never a shadow tracker. Issue shape:
+`docs/agents/issue-template.md` (English).
 Access, release binding and state ownership: `docs/agents/issue-tracker.md`. Triage labels:
 `docs/agents/triage-labels.md`.
 

@@ -52,7 +52,8 @@ case "$MODE" in
     *) SUITES=("${PY[*]} -m pytest tests/e2e" "${PY[*]} -m pytest tests/test_agent_dispatch.py") ;;
 esac
 
-INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh scripts/roles.sh scripts/cut-release.sh config/content-roles.conf .githooks/pre-push)
+INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh scripts/roles.sh scripts/cut-release.sh config/content-roles.conf .githooks/pre-push
+    SETUP.md docs/agents/issue-tracker.md docs/agents/trackers/linear.md docs/agents/trackers/github.md)
 while IFS= read -r f; do INPUTS+=("$f"); done < <(find tests/e2e -type f ! -path '*/__pycache__/*' | sort)
 [ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py config/agent-roles.conf scripts/e2e.sh scripts/wt-gc.sh)
 # <<< E2E SUITES <<<

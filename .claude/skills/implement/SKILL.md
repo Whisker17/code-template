@@ -21,8 +21,9 @@ Implement one issue (or the bounded work the user describes) end to end. You are
    the orchestrator cut it in preflight if needed, and you do not cut one. Assert
    the base, enable hooks in the worktree. The worktree lives at
    `../<repo>-wt/<issue-id>` (a verification worktree at `../<repo>-wt/<issue-id>-verify`).
-3. Tracker → `In Progress` (standalone). Under `/orchestrate` the orchestrator owns the
-   tracker; you report facts.
+3. Tracker → `In Progress` (standalone; how the state is set:
+   `docs/agents/issue-tracker.md` § Issue lifecycle ↔ Git). Under `/orchestrate` the
+   orchestrator owns the tracker; you report facts.
 
 ## Build and verify
 

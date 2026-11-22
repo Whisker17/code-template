@@ -38,8 +38,9 @@ chat, not a running process, not an agent saying "done".
 
 ## 1. Preflight
 
-Input is an explicit Linear project **and** Release. Never guess from a similar title or a
-milestone.
+Input is an explicit tracker scope (the Linear project, or the GitHub repository) **and**
+Release. Never guess from a similar title. "Release" below is the tracker's release entity:
+a Linear Release or a GitHub milestone `vX.Y.Z` (`docs/agents/issue-tracker.md` § Operations).
 
 0. If this session is not running `ORCHESTRATOR_MODEL`, warn once, record the actual model
    and effort in the orchestration document and continue. A config file cannot switch a
@@ -61,7 +62,7 @@ milestone.
    fix the issue set, do not pick an order anyway.
 4. Mark issues that hit high-risk paths, and pairs whose expected scopes share a module,
    schema, public interface or generated file.
-5. Check GitHub, Linear and the project's real verification commands. Make one real
+5. Check GitHub, the tracker and the project's real verification commands. Make one real
    `DISPATCH-OK` call per role you will use (`docs/agents/runtime.md` § Preflight) — once
    per release, again only after an auth/call error. A role-binding change is verified in
    tiers instead (`docs/GIT_WORKFLOW.md` § Role binding lane).
@@ -98,8 +99,8 @@ the issues that depend on it.
   where you can watch it to completion. Never an unobserved background process. Effort comes from the
   issue's `Complexity`. You may raise it to `high` on evidence — record why on the issue —
   never lower it. The prompt is [`implementer-prompt.md`](implementer-prompt.md), filled.
-- Tracker: `In Progress` when you dispatch, `In Review` as soon as you see the PR, `Done`
-  after merge and cleanup. Waiting for a human or failed verification stays `In Review`
+- Tracker (`docs/agents/issue-tracker.md` § Issue lifecycle ↔ Git): `In Progress` when you
+  dispatch, `In Review` as soon as you see the PR, `Done` after merge and cleanup. Waiting for a human or failed verification stays `In Review`
   with the reason. On resume, reconcile against real PR states before doing anything.
 - You own the worktrees of the implementers you dispatch (layout `../<repo>-wt/<issue-id>`,
   verification `../<repo>-wt/<issue-id>-verify`). `Done` after merge and `Canceled`
@@ -253,8 +254,10 @@ log`:
 4. After `git fetch origin`, `git diff --quiet <H> origin/main` must pass; if it fails, do not
    tag, stop. Then the annotated tag `vX.Y.Z`, pushed; GitHub Release for it with English
    notes and the release E2E artifact of H attached (`artifacts/e2e/release/<X.Y.Z>/<H>/`).
-5. Linear Release: `commitSha` = `git rev-parse 'vX.Y.Z^{commit}'` and the released stage;
-   re-read to confirm.
+5. The tracker's Release → Released step (`docs/agents/issue-tracker.md` § Operations; Linear:
+   `commitSha` = `git rev-parse 'vX.Y.Z^{commit}'` and the released stage; GitHub: close the
+   milestone, description `released at <sha>`, and close the orchestration issue); re-read to
+   confirm.
 6. Post-merge cleanup and fan-out (`docs/GIT_WORKFLOW.md` § Post-merge cleanup), then
    `scripts/wt-gc.sh`: remove or name every leftover with path and reason in the
    orchestration document, and report them.

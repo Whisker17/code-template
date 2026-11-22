@@ -1,7 +1,7 @@
 # Triage Labels
 
 Skills speak in terms of five canonical triage roles. This file maps those roles to the
-actual label strings used in this repo's issue tracker (Linear labels).
+actual label strings used in this repo's issue tracker (Linear or GitHub labels).
 
 | Canonical role             | Label in our tracker | Meaning                                  |
 | -------------------------- | -------------------- | ---------------------------------------- |
@@ -26,11 +26,14 @@ worktree** — never assume `dev`.
 Apply it only when production is actually broken *and* `dev` holds work that must not ship
 yet. If everything on `dev` is shippable, the fix rides a normal release instead.
 
-In Linear, these are **issue labels**. Find existing labels with
-`linear.list_issue_labels` and create any missing one with `linear.create_issue_label`
-before applying it via `linear.save_issue`. Note that lifecycle (open → done) is tracked
-separately by Linear **workflow states** — these labels layer the triage role on top of
+These are **issue labels** in either tracker; `docs/agents/issue-tracker.md` says how to find
+and create one. Create any missing label before applying it. Lifecycle (open → done) is
+tracked separately — by workflow states in Linear, by the state labels `todo` / `in-progress` /
+`in-review` (and open/closed) on GitHub — so these labels layer the triage role on top of
 whatever state the issue is in.
+
+On GitHub, SETUP also creates `governance`, `backlog`, `orchestration`, `needs-design` and
+`hotfix` next to the state and triage labels above.
 
 ## High-risk-path extra caution (this repo)
 

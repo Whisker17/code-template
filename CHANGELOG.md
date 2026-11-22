@@ -25,6 +25,34 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ## Unreleased — v0.3.1
 
+- **Optional GitHub Issues tracker binding; tracker-neutral SETUP, skills and docs (WHI-2630).**
+  The tracker is now a choice made at SETUP: Linear or GitHub Issues. New
+  `docs/agents/trackers/linear.md` (the old `issue-tracker.md` plus a `## Operations` table) and
+  `docs/agents/trackers/github.md` define the same six operations (Release entity, Version
+  signal, Workflow states, Dependencies, Orchestration document, Release → Released) and the
+  same cross-referenced sections. GitHub: milestone `vX.Y.Z` is the Release (title prefix +
+  milestone, refuse on mismatch), state labels `todo` / `in-progress` / `in-review` (exactly one
+  on an open issue; Done = closed completed, Canceled = closed not planned), native dependencies
+  via `gh api -X POST .../dependencies/blocked_by -F issue_id=<REST id>` (`-F`, not `-f`), one
+  `Release X.Y.Z — orchestration` issue per milestone, milestone closed with `released at <sha>`,
+  `gh` only with `--repo`, PRs into `release/v*` never close issues so they are closed by hand.
+  `docs/agents/issue-tracker.md` is the only file skills and shared docs name; in the template it
+  is a byte-identical copy of `trackers/linear.md`. `SETUP.md` §1.3-1.4 and § A.1 ask the tracker
+  first and collect only that tracker's values (GitHub: `GITHUB_REPO`, prefixes `GH` / `gh`);
+  bootstrap copies the chosen binding over `issue-tracker.md` and deletes `docs/agents/trackers/`,
+  creates the GitHub labels (`gh label create --force`) and adds `GITHUB_REPO` to the placeholder
+  sweep; adopt's § A.2 loop skips `docs/agents/trackers/*` and handles `issue-tracker.md` from the
+  chosen binding under the same no-overwrite rule (a differing one goes to `conflicts.txt`). The
+  five skills, `AGENTS.md`, `README.md`, `docs/GIT_WORKFLOW.md`, `issue-template.md`,
+  `triage-labels.md` and the PR template are tracker-neutral (the Linear markers live only in the
+  Linear binding; `Closes WHI-123` / `#123` shown side by side); `docs/TRAPS.md` gains a
+  multi-`gh`-account entry. E2E: `tests/e2e/test_tracker_bindings.py` (smoke; runs SETUP's
+  tracker selection, placeholder sweep and § A.2 loop extracted from SETUP.md); `SETUP.md` and
+  the binding files join the `scripts/e2e.sh` inputs. Downstream migration: merge the files
+  above, keep your `docs/agents/issue-tracker.md` (it is your Linear binding; add the
+  `## Operations` table from `trackers/linear.md` and the Sub-issue line); to move to GitHub
+  Issues, replace it with `trackers/github.md` (fill in the repo), create the labels and
+  milestone, and record the `gh` account in `docs/TRAPS.md`; add the new files to your e2e inputs.
 - **An agent may cut `release/vX.Y.Z` from the trunk tip under four conditions (WHI-2629).**
   A missing integration branch used to be a refusal; now `/orchestrate` preflight (or a
   standalone `/implement`) cuts it with new `scripts/cut-release.sh X.Y.Z (--github-repo o/r |
