@@ -49,9 +49,10 @@ human approval** applies to both (except what an owner-invoked `--through tag` c
 | When done | PR → `main` (human gate), delete | Once the **current** SHA passed release E2E and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk — unless the owner invoked `--through tag`, [§ 4](#unattended-promotion---through-tag)). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
 
 Cutting a version-integration branch is a **deliberate act** (it comes with the
-merge-back decision above). An agent must not create `release/v*` as a side
-effect of picking up a ticket. First push of a newly cut `release/v*` (no
-PR yet) uses `ALLOW_DIRECT_PUSH=1` — the hook protects the name.
+merge-back decision above): the owner does it, or an agent does it under the four
+conditions of [§ Agent release cut](#agent-release-cut). Nothing else creates `release/v*`.
+First push of a newly cut `release/v*` (no PR yet) uses `ALLOW_DIRECT_PUSH=1` — the hook
+protects the name — except the agent cut, which the hook admits itself.
 
 ## Resolving the base branch
 
@@ -78,8 +79,9 @@ request that names no base, names a base that does not exist, or names `main` is
 > there is no hotfix lane and nothing for `dev` to stay shippable *against*), the
 > version-scoped row resolves to `dev` and no `release/v*` integration branch
 > exists yet. This is a resolved value from this table, not a default. The first
-> long-lived integration branch is cut — deliberately, by the owner — when work on
-> the next version begins while a deployed version is live. From that point the
+> long-lived integration branch is cut — by the owner, or by an agent under
+> [§ Agent release cut](#agent-release-cut), which refuses while no `v*` tag exists —
+> when work on the next version begins while a deployed version is live. From that point the
 > table applies in full and falling back to `dev` is forbidden.
 
 ### Repo-wide governance carve-out
@@ -149,11 +151,40 @@ reachability is a fallback ladder — do not hard-bind a git operation to MCP.
 If the two signals disagree, or the cross-check exists and either signal is
 missing, **refuse to start and surface it. Never default to `dev`.** A silent
 fallback recreates the trunk pollution this rule exists to prevent, and does it
-invisibly. If `origin/release/v{version}` does not exist, refuse and ask — do
-not create it as a side effect of picking up a ticket.
+invisibly. If `origin/release/v{version}` does not exist, cut it only under
+[§ Agent release cut](#agent-release-cut); otherwise refuse and ask.
 
 The issue template asks for the release field; that is a prompt, not a gate —
 trackers generally do not enforce non-empty fields. Enforcement is this refusal.
+
+### Agent release cut
+
+When `origin/release/vX.Y.Z` is missing but an open milestone/Release says the owner wants
+that version, `/orchestrate` preflight (or a standalone `/implement`) cuts it from the trunk
+tip with `scripts/cut-release.sh` — only if **all four** conditions hold. Milestones and
+Releases stay owner-created; an orchestrated implementer never cuts (it would race the
+preflight): it confirms `origin/<base>` exists.
+
+| # | Condition | Checked by |
+|---|-----------|------------|
+| 1 | The issue-title prefix and the tracker milestone/Release agree | the agent, against the tracker (`docs/agents/issue-tracker.md`); recorded. Not scriptable for Linear |
+| 2 | The milestone/Release is open | the script for GitHub (`--github-repo o/r`: an open milestone titled `vX.Y.Z`; a `gh` failure aborts). For Linear the agent reads the Release via MCP and passes `--linear-release-open <release-url>`, which the script records verbatim as the agent's evidence |
+| 3 | Tag `vX.Y.Z` is absent on the remote | the script, `git ls-remote --tags` |
+| 4 | `X.Y.Z` is numerically greater than the highest three-segment `v*` tag on the remote | the script. Four-segment hotfix tags are ignored; leading zeros or a malformed version are refused; **no `v*` tag at all refuses** (bootstrap resolves to `dev`) |
+
+```bash
+scripts/cut-release.sh X.Y.Z --github-repo owner/repo            # GitHub milestone
+scripts/cut-release.sh X.Y.Z --linear-release-open <release-url> # Linear Release, read by the agent
+```
+
+The script pushes `refs/remotes/origin/<trunk>:refs/heads/release/vX.Y.Z` with an empty
+`--force-with-lease` (the server refuses if the ref exists) and prints
+`cut release/vX.Y.Z at <sha> (agent)`. The trunk is `dev` if the remote has one, else `main`.
+It creates nothing, and exits non-zero, when condition 2, 3 or 4 fails, the remote has no
+`v*` tag, `release/vX.Y.Z` already exists, `git ls-remote` fails or the version is malformed.
+The agent records that line in the orchestration document (and on the milestone for
+GitHub). The pre-push hook admits exactly this creation without `ALLOW_DIRECT_PUSH`; see
+[§ Fallback hook](#fallback-the-local-pre-push-hook).
 
 ### Base check (mandatory, immediately after worktree creation)
 
@@ -897,7 +928,9 @@ This means the GitHub repo must have **both** `Allow squash merge` and
   with `--force`; deleting unmerged work before an `archive/<name>` tag was pushed
 - **Defaulting a version-scoped issue to `dev`** because the release field is
   empty or the release branch does not exist — refuse and surface it
-- **Creating `release/v*` as a side effect of picking up a ticket**
+- **Creating `release/v*` outside [§ Agent release cut](#agent-release-cut)** (or the owner's
+  deliberate cut): an implementer never cuts under `/orchestrate`, and any cut with a
+  condition unmet is forbidden
 - Committing `.env`, private keys, or API secrets
 - **Deploying from a branch.** The only valid deploy source is a tag — otherwise nobody
   can say which tree production is running
@@ -979,8 +1012,16 @@ land that backmerge as a PR from a throwaway branch cut off `origin/main` into
 
 While server-side protection is unavailable, `.githooks/pre-push` (checked in) blocks the
 most common mistake — pushing straight to `main`, `dev`, or a `release/v*`
-integration branch. It admits exactly one direct push without an override, the
-[role-binding lane](#role-binding-lane); the rule table there is its contract. Enable it **once per clone and per worktree**:
+integration branch. It admits two direct pushes without an override: the
+[role-binding lane](#role-binding-lane) (the rule table there is its contract) and the
+[agent release cut](#agent-release-cut). The cut is admitted only as the creation of
+`refs/heads/release/vX.Y.Z` (three numeric segments, no leading zeros) in a single-ref push
+whose remote ref is absent (zero `remote_sha`, and not in `git ls-remote --heads`), whose sha
+is the remote trunk tip from `ls-remote`, and for which conditions 3 and 4 hold against
+`git ls-remote --tags`. Updates, deletes, multi-ref pushes and any other sha stay refused,
+with the violated rule named as `[single-ref]`, `[release-name]`, `[new-ref-only]`,
+`[ls-remote]`, `[trunk-tip]`, `[tag-absent]` or `[version-greater]`. Enable it **once per
+clone and per worktree**:
 
 ```bash
 git config core.hooksPath .githooks

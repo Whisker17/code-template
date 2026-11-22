@@ -40,11 +40,29 @@
 #                       commit has `%G?` = G (default off)
 # Blobs are compared as temp files, never captured with $(...), so NULs and trailing
 # newlines survive. bash 3.2+ and git only.
+#
+# The fifth direct push is the agent release cut (docs/GIT_WORKFLOW.md § Agent release cut):
+# the creation of `release/vX.Y.Z` at the remote trunk tip, which scripts/cut-release.sh
+# performs. It is the ONLY thing admitted under `release/v*` without the override; updates,
+# deletes, multi-ref pushes and any other sha stay refused. A push is admitted only if ALL
+# hold, else it is refused with the rule named as `[rule]`:
+#   single-ref       one ref is pushed
+#   release-name     the ref is exactly refs/heads/release/vX.Y.Z (three numeric segments, no
+#                    leading zeros)
+#   new-ref-only     remote_sha is zero and `git ls-remote --heads` lists no such branch
+#   ls-remote        both `ls-remote` calls succeed
+#   trunk-tip        local_sha is the remote trunk tip (`dev` if the remote has one, else `main`)
+#   tag-absent       tag vX.Y.Z is absent from `git ls-remote --tags`
+#   version-greater  X.Y.Z is numerically greater than the highest three-segment v* tag there,
+#                    and at least one such tag exists (none = bootstrap, which resolves to dev)
+# shortcut: the tag verdict awk is duplicated in scripts/cut-release.sh; the hook stays
+# self-contained because it is a trust boundary. Change both or neither (test_cut_release.py).
 
 set -euo pipefail
 
 # The role-binding lane: the only files a value-only push may change.
 LANE_FILES=(config/agent-roles.conf config/content-roles.conf)
+RELEASE_REF='^refs/heads/release/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 BINDING_LINE='^[A-Z][A-Z_]*_(RUNTIME|MODEL|EFFORT|EFFORT_MEDIUM|EFFORT_HIGH)="[^"]*"$'
 
 is_protected() {
@@ -194,6 +212,59 @@ lane_push() {
     echo "pre-push: role-binding lane: $count value-only binding commit(s) to $trunk admitted (no ALLOW_DIRECT_PUSH needed)." >&2
 }
 
+cut_refuse() { echo "pre-push: release cut refused [$1]: $2" >&2; return 1; }
+
+# Admit the single-ref creation of release/vX.Y.Z at the remote trunk tip. $1 is the remote name.
+cut_push() {
+    local remote="$1" heads tags tip verdict
+    [ "$NREFS" -eq 1 ] ||
+        { cut_refuse single-ref "a release cut is exactly one pushed ref, got $NREFS"; return 1; }
+    [[ "$REMOTE_REF" =~ $RELEASE_REF ]] ||
+        { cut_refuse release-name "$REMOTE_REF is not refs/heads/release/vX.Y.Z"; return 1; }
+    local version="${REMOTE_REF#refs/heads/release/v}"
+    if is_zero_sha "$LOCAL_SHA" || ! is_zero_sha "$REMOTE_SHA"; then
+        cut_refuse new-ref-only "only the creation of a new $REMOTE_REF is admitted, not an update or a delete"; return 1
+    fi
+    heads="$(git ls-remote --heads "$remote" </dev/null 2>/dev/null)" ||
+        { cut_refuse ls-remote "cannot list the heads of '$remote'"; return 1; }
+    tags="$(git ls-remote --tags "$remote" </dev/null 2>/dev/null)" ||
+        { cut_refuse ls-remote "cannot list the tags of '$remote'"; return 1; }
+    [ -z "$(printf '%s\n' "$heads" | awk -v r="$REMOTE_REF" '$2 == r')" ] ||
+        { cut_refuse new-ref-only "$REMOTE_REF already exists on '$remote'"; return 1; }
+    tip="$(printf '%s\n' "$heads" | awk '$2 == "refs/heads/dev" { print $1; exit }')"
+    [ -n "$tip" ] || tip="$(printf '%s\n' "$heads" | awk '$2 == "refs/heads/main" { print $1; exit }')"
+    [ -n "$tip" ] || { cut_refuse trunk-tip "'$remote' has neither dev nor main"; return 1; }
+    [ "$LOCAL_SHA" = "$tip" ] ||
+        { cut_refuse trunk-tip "$LOCAL_SHA is not the remote trunk tip $tip"; return 1; }
+    verdict="$(printf '%s\n' "$tags" | LC_ALL=C awk -v want="$version" '
+        function cmp(a, b,   i, x, y) {
+            split(a, x, "."); split(b, y, ".")
+            for (i = 1; i <= 3; i++) {
+                if (length(x[i]) != length(y[i])) return length(x[i]) > length(y[i]) ? 1 : -1
+                if ((x[i] "") != (y[i] "")) return (x[i] "") > (y[i] "") ? 1 : -1
+            }
+            return 0
+        }
+        $2 ~ /^refs\/tags\/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/ {
+            v = substr($2, 12); n++
+            if (v == want) found = 1
+            if (n == 1 || cmp(v, max) > 0) max = v
+        }
+        END {
+            if (!n) print "none"
+            else if (found) print "exists"
+            else if (cmp(want, max) <= 0) print "notgreater " max
+            else print "ok"
+        }')" || { cut_refuse ls-remote "cannot read the tag list"; return 1; }
+    case "$verdict" in
+        ok) ;;
+        exists) cut_refuse tag-absent "tag v$version already exists on '$remote'"; return 1 ;;
+        none) cut_refuse version-greater "'$remote' has no three-segment v* tag (bootstrap resolves to dev)"; return 1 ;;
+        *) cut_refuse version-greater "$version is not greater than the highest tag v${verdict#notgreater }"; return 1 ;;
+    esac
+    echo "pre-push: release cut: release/v$version at the trunk tip $tip admitted (no ALLOW_DIRECT_PUSH needed)." >&2
+}
+
 BLOCKED=0
 NREFS=0
 TRUNKISH=0
@@ -214,9 +285,11 @@ while read -r _local_ref local_sha remote_ref remote_sha; do
     fi
 done
 
-if [ "$BLOCKED" -eq 1 ] && [ "${ALLOW_DIRECT_PUSH:-}" != "1" ] && [ "$TRUNKISH" -eq 1 ]; then
-    if lane_push "${1:-}"; then
-        exit 0
+if [ "$BLOCKED" -eq 1 ] && [ "${ALLOW_DIRECT_PUSH:-}" != "1" ]; then
+    if [ "$TRUNKISH" -eq 1 ]; then
+        lane_push "${1:-}" && exit 0
+    else
+        cut_push "${1:-}" && exit 0
     fi
 fi
 
@@ -240,6 +313,10 @@ if [ "$BLOCKED" -eq 1 ]; then
   config/agent-roles.conf / config/content-roles.conf is admitted; the lines
   above `[rule]` say which rule your push broke
   (docs/GIT_WORKFLOW.md § Role binding lane).
+
+  A fifth needs no override either: the agent release cut. scripts/cut-release.sh
+  creates release/vX.Y.Z at the remote trunk tip when its four conditions hold;
+  the hook admits only that creation (docs/GIT_WORKFLOW.md § Agent release cut).
 
   Everything else goes through one of these four lanes:
 

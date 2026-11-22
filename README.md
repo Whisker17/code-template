@@ -38,7 +38,9 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
    each with complexity (`medium` | `high`), expected scope and native blocking relations.
 5. Implement. Hand a Release to `/orchestrate <Release> [--through tag]`, which runs the whole
    Release unattended in the current session (visible sub-agents, every decision logged in the
-   orchestration document; it stops only for a missing release branch, an unmet external
+   orchestration document; it cuts a missing `release/v{version}` from the trunk tip only
+   when four conditions hold (`scripts/cut-release.sh`, `docs/GIT_WORKFLOW.md` § Agent release
+   cut), and stops only for a release branch it may not cut, an unmet external
    dependency, an exhausted review budget, a mandatory human path, a failed dispatch with no
    usable fallback, or a human-gated step outside its declared scope):
    - schedules issues by real dependencies and shared-scope conflicts;
