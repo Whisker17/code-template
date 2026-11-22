@@ -55,7 +55,8 @@ milestone.
    schema, public interface or generated file.
 5. Check GitHub, Linear and the project's real verification commands. Make one real
    `DISPATCH-OK` call per role you will use (`docs/agents/runtime.md` § Preflight) — once
-   per release, again only after a config change or an auth/call error.
+   per release, again only after an auth/call error. A role-binding change is verified in
+   tiers instead (`docs/GIT_WORKFLOW.md` § Role binding lane).
 6. Run `scripts/wt-gc.sh` (dry run) and clear leftovers before dispatching anything
    (`docs/GIT_WORKFLOW.md` § No worktree left behind). `--apply` removes only what it proves
    `done`; pass `--select <path>` only for a worktree you can attribute to a finished or

@@ -23,6 +23,31 @@ Format: date — what changed and why — which project surfaced it (if any).
   `skills-lock.json` stays the historical installer baseline, not a local-content checksum.
   Downstream projects can merge these six skill files and the provenance record directly.
 
+## Unreleased — v0.3.1
+
+- **Role binding lane: a value-only binding commit goes straight to the trunk (WHI-2627).**
+  `.githooks/pre-push` now admits a direct push to the trunk without `ALLOW_DIRECT_PUSH`
+  only when it is a single-ref fast-forward of an existing trunk ref (`dev` if the remote has
+  one, `main` if it is reachable and has none, otherwise refused), contains no merge commit,
+  and every commit changes only the quoted values of existing `KEY="value"` binding lines in
+  `config/agent-roles.conf` / `config/content-roles.conf` (no added, removed, renamed or
+  reordered key; no comment, blank-line, CRLF, trailing-newline or mode change; no `$`,
+  backtick, backslash or NUL). Each refusal names its rule as `[rule]`. Opt-in
+  `git config roles.requireSignedCommits true` also requires `%G?` = `G`. Anything else keeps
+  today's protected-branch refusal. `scripts/agent-dispatch.sh` reads the **primary clone's**
+  `config/agent-roles.conf` (first `git worktree list` entry; falls back to its own repo
+  without `git`; `AGENT_ROLES_CONF` still overrides) and `--probe` prints `conf: <path>` first.
+  `docs/GIT_WORKFLOW.md` gains § Role binding lane (and its verification tiers: bind time,
+  first dispatch, release start; a binding commit needs no immediate fan-out);
+  `docs/agents/runtime.md`, `config/agent-roles.conf`, `SETUP.md` §1.9, `README.md` and
+  `AGENTS.md` name no literal model: the conf is the only place. E2E:
+  `tests/e2e/test_role_binding_lane.py` (smoke) plus a primary-clone case in
+  `tests/test_agent_dispatch.py`; `.githooks/pre-push` joins the `scripts/e2e.sh` inputs.
+  Downstream migration: merge `.githooks/pre-push`, `scripts/agent-dispatch.sh`, the docs
+  above and the two test files; no config change. The lane is active once a clone has
+  `core.hooksPath` set to `.githooks`; if you keep a server-side require-PR rule on `dev`,
+  give the owner a bypass for it.
+
 ## Unreleased — v0.3.0
 
 - **E2E replaces after-the-fact unit tests (WHI-2195).** `AGENTS.md` opens with

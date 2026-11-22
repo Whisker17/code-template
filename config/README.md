@@ -16,3 +16,12 @@ loaded into a typed, validated model at startup.
   checking out a release tag never conflicts with live settings.
 
 No loader code ships with the template — write it when the first config file lands.
+
+## Role bindings
+
+`agent-roles.conf` (and, once it exists, `content-roles.conf`) is not YAML: it is a
+shell-sourced `KEY="value"` file that `scripts/agent-dispatch.sh` reads from the **primary
+clone**. Its values change through the owner's value-only commit straight to the trunk
+(`docs/GIT_WORKFLOW.md` § Role binding lane), which `.githooks/pre-push` checks; adding or
+removing a role, or touching a comment or format, is a governance PR. Contract and defaults:
+`docs/agents/runtime.md`.
