@@ -126,9 +126,10 @@ Also:
 2. Create the integration branch: `git checkout -b dev` (keep `main` as the release
    line). Do **not** cut a `release/v*` branch yet: until the first production tag
    exists, `docs/GIT_WORKFLOW.md` § Resolving the base branch resolves the
-   version-scoped row to `dev`. The first long-lived `release/v*` integration
-   branch is cut deliberately, later, when work on the next version begins while a
-   deployed version is live.
+   version-scoped row to `dev`, and `scripts/cut-release.sh` refuses while no `v*` tag
+   exists. The first long-lived `release/v*` integration branch is cut later, by the
+   owner or by an agent under § Agent release cut, when work on the next version begins
+   while a deployed version is live.
 3. Set merge policy on the GitHub repo. **Both** squash and merge-commit must be
    allowed — the lane decides which you use (`docs/GIT_WORKFLOW.md` § Merge strategy):
    squash for issues → `dev` or → a long-lived `release/v*`, merge commit for

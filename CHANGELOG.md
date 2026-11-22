@@ -25,6 +25,28 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ## Unreleased — v0.3.1
 
+- **An agent may cut `release/vX.Y.Z` from the trunk tip under four conditions (WHI-2629).**
+  A missing integration branch used to be a refusal; now `/orchestrate` preflight (or a
+  standalone `/implement`) cuts it with new `scripts/cut-release.sh X.Y.Z (--github-repo o/r |
+  --linear-release-open <url>)` only if (1) the title prefix and milestone/Release agree (the
+  agent checks and records it), (2) the milestone/Release is open (GitHub: an open milestone
+  titled `vX.Y.Z`, `gh` failure aborts; Linear: the agent's evidence URL, recorded verbatim),
+  (3) tag `vX.Y.Z` is absent on the remote, (4) `X.Y.Z` is numerically greater than the highest
+  three-segment `v*` tag (four-segment hotfix tags ignored; no `v*` tag at all refuses, since
+  bootstrap resolves to `dev`). It pushes the remote trunk tip (`dev`, else `main`) with an empty
+  `--force-with-lease` and prints `cut release/vX.Y.Z at <sha> (agent)`. `.githooks/pre-push`
+  admits exactly that creation without `ALLOW_DIRECT_PUSH` (single-ref, absent remote ref, sha =
+  remote trunk tip, conditions 3 and 4 against `ls-remote --tags`, strict `release/vX.Y.Z` name,
+  rules named `[rule]`); updates, deletes, multi-ref pushes and other shas stay refused.
+  `docs/GIT_WORKFLOW.md` gains § Agent release cut; `AGENTS.md`, `README.md`, `SETUP.md`, the
+  `implement` and `orchestrate` skills and `implementer-prompt.md` drop "never create
+  `release/v*`" (an orchestrated implementer still never cuts). E2E:
+  `tests/e2e/test_cut_release.py` (smoke; scratch remote, fake `gh`, real hook);
+  `scripts/cut-release.sh` joins the `scripts/e2e.sh` inputs. Downstream migration: merge
+  `scripts/cut-release.sh`, `.githooks/pre-push`, the docs and skills above and the test file;
+  add `scripts/cut-release.sh` to your e2e inputs; no config change. Do not run the script
+  before your first production tag exists (it refuses).
+
 - **Role binding lane: a value-only binding commit goes straight to the trunk (WHI-2627).**
   `.githooks/pre-push` now admits a direct push to the trunk without `ALLOW_DIRECT_PUSH`
   only when it is a single-ref fast-forward of an existing trunk ref (`dev` if the remote has

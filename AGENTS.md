@@ -80,8 +80,12 @@ issue fits not exactly one row, **stop and surface it**.
   they disagree, or one is missing while the other exists, refuse. Never infer it from a
   milestone. Before the first production tag the version-scoped row resolves to `dev`
   (bootstrap — a resolved value, not a default).
-- A missing `origin/release/v{version}` is a refusal. Cutting an integration branch is the
-  owner's deliberate act, never a side effect of picking up a ticket.
+- A missing `origin/release/v{version}` is cut only by `scripts/cut-release.sh`, from the trunk
+  tip, when four conditions hold (title prefix and milestone/Release agree, the milestone/Release
+  is open, tag `vX.Y.Z` absent, `X.Y.Z` above the highest three-segment `v*` tag; no tag at all
+  refuses): the `/orchestrate` preflight or a standalone `/implement` does it
+  (`docs/GIT_WORKFLOW.md` § Agent release cut); an orchestrated implementer never does. Otherwise
+  stop and surface it.
 - **Quick-fix** (`docs/GIT_WORKFLOW.md` § Quick-fix lane): no named base (or `main`, or a
   missing branch) → refuse, never a default. Branch `quick/<short-topic>`, PR type
   `quick-fix` quoting the owner's request. Waives only the tracker issue/Release binding and

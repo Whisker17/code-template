@@ -20,7 +20,7 @@ chat, not a running process, not an agent saying "done".
 - **Unattended.** Decide everything the rules allow; do not stop to ask. Append each
   decision (what, and the rule or evidence behind it) to the `Decision log` section of the
   orchestration document as you make it.
-- **Stop only for:** a missing release branch; an unmet external dependency; the review
+- **Stop only for:** a missing release branch that § 1 step 2 may not cut; an unmet external dependency; the review
   budget exhausted (§ 3); a mandatory human path (below); a failed real dispatch with no
   usable fallback (`docs/agents/runtime.md` § Reviewer unavailable); a human-gated step
   outside the declared authorization scope. Stopping means: record the blocker in the
@@ -46,8 +46,16 @@ milestone.
    running session, and this is no reason to start another one.
 1. Read the whole Release (`docs/agents/issue-tracker.md` § Reading a release — every page).
 2. For each issue, check its version signals and resolve the Git base
-   (`docs/GIT_WORKFLOW.md` § Resolving the base branch). A missing version branch is a
-   blocker to report, never something to create.
+   (`docs/GIT_WORKFLOW.md` § Resolving the base branch). If `origin/release/vX.Y.Z` is
+   missing, cut it yourself, here, before any dispatch (implementers never cut), only when
+   all four conditions of `docs/GIT_WORKFLOW.md` § Agent release cut hold: (1) the title
+   prefix and the Release agree (you checked them in this step), (2) the Release is open
+   (Linear: read it via MCP and pass `--linear-release-open <release-url>`; GitHub:
+   `--github-repo o/r`), (3) tag `vX.Y.Z` absent and (4) `X.Y.Z` above the highest
+   three-segment `v*` tag, both checked by `scripts/cut-release.sh`. Record its
+   `cut release/vX.Y.Z at <sha> (agent)` line in the orchestration document's `Decision log`
+   (and on the milestone for GitHub). If any condition fails or the script refuses, that is
+   the blocker to report; the Release itself stays owner-created.
 3. Check for external blockers, dependency cycles, unmeetable acceptance criteria and
    missing `## Execution` data. A cycle or a version-signal mismatch blocks those issues;
    fix the issue set, do not pick an order anyway.
