@@ -17,14 +17,14 @@ stop and surface it.
 Never develop an issue directly in the primary clone's working tree (it dirties the
 `dev` workspace and blocks parallel work on multiple issues). The primary clone is only
 for: pulling `dev`/`main`/live `release/v*`, creating worktrees, post-merge
-verification, and fan-out merges.
+verification, fan-out merges, and the owner's [role-binding commits](#role-binding-lane).
 
 ## Branch roles
 
 | Branch | Role | Who writes |
 |--------|------|------------|
 | `main` | **Equals production.** Always equals the last deployed tag. Only accepts merges from `release/*` and `hotfix/*`. | PR only |
-| `dev` | **Validated, shippable trunk.** Receives hotfix backmerges, repo-wide governance, and a finished version-integration branch. Not the integration point for unreleased version work — *except* before the first production tag exists, when it is also the integration branch for version-scoped work (see the [bootstrap clause](#before-the-first-production-tag-bootstrap)). | PR from governance / merge of a finished `release/v*` |
+| `dev` | **Validated, shippable trunk.** Receives hotfix backmerges, repo-wide governance, and a finished version-integration branch. Not the integration point for unreleased version work — *except* before the first production tag exists, when it is also the integration branch for version-scoped work (see the [bootstrap clause](#before-the-first-production-tag-bootstrap)). | PR from governance / merge of a finished `release/v*`; the owner's value-only [role-binding commits](#role-binding-lane) go straight to it |
 | `feat/*` `fix/*` `chore/*` | Single-issue implementation branches (inside worktrees) | Short-lived |
 | `quick/*` | Owner-requested quick-fix branches, no tracker issue ([§ Quick-fix lane](#quick-fix-lane-owner-requested)) | Short-lived |
 | `hotfix/*` | Emergency production fixes (branched from `main`) | Sync back to `dev` after merging to `main`, then fan out |
@@ -434,12 +434,13 @@ For the human-gated rows, a human reviewer:
 ### Post-merge cleanup (mandatory, in order)
 
 Drive these from the **primary clone**. Never commit **feature work** to
-`dev` or a `release/v*` integration branch directly. Three merges are the
-documented exceptions — they are not PR-gated and they push with
+`dev` or a `release/v*` integration branch directly. Four direct pushes are the
+documented exceptions. Three are merges that are not PR-gated and push with
 `ALLOW_DIRECT_PUSH=1`: fan-out of `dev` into live integration branches
 (step 5), the hotfix backmerge of `main` into `dev`
 ([§ Hotfix](#hotfix) step 7), and the first push of a freshly cut
-`release/v*` ([§ Releasing to `main`](#releasing-to-main)).
+`release/v*` ([§ Releasing to `main`](#releasing-to-main)). The fourth, the owner's
+[role-binding lane](#role-binding-lane), needs no override: the hook admits it.
 
 0. **If the PR is CONFLICTING** (the resolved base advanced since you
    branched): inside the feature worktree,
@@ -538,7 +539,9 @@ there will not be caught by review when no human reads the diff.
 **When:** whenever `dev` advances, in that same session — **any** merge landing on
 `dev` triggers it, not just some of them: a hotfix backmerge, a governance PR, and a
 finished version-integration branch merging back (which must reach the *other* live
-version branches) alike. If the resolved base was `dev`, fan out. A version branch
+version branches) alike. The one exception is a [role-binding commit](#role-binding-lane):
+it needs no immediate fan-out and rides the next one (the dispatcher reads the primary
+clone, so it is already in effect everywhere). If the resolved base was `dev`, fan out. A version branch
 more than **one release** behind `dev` is a defect: fix the fan-out before further
 feature work merges into it.
 
@@ -611,6 +614,61 @@ A rule landed in `AGENTS.md` on `dev` alone is not in force anywhere else.
 Agents working a `0.2.0` issue read
 `release/v0.2.0`'s copy. Landing governance on `dev` alone recreates the
 problem the next version-scoped PR. Fan out in the same session.
+
+## Role binding lane
+
+Which runtime, model and effort a role uses is the owner's decision, not a code change, so
+changing it takes **one commit pushed straight to the trunk**: no PR, no independent review,
+no E2E run, no fan-out and no real-call evidence at push time. (Origin: a one-line model
+swap once needed a governance PR, an independent review, a full E2E and a fan-out.)
+
+- **Who and where:** the owner, in the primary clone, on the trunk. The hook decides the
+  trunk from the remote: it has `dev` → `dev`; it is reachable and has none → `main`;
+  anything else → refuse. In this template a value-only push to `main` is refused.
+- **What:** existing values of binding lines in `config/agent-roles.conf` and
+  `config/content-roles.conf`: `<ROLE>_RUNTIME`, `_MODEL`, `_EFFORT`, `_EFFORT_MEDIUM`,
+  `_EFFORT_HIGH`, each `KEY="value"`.
+- **How:** by hand, or with `scripts/roles.sh set`, which pushes through this same lane. One
+  commit per change, message `roles: <KEY> <old> → <new> (why)`, then `git push origin dev`
+  without `ALLOW_DIRECT_PUSH`.
+- **Effective at the next dispatch** in every worktree, because
+  `scripts/agent-dispatch.sh` reads the primary clone's `config/agent-roles.conf`
+  (`--probe` prints the path first; `AGENT_ROLES_CONF` overrides). The commit reaches
+  `release/v*` and `main` only through the normal fan-out and release.
+- **Out of the lane**, which stays a governance PR: adding or removing a role or key,
+  comments, blank lines or formatting, and any change to the dispatcher or the hook.
+
+The files are sourced by shell, so `.githooks/pre-push` is the trust boundary: a push is
+admitted only if **all** hold, and each refusal prints the rule as `[rule]` on stderr. Anything
+that is not a lane push keeps the protected-branch refusal unless `ALLOW_DIRECT_PUSH=1`.
+
+| Rule | Holds when |
+| --- | --- |
+| `single-ref` | The push updates exactly one ref (`git push origin dev main` is refused whole) |
+| `existing-ref-only` | The remote ref exists and is not being deleted |
+| `trunk-only` | The ref is the trunk |
+| `fast-forward-only` | `remote_sha` is an ancestor of `local_sha` |
+| `no-merge-commits` | No commit in `remote_sha..local_sha` is a merge |
+| `lane-paths` | Every commit changes only the two lane files, each as a modification (no add, delete, rename or copy) |
+| `file-mode` | The mode stays `100644` (no symlink, no chmod) |
+| `nul-byte`, `format` | No NUL or CR byte; the file is not empty and ends with a newline |
+| `key-set` | Same line count; each changed line keeps its position and key |
+| `binding-lines` | Each changed line, before and after, matches `^[A-Z][A-Z_]*_(RUNTIME\|MODEL\|EFFORT\|EFFORT_MEDIUM\|EFFORT_HIGH)="[^"]*"$` |
+| `value-chars` | No `$`, backtick or backslash in a changed line |
+| `signed-commits` | Only when `git config roles.requireSignedCommits true` (opt-in, per clone): every commit is signed (`%G?` = `G`) |
+
+Every commit in the range is checked, not just the tip. The hook is local to the pushing
+clone and the remote stays unprotected: a `git push --no-verify` or another clone passes
+it, so this is a guard against mistakes, not a server-side gate.
+
+**Verification tiers** replace the per-change real call:
+
+1. **Bind time:** `scripts/roles.sh check`: the static probe, no model call.
+2. **First real dispatch** of the changed role: a failed call is a failed role
+   (`/orchestrate` § Stop only for; `docs/agents/runtime.md` § Reviewer unavailable). Nothing
+   is substituted, so fix the binding with another lane commit.
+3. **Release start:** one real `DISPATCH-OK` call per role
+   (`docs/agents/runtime.md` § Preflight).
 
 ## Choosing a promotion lane: release or hotfix?
 
@@ -823,7 +881,9 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 ## Forbidden
 
 - Developing an issue in the primary clone's working tree (always use a worktree)
-- Pushing feature commits directly to `main` / `dev` (always via PR)
+- Pushing feature commits directly to `main` / `dev` (always via PR). The only direct
+  pushes are the three `ALLOW_DIRECT_PUSH=1` merges and the owner's
+  [role-binding lane](#role-binding-lane)
 - Force-pushing to `main` / `dev`
 - Long-lived giant branches with no PR
 - Bundling multiple unrelated issues in one PR
@@ -858,6 +918,7 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 Implementing agents (including unattended ones) **must**:
 
 1. Change code only inside a worktree — never commit directly to `dev` in the primary clone
+   (the owner's [role-binding commit](#role-binding-lane) is the one exception)
 2. Move the tracker in lockstep: `In Progress` on start → `In Review` when the PR opens →
    `Done` only after confirming the merge and the post-merge cleanup
    (under `/orchestrate` the orchestrator owns these transitions and the implementer
@@ -901,8 +962,9 @@ allows it: require a PR, forbid force-pushes, forbid deletion. On live
 the primary clone; a require-PR ruleset has no `ALLOW_DIRECT_PUSH` equivalent
 and would make the standing cadence impossible.
 
-Require-a-PR on `dev` is still right, but it blocks one legitimate push: the
-hotfix backmerge ([§ Hotfix](#hotfix) step 7) lands on `dev` directly too. Keep a
+Require-a-PR on `dev` is still right, but it blocks two legitimate pushes: the
+hotfix backmerge ([§ Hotfix](#hotfix) step 7) and the owner's
+[role-binding commits](#role-binding-lane) land on `dev` directly too. Keep a
 bypass for the owner (classic protection: leave *Do not allow bypassing the above
 settings* unchecked; rulesets: a bypass entry) — or, where no bypass is available,
 land that backmerge as a PR from a throwaway branch cut off `origin/main` into
@@ -917,13 +979,14 @@ land that backmerge as a PR from a throwaway branch cut off `origin/main` into
 
 While server-side protection is unavailable, `.githooks/pre-push` (checked in) blocks the
 most common mistake — pushing straight to `main`, `dev`, or a `release/v*`
-integration branch. Enable it **once per clone and per worktree**:
+integration branch. It admits exactly one direct push without an override, the
+[role-binding lane](#role-binding-lane); the rule table there is its contract. Enable it **once per clone and per worktree**:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-Deliberate override, when you genuinely need it — the three documented cases, all
+Deliberate override, when you genuinely need it — the documented cases (three merges), all
 from the primary clone: the fan-out merge of `origin/dev` into a live `release/v*`,
 the hotfix backmerge of `main` into `dev` ([§ Hotfix](#hotfix) step 7), and the first
 push of a freshly cut `release/v*`:

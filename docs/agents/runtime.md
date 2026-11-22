@@ -6,7 +6,8 @@ Skills name a **role** and a semantic **effort**; this file and one config file 
 to real commands. Model generations turn over every few months, so the mapping has exactly
 one edit point.
 
-- **Mapping (the only place a model ID lives):** `config/agent-roles.conf`
+- **Mapping (the only place a model ID lives):** `config/agent-roles.conf`, read from the
+  **primary clone** by every worktree (§ Dispatch)
 - **Executable seam:** `scripts/agent-dispatch.sh`
 - **Tests (fake runtimes, no model calls):** `tests/test_agent_dispatch.py`
 
@@ -55,6 +56,11 @@ scripts/agent-dispatch.sh --probe [ROLE ...]
   exit `3`.
 - The dispatched process runs in the caller's working directory (for an implementer, its
   worktree); its result is stdout.
+- The mapping is read from the primary clone's `config/agent-roles.conf` (the first entry
+  of `git worktree list`, located from the script's own repo, never the caller's cwd), so a
+  binding change reaches every worktree at its next dispatch. Without `git` on `PATH`,
+  outside a work tree, or with no conf in the primary, it reads the script's own repo.
+  `AGENT_ROLES_CONF` overrides. `--probe` prints `conf: <path>` first.
 - No secrets in the config: authentication is the runtime's own login or environment.
 
 **Native sub-agents** (a runtime's own fresh-context primitive) may replace the subprocess
@@ -81,8 +87,11 @@ never an unobserved background process.
   `printf 'Reply with exactly: DISPATCH-OK\n' | scripts/agent-dispatch.sh <ROLE> - --effort high`
   must print `DISPATCH-OK` and exit `0`. Include `REVIEWER_FALLBACK` when it is declared.
 - Run it **once at the start of a release** (or before a standalone `/implement` relies on
-  `REVIEWER`) — not before every issue. Run it again when the config changes or a real
-  dispatch hits an authentication or call error.
+  `REVIEWER`) — not before every issue. A binding change does not need its own real call:
+  it is verified in three tiers (`docs/GIT_WORKFLOW.md` § Role binding lane): at bind time
+  by the static `--probe`, at the first real dispatch of the changed role (a failed call
+  stops as above), and at the next release start by one `DISPATCH-OK` per role. Run it
+  again also when a real dispatch hits an authentication or call error.
 
 ## Reviewer unavailable
 
@@ -130,22 +139,25 @@ Cross-vendor review is the preferred configuration: independent failure modes ca
 than a stronger model sharing the implementer's blind spots. `--probe` notes when
 `IMPLEMENTER` and `REVIEWER` use the same model.
 
-The template ships these **defaults**, all on `pi`, each confirmed with a real
-`DISPATCH-OK` call at the efforts it maps:
-
-| Role | Model (pi registry ID) | Note |
-| --- | --- | --- |
-| `ORCHESTRATOR` | `mantle-gateway/claude-opus-5-5` | `medium` and `high` mapped as themselves |
-| `IMPLEMENTER` | `mantle-gateway/claude-sonnet-5-5` | `medium` or `high` from the issue's `Complexity` |
-| `REVIEWER` | `magpie/codex/gpt-6-astra` | A different vendor than `IMPLEMENTER` |
-| `REVIEWER_FALLBACK` | none (empty) | Declare one deliberately; see § Reviewer unavailable |
+The shipped defaults are the values in `config/agent-roles.conf`; this file names none, so
+it never drifts from them. Read the current bindings with `scripts/agent-dispatch.sh --probe`.
+The template's `REVIEWER` is on a different vendor than its `IMPLEMENTER`, and
+`REVIEWER_FALLBACK` is empty by default: declare one deliberately (§ Reviewer unavailable).
 
 A model ID is valid only on a machine whose runtime lists it, so the defaults are not
 proof: `SETUP.md` step 1.9 re-verifies every role with a real call and the project keeps or
 changes each one. A role that fails stays failed — no silent substitution, no lower effort.
 
-When a generation turns over, edit `config/agent-roles.conf` and nothing else. A model name
-inside `.claude/skills/` is drift; fix the skill to name a role.
+When a generation turns over, change the values in `config/agent-roles.conf` and nothing
+else; as a value-only commit by the owner it goes straight to the trunk
+(`docs/GIT_WORKFLOW.md` § Role binding lane), `config/agent-roles.conf` stays the only edit
+point. A model name inside `.claude/skills/` is drift; fix the skill to name a role.
+
+**`roles.requireSignedCommits`** (opt-in, default off): `git config roles.requireSignedCommits
+true` in the clone that pushes binding commits makes `.githooks/pre-push` admit a role-binding
+push only when every commit's `git log --format=%G?` is `G`. It is a per-clone setting
+(not in the repo), it needs a working signing setup there, and an invalid value refuses the
+push (fail closed).
 
 ## Per-runtime notes
 

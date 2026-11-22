@@ -66,9 +66,9 @@ Ask **one at a time** ([interview]):
 8. **Template repo URL** (for the feedback-loop pointer; default to the URL in
    `git remote -v` before you change it) → `TEMPLATE_REPO_URL`
 9. **Agent roles** — read `docs/agents/runtime.md` first. `config/agent-roles.conf` ships
-   defaults, all on `pi`: `ORCHESTRATOR` = `claude/claude-opus-5-5`, `IMPLEMENTER` =
-   `claude/claude-sonnet-5-5`, `REVIEWER` = `magpie/codex/gpt-6-astra`, each with `medium`
-   and `high` effort. **Present them and ask the user, role by role, to keep or change.**
+   defaults for `ORCHESTRATOR`, `IMPLEMENTER` and `REVIEWER`, each with `medium` and `high`
+   effort. **Read the current values from that file (or `scripts/agent-dispatch.sh --probe`),
+   present them, and ask the user, role by role, to keep or change.**
    A default is only valid if this machine's runtime accepts it: take any changed runtime
    (`claude` | `codex` | `pi`), **exact** model ID and native `medium`/`high` values from the
    runtime itself (its `--help`, model list, or current config), not from memory or a

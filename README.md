@@ -7,7 +7,7 @@ and a small set of core skills**.
 
 **Runtime-neutral by design.** Skills name a *role* (`ORCHESTRATOR`, `IMPLEMENTER`,
 `REVIEWER`) and an effort (`medium` | `high`), never a model. `config/agent-roles.conf`
-ships verified defaults (Opus 5.5 / Sonnet 5.5 / GPT-6 Astra on pi) and an optional
+ships verified defaults and an optional
 `REVIEWER_FALLBACK`, maps each role to a runtime, an exact model ID and effort values, and
 `scripts/agent-dispatch.sh` dispatches it. The same process runs under Claude Code, Codex,
 pi, or an agent that only has a terminal. See `docs/agents/runtime.md`.

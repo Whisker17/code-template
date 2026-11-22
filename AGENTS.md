@@ -110,6 +110,7 @@ issue fits not exactly one row, **stop and surface it**.
 | Bootstrap issue → `dev` (no production tag yet), under `/orchestrate` | Same | Yes — first release still gets a full release review |
 | Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and full E2E, plus one independent PR review passed on the final commit | Yes, then fan out (unless a human row below applies) |
 | Quick-fix → owner-named `dev` / `release/v*` | Required project checks and smoke E2E on the final HEAD; PR quotes the owner's request; no high-risk or mandatory human path in the diff | Yes — no independent review; never into `main` |
+| Role-binding commit: value-only change of a binding line in `config/agent-roles.conf` / `config/content-roles.conf` → trunk (`dev`) | None at push time: `.githooks/pre-push` is the gate (`docs/GIT_WORKFLOW.md` § Role binding lane); verified at bind time, first dispatch and release start | No agent merge: the owner pushes it from the primary clone — no PR, review, E2E or fan-out |
 | Touches **{{HIGH_RISK_PATHS}}** | Its lane's checks + documented verification | **No** — human; a quick-fix is never eligible |
 | Touches a **mandatory human path**: `.github/workflows/**` or the project's release/promotion scripts (`{{RELEASE_SCRIPT_PATHS}}`), in every lane, whatever `{{HIGH_RISK_PATHS}}` says | Its lane's checks + documented verification | **No** — human; no waiver, no `--through tag` scope and no quick-fix request covers it |
 | `hotfix/*` → `main` | Required and relevant checks, full E2E, independent review | **No** — human |
@@ -156,9 +157,10 @@ only on branches that carry it. Merge strategy is per lane: squash into `dev` an
 `main` equals production; deploy **only from a tag**. Promote via a temporary
 `release/vX.Y.Z` cut from `dev`, never a `dev` → `main` PR. Production broken while `dev`
 holds unshippable work → hotfix lane (`docs/GIT_WORKFLOW.md` § Choosing a promotion lane).
+A role-binding commit on `dev` needs no immediate fan-out; it rides the next one.
 Never commit feature work directly to `main`, `dev` or a `release/v*`; the only direct
-pushes are the three documented merges (fan-out, hotfix backmerge, first push of a new
-cut), with `ALLOW_DIRECT_PUSH=1`.
+pushes are four: three merges (fan-out, hotfix backmerge, first push of a new cut) with
+`ALLOW_DIRECT_PUSH=1`, and the owner's role-binding lane, which the hook admits without it.
 
 ## Agent runtime
 
@@ -174,7 +176,10 @@ model ID and effort values; `scripts/agent-dispatch.sh` dispatches them. Contrac
 - A failed or missing role fails closed — no model substitution, no lower effort — except
   the declared `REVIEWER_FALLBACK` under `docs/agents/runtime.md` § Reviewer unavailable
   (only after a real `REVIEWER` call failed; never for exit 2/3).
-- When a model generation turns over, edit `config/agent-roles.conf` and nothing else.
+- When a model generation turns over, edit `config/agent-roles.conf` and nothing else. A
+  value-only change is the owner's role-binding commit straight to the trunk, admitted by
+  `.githooks/pre-push`; every worktree's dispatcher reads the primary clone's conf
+  (`docs/GIT_WORKFLOW.md` § Role binding lane).
 
 ## Agent skills
 
