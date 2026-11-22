@@ -92,11 +92,16 @@ hotfix branches run under stale rules:
 - `AGENTS.md` (the single agent-instruction entry; the template ships no `CLAUDE.md`)
 - `docs/GIT_WORKFLOW.md`
 - `docs/agents/` (issue template, tracker binding, triage labels, runtime)
+- `docs/agents/trackers/` (the Linear and GitHub bindings)
 - `.githooks/`
 - CI config (`.github/workflows/`)
 - `.github/pull_request_template.md`
 - `config/agent-roles.conf`
+- `config/content-roles.conf`
 - `scripts/agent-dispatch.sh`
+- `scripts/roles.sh`
+- `scripts/cut-release.sh`
+- `scripts/issue-audit.sh`
 - `.claude/skills/`
 - `README.md` (locally-customized skills inventory)
 - `CHANGELOG.md` (template feedback loop)
@@ -229,6 +234,14 @@ Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Revie
          fan-out if that base was dev
          tracker: state = Done
 ```
+
+**Design gate (UI/UX issues).** Before any of this, an issue labelled `needs-design`, or whose
+body has a `## Design Draft` heading but no `## Design` heading, is **not started**: neither
+`/implement` nor `/orchestrate` resolves a base or creates a worktree for it. The owner's approval
+turns the draft into `## Design`, drops `needs-design` and adds `ready-for-agent`
+(`docs/agents/issue-tracker.md` § UI/UX design gate). Every open issue also has exactly one home
+(`docs/agents/issue-tracker.md` § Issue homes), checked by the audit at `/orchestrate` preflight,
+before the release PR and before the milestone / Release is closed.
 
 ### 1. Start: new worktree off the resolved base
 

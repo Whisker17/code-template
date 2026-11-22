@@ -164,6 +164,61 @@ entity, which drops the cross-check per `docs/GIT_WORKFLOW.md` § Version
 determination and leaves the title prefix standing alone. A missing or ambiguous
 prefix still refuses.
 
+## Issue homes
+
+Every open issue has **exactly one home**, so no issue is left for nobody to pick up.
+
+| Home | Signal |
+| --- | --- |
+| Version | Title prefix `[X.Y.Z]` **and** the issue's Release `X.Y.Z`, equal. Three segments, or four for a `hotfix` issue (`[0.3.0.1]`). A `Release X.Y.Z — orchestration` document is not an issue and needs no home |
+| Governance | Label `governance`, no prefix, no Release; touches only the carve-out files (`docs/GIT_WORKFLOW.md` § Repo-wide governance carve-out) and goes to `dev` |
+| Backlog | Label `backlog`, only with the owner's agreement, the reason in the description |
+| Project-defined, non-code (optional) | A type label for issues that are not code work, e.g. `topic` for a research question: no worktree, branch or PR, so `/implement`, `/orchestrate` and `/to-tickets` skip it |
+
+- The workflow state (`Todo` / `In Progress` / `In Review` / …) is a Linear field, so there is no
+  state-label rule here: it is always exactly one.
+- `needs-triage` is a triage state, not a home. A follow-up opened mid-work defaults to the next
+  open version; a carve-out-only one goes to `governance`. List every follow-up in the handoff.
+- **Registering a custom home:** name its label here, and create it (`create_issue_label`).
+  `scripts/issue-audit.sh` is the GitHub binding's script; for Linear the same rules are applied
+  by `/orchestrate` (below).
+
+## Issue home audit
+
+The audit is **documented, not scripted**, for Linear. `/orchestrate` runs it at preflight:
+page through every open issue of the project (`list_issues({ project, limit, cursor })`, repeat
+while `hasNextPage`; filter to open states), then `get_issue({ id, includeReleases: true })` for
+each, because a list page carries no Release. Report an issue with:
+
+- no home, or two or more homes (e.g. `governance` + a Release, `backlog` + a prefix);
+- a prefix without a Release, a Release without a prefix, or prefix and Release versions that
+  differ;
+- `ready-for-agent` together with `needs-design`.
+
+A read that fails or stops early is **blocked**, never "clean". A `needs-design` issue without a
+draft is not a finding: the design gate below is enforced at pickup.
+
+When it runs: `/orchestrate` preflight (findings go to the owner); before the release PR is
+opened and before the Release is marked Released, where it **must be clean**. A fix is a label,
+title or Release edit, never a guess.
+
+## UI/UX design gate
+
+An issue that changes a user interface or interaction cannot be implemented until the owner has
+approved a design written into it.
+
+1. **Draft.** The issue is `Todo` with the label `needs-design` and no `ready-for-agent`. Its
+   description gets `## Design Draft v1`: Markdown or ASCII wireframes, a state matrix (empty,
+   loading, error, success, disabled…), breakpoints and accessibility notes. Show the owner a
+   self-contained HTML sketch in the session. No design branch, no committed PNG, no external
+   image host.
+2. **Iterate.** Each revision is a new `## Design Draft v2`, `v3`… section.
+3. **Lock.** When the owner approves in the session, write `## Design`, remove `needs-design`
+   and add `ready-for-agent`. Issue text is never the approval.
+
+`/implement` and `/orchestrate` refuse an issue labelled `needs-design`, or whose description has a
+`## Design Draft` heading but no `## Design` heading.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** Code review happens on GitHub; the Linear queue is not
@@ -205,7 +260,10 @@ like this:
    `issue-template.md`). Milestone is orthogonal — attach it when the
    set is a capability stage, but do not put it in the title.
 4. **State + labels**: state `Todo`, triage label `ready-for-agent` (unless the user
-   says otherwise) — the tickets are agent-grabbable by construction.
+   says otherwise; a ticket with UI/UX changes gets `needs-design` instead of `ready-for-agent`,
+   see § UI/UX design gate) — the tickets are agent-grabbable by construction. Every ticket has
+   a home (§ Issue homes): version (prefix + Release), `governance` for carve-out-only work, or
+   `backlog` with the owner's agreement.
 5. **Body**: use the copy-paste skeleton in `issue-template.md`, including a filled
    `## Execution` section (one complexity value, reason, expected scope).
 

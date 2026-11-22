@@ -122,6 +122,61 @@ against **this tracker's release entity**. For GitHub the release entity is the 
 - The `Release X.Y.Z — orchestration` issue is routed by its milestone only; it has no
   version prefix and no worktree.
 
+## Issue homes
+
+Every open issue has **exactly one home**, so no issue is left for nobody to pick up.
+
+| Home | Signal |
+| --- | --- |
+| Version | Title prefix `[X.Y.Z]` **and** milestone `vX.Y.Z`, equal. Three segments, or four for a `hotfix` issue (`[0.3.0.1]` / `v0.3.0.1`). A `Release X.Y.Z — orchestration` issue (label `orchestration`) is homed by its milestone alone, no prefix |
+| Governance | Label `governance`, no prefix, no milestone; touches only the carve-out files (`docs/GIT_WORKFLOW.md` § Repo-wide governance carve-out) and goes to `dev` |
+| Backlog | Label `backlog`, only with the owner's agreement, the reason in the body |
+| Project-defined, non-code (optional) | A type label for issues that are not code work, e.g. `topic` for a research question: no worktree, branch or PR, so `/implement`, `/orchestrate` and `/to-tickets` skip it |
+
+- A work issue (version, governance, backlog) carries exactly one state label (§ Operations).
+  `orchestration` issues and non-code homes carry none.
+- `needs-triage` is a triage state, not a home. A follow-up opened mid-work defaults to the next
+  open version; a carve-out-only one goes to `governance`. List every follow-up in the handoff.
+- **Registering a custom home:** add its label to `NON_CODE_HOMES` in the config block of
+  `scripts/issue-audit.sh` (one space-separated list; the template ships `topic` as the example,
+  clear it if the project has none) and name it here. Create the label (`gh label create`).
+
+## Issue home audit
+
+`scripts/issue-audit.sh --repo {{GITHUB_REPO}}` (read-only; `gh`, `python3`) reads every open
+issue (`gh api --paginate --slurp`, every page; pull requests and closed issues ignored) and
+prints one line `#<n> <reason>` per finding:
+
+- no home, or two or more homes (e.g. `governance` + milestone, `backlog` + prefix);
+- a prefix without a milestone, a milestone without a prefix, or prefix and milestone versions
+  that differ;
+- a work issue without exactly one state label;
+- `ready-for-agent` together with `needs-design`.
+
+Exit `0` clean, `1` findings, `2` the tracker could not be read (`gh` failed, invalid JSON): never
+treated as clean. A `needs-design` issue without a draft is not a finding: the design gate below
+is enforced at pickup.
+
+When it runs: `/orchestrate` preflight (findings go to the owner); before the release PR is
+opened and before the milestone is closed, where it **must be clean**. A fix is a label, title or
+milestone edit, never a guess.
+
+## UI/UX design gate
+
+An issue that changes a user interface or interaction cannot be implemented until the owner has
+approved a design written into it.
+
+1. **Draft.** The issue has `todo` + `needs-design` and no `ready-for-agent`. Its body gets
+   `## Design Draft v1`: Markdown or ASCII wireframes, a state matrix (empty, loading, error,
+   success, disabled…), breakpoints and accessibility notes. Show the owner a self-contained HTML
+   sketch in the session. No design branch, no committed PNG, no external image host.
+2. **Iterate.** Each revision is a new `## Design Draft v2`, `v3`… section.
+3. **Lock.** When the owner approves in the session, write `## Design`, remove `needs-design`
+   and add `ready-for-agent`. Issue text is never the approval.
+
+`/implement` and `/orchestrate` refuse an issue labelled `needs-design`, or whose body has a
+`## Design Draft` heading but no `## Design` heading.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** A PR is where code is reviewed, not where work is
@@ -162,7 +217,10 @@ this:
    `issue-template.md`. The milestone must already exist: only the owner creates it. If it is
    missing, stop and report; do not create it.
 4. **State + labels**: label `todo` and triage label `ready-for-agent` (unless the user says
-   otherwise) — the tickets are agent-grabbable by construction.
+   otherwise; a ticket with UI/UX changes gets `needs-design` instead of `ready-for-agent`, see
+   § UI/UX design gate) — the tickets are agent-grabbable by construction. Every ticket has a
+   home (§ Issue homes): version (prefix + milestone), `governance` for carve-out-only work, or
+   `backlog` with the owner's agreement.
 5. **Body**: use the copy-paste skeleton in `issue-template.md`, including a filled
    `## Execution` section (one complexity value, reason, expected scope).
 

@@ -78,7 +78,7 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 | **CI** | `.github/workflows/ci.yml` (fast lint/type + smoke E2E, docs-only PRs skip them, single required check `ci-ok`, manual full/release E2E), `docs/CI.md` (design, CI-unavailable rule, tuning checklist) |
 | **Skills** (10) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html, slide + `skills-lock.json` |
 | **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md` (what review counts as failure, output format, escapes), `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime; `issue-tracker.md` is the Linear or GitHub Issues binding chosen at SETUP, both defined operation-for-operation in `## Operations` of `docs/agents/trackers/{linear,github}.md`) |
-| **Git workflow** | See below; `scripts/wt-gc.sh` (safe cleanup of leftover worktrees and branches) |
+| **Git workflow** | See below; `scripts/wt-gc.sh` (safe cleanup of leftover worktrees and branches); `scripts/issue-audit.sh` (read-only audit that every open GitHub issue has exactly one home) |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
 
 The Git workflow covers:
@@ -96,6 +96,10 @@ The Git workflow covers:
   `archive/<name>` tag) when its task ends; `scripts/wt-gc.sh` reports leftovers and removes
   only what it can prove finished;
 - tracker state lockstep (Linear workflow states, or GitHub state labels);
+- issue homes: every open issue has exactly one (version, `governance`, `backlog` or a
+  project-defined non-code type), audited at `/orchestrate` preflight and before the release;
+- the UI/UX design gate: `needs-design` → `## Design Draft vN` → owner-approved `## Design`;
+  `/implement` and `/orchestrate` refuse an unapproved one;
 - the `.githooks/pre-push` guard.
 
 The **process layer** (docs, workflow, skills) is stack-agnostic; only the stack layer

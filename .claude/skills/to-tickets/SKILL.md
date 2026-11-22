@@ -81,6 +81,8 @@ Follow `docs/agents/issue-tracker.md` § Publishing ticket sets:
 - Use the template skeleton, including `## Execution`.
 - Version-scoped tickets carry the `[X.Y.Z]` title prefix **and** the matching Release (GitHub: the milestone `vX.Y.Z`). The two must agree. A Linear milestone plays no part in routing.
 - Governance tickets carry neither.
+- **Every ticket gets exactly one home** (`docs/agents/issue-tracker.md` § Issue homes): version (prefix + Release), `governance` (carve-out files only), or `backlog` (only with the owner's agreement, reason in the body). Skip project-defined non-code homes (e.g. `topic`); they are not tickets. A follow-up opened mid-work defaults to the next open version; a carve-out-only one is `governance`. List every follow-up and its home in the handoff.
+- A ticket that changes a user interface or interaction is published `todo` + `needs-design` without `ready-for-agent`, with a `## Design Draft v1` (`docs/agents/issue-tracker.md` § UI/UX design gate); `/implement` and `/orchestrate` refuse it until the owner approves.
 - Reach the tracker through the access path in `docs/agents/issue-tracker.md`. If no tracker is reachable, report that publishing is blocked. Do not write local files as a stand-in.
 
 Do NOT close or otherwise modify the source parent issue; setting `parentId` on the new
