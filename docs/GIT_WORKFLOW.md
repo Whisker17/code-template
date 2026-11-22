@@ -107,7 +107,7 @@ the feature part goes to its release branch.
 
 ### Quick-fix lane (owner-requested)
 
-When the owner explicitly says to just change something ("改代码，不用走 Linear"), the change
+When the owner explicitly says to just change something ("改代码，不用走 tracker"), the change
 still goes through one worktree, one PR and CI, without a tracker issue or release binding.
 
 - **Named base required.** The owner's request must name the target base, and
@@ -202,7 +202,9 @@ a wrong resolution is auditable.
 
 ## Issue lifecycle (mandatory)
 
-Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Review` → `Done`.
+Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Review` → `Done`
+(GitHub: the labels `todo` / `in-progress` / `in-review`, then closed as completed;
+`docs/agents/issue-tracker.md` § Operations).
 
 ```text
          resolve base (table; fail closed)
@@ -238,7 +240,8 @@ The example below uses `origin/dev` (the governance row); substitute
 ```bash
 git fetch origin
 
-# Branch name: type/{{ISSUE_PREFIX_LOWER}}-<id>-short-topic (all lowercase, dash-separated)
+# Branch name: type/{{ISSUE_PREFIX_LOWER}}-<id>-short-topic (all lowercase, dash-separated;
+# a GitHub issue #123 is gh-123)
 ISSUE={{ISSUE_PREFIX_LOWER}}-123
 BRANCH=feat/${ISSUE}-short-topic
 WT="../{{PROJECT_NAME}}-wt/${ISSUE}"
@@ -315,7 +318,7 @@ gh pr create --base "$PR_BASE" \
 - ...
 
 ## Tracker
-Closes {{ISSUE_PREFIX}}-123
+Closes WHI-123        # Linear; on GitHub: Closes #123
 
 ## Base resolution
 - Category: version-scoped | governance | hotfix
@@ -344,7 +347,7 @@ PR conventions:
 - **base is the resolved base** (version-scoped work never targets `dev`;
   features/fixes never target `main` except an issue labelled `hotfix`, see
   [§ Hotfix](#hotfix))
-- Title carries `{{ISSUE_PREFIX}}-NNN`
+- Title carries the issue id (`{{ISSUE_PREFIX}}-NNN`; the body also carries `#NNN` on GitHub)
 - Body links the tracker issue **and states the resolved base plus the
   signals it was derived from**
 - Merge strategy: **squash and merge** into `dev` or a long-lived
@@ -400,7 +403,7 @@ on H, and it follows the normal routing ([§ Two `release/` lifecycles](#two-rel
    the `CI unavailable` evidence) and MERGEABLE/CLEAN;
 3. the annotated tag `vX.Y.Z` and the GitHub Release with the release E2E artifact of H
    attached;
-4. the tracker Release's `commitSha` and released stage;
+4. the tracker's Release → Released step (`docs/agents/issue-tracker.md` § Operations);
 5. post-merge cleanup, fan-out and `scripts/wt-gc.sh`.
 
 It never covers: a mandatory human path (`.github/workflows/**`, the project's
@@ -541,6 +544,11 @@ release close, the end of `/implement`, and once in `SETUP.md`.
 
 `Done` **and** `Canceled` both require the worktree and its local branch to be gone
 (`scripts/wt-gc.sh` shows leftovers); until then the issue is not closed.
+
+The state names are the tracker's workflow states. On GitHub they are the labels `todo` /
+`in-progress` / `in-review`, `Done` is closed as completed and `Canceled` closed as not planned
+(`docs/agents/issue-tracker.md` § Operations); a PR merged into a `release/v*` or `dev` does not
+close the issue, so the agent closes it by hand after the cleanup.
 
 Triage labels (`ready-for-agent` / `ready-for-human` / …) are **orthogonal** to workflow
 state: labels say *who* does the work, state says *how far along* it is.
@@ -765,8 +773,9 @@ After the PR reads MERGEABLE/CLEAN and a human has approved it (`release/*` → 
    `git push origin v0.1.0`, then `gh release create v0.1.0 --verify-tag --notes-file <notes>
    <release E2E artifact of the candidate>` (notes in English)
 3. **Deploy from the tag**, never from a branch
-4. Backfill the tracker Release's `commitSha` (see [§ Version axis](#version-axis)) and move it
-   to its released stage
+4. Do the tracker's Release → Released step (see [§ Version axis](#version-axis); Linear:
+   backfill `commitSha` and move the Release to its released stage; GitHub: close the milestone
+   with the description `released at <sha>`)
 
 Temporary `release/*` branches may be auto-deleted; `dev` lives forever.
 
@@ -792,7 +801,8 @@ Then:
 1. Fix **only** this one issue
 2. **Bump the project version to a patch release** (`0.1.5` → `0.1.5.1`) — otherwise tag
    `v0.1.5.1` points at a tree that calls itself `0.1.5`
-3. `gh pr create --base main`, title/body carry `{{ISSUE_PREFIX}}-NNN`; tracker →
+3. `gh pr create --base main`, title/body carry the issue id (`{{ISSUE_PREFIX}}-NNN`, GitHub
+   also `#NNN`); tracker →
    `In Review`
 4. Required project checks, relevant checks, full E2E and one independent review
    (`/code-review`) pass, then **a human
@@ -816,8 +826,8 @@ Then:
 8. **Fan out `dev` into every live version-integration branch** (see
    [§ Fan-out](#fan-out-dev-into-live-version-branches)). Skip this and the
    next version ships without the hotfix. State the query, never a name list.
-9. Tracker: issue → `Done`, the corresponding Release → `Released`, and fill in that
-   Release's `commitSha`
+9. Tracker: issue → `Done`, and the corresponding Release → `Released` (Linear: fill in that
+   Release's `commitSha`; GitHub: close the milestone, `released at <sha>`)
 
 When production is live, hotfixes outrank regular issues — anything on a
 {{HIGH_RISK_PATHS}} path takes this route.
@@ -839,10 +849,11 @@ If any one of them disagrees, a step was skipped:
   issues have no Release. Once a Release has issues attached, those issues
   leave `Backlog` for `Todo`.
 - After shipping, backfill the tracker Release's **`commitSha`** (the commit the tag points
-  at). This is the only authoritative binding between "a version" and "some code".
-- Milestones and Releases are **orthogonal axes**: a milestone is *which capability stage*,
-  a Release is *when it ships* (and how git routes). Don't use milestones to
-  express release batches, and don't put the milestone in the title.
+  at; GitHub: the closed milestone's description `released at <sha>`). This is the only authoritative binding between "a version" and "some code".
+- In Linear, milestones and Releases are **orthogonal axes**: a milestone is *which capability
+  stage*, a Release is *when it ships* (and how git routes). Don't use milestones to
+  express release batches, and don't put the milestone in the title. In GitHub Issues there is
+  one axis: the milestone `vX.Y.Z` **is** the Release.
 - Hotfixes use a four-segment version (`0.1.5.1` — valid and correctly ordered under
   PEP 440 and semver-tools alike). **Don't** reuse the next minor number; the tracker has
   already promised that number to a feature batch.
@@ -886,7 +897,8 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 | Release | `release/v<version>` | `release/v0.1.0`, `release/v0.1.5.1` |
 
 - All lowercase, words joined with `-`
-- **Must include the tracker id** (`{{ISSUE_PREFIX_LOWER}}-NNN`) for PR ↔ issue tracing —
+- **Must include the tracker id** (`{{ISSUE_PREFIX_LOWER}}-NNN`; a GitHub issue `#123` is
+  `gh-123`) for PR ↔ issue tracing —
   hotfixes included, they are tracked issues too. The only exception is `quick/*`, which has
   no issue by definition; its trace is the owner's request quoted in the PR
 - One PR does one thing

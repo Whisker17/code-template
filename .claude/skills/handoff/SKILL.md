@@ -36,7 +36,7 @@ below; write `none` for a field that does not apply, never omit it:
   `/implement <ISSUE>`), or the first command if no skill applies.
 - **Stop conditions:** when to stop and hand back to the owner (human gates, failed required
   checks, an unapproved decision, an unavailable role).
-- **Evidence:** where the durable facts live (Linear issue and `Release X.Y.Z — orchestration`
+- **Evidence:** where the durable facts live (the tracker issue and `Release X.Y.Z — orchestration`
   document, PR bodies, artifact paths), so the session reads them instead of trusting this prompt.
 
 The block names the next action in one sentence the fresh session can act on without asking a

@@ -40,10 +40,19 @@ Ask **one at a time** ([interview]):
 1. **Project name** (kebab-case, used as repo/package name) → `PROJECT_NAME`
 2. **One-paragraph description** (what this project is; goes into AGENTS.md "What this
    is") → `PROJECT_DESCRIPTION`
-3. **Linear project name** (create it in Linear if it doesn't exist — ask the user
-   whether to create it via the Linear MCP tools) → `LINEAR_PROJECT`
-4. **Linear team key** (e.g. `WHI`; also derives the issue prefix) → `LINEAR_TEAM`,
-   `ISSUE_PREFIX` (the team key, uppercase), `ISSUE_PREFIX_LOWER` (lowercase)
+3. **Issue tracker** — `linear` or `github` (GitHub Issues) → `TRACKER`. Ask this before any
+   tracker value: it decides which values question 4 collects, and which binding
+   (`docs/agents/trackers/<TRACKER>.md`) becomes `docs/agents/issue-tracker.md` in §2.
+4. **That tracker's values only** — never the other's:
+   - `linear`: the **Linear project name** (create it in Linear if it doesn't exist — ask the
+     user whether to create it via the Linear MCP tools) → `LINEAR_PROJECT`; the **Linear team
+     key** (e.g. `WHI`; also derives the issue prefix) → `LINEAR_TEAM`, `ISSUE_PREFIX` (the team
+     key, uppercase), `ISSUE_PREFIX_LOWER` (lowercase);
+   - `github`: the repository as `owner/repo` → `GITHUB_REPO` (create it first if needed, §3.1);
+     the prefixes are fixed: `ISSUE_PREFIX` = `GH`, `ISSUE_PREFIX_LOWER` = `gh` (branches
+     `feat/gh-<n>-topic`, PR body `#<n>`). Ask whether to create the first milestone `vX.Y.Z`
+     now; the default is no, because milestones are the owner's call
+     (`docs/agents/issue-tracker.md` § Release ↔ version binding).
 5. **High-risk paths** — the areas of *this* project where an agent-authored PR must
    always stop for human review (e.g. payment flows, auth, production data migrations,
    key handling). Push the user to actually think about this; "none" is an acceptable
@@ -88,17 +97,26 @@ Ask **one at a time** ([interview]):
 
 ## 2. Replace placeholders
 
+First install the chosen tracker binding as the one tracker file skills and docs name, and
+delete the bindings (`TRACKER` from §1.3):
+
+```bash
+cp "docs/agents/trackers/$TRACKER.md" docs/agents/issue-tracker.md
+rm -r docs/agents/trackers
+```
+
 Every placeholder marker in the repo must be gone when you finish. Replace across all
 tracked files:
 
-- `{{PROJECT_NAME}}`, `{{PROJECT_DESCRIPTION}}`, `{{LINEAR_PROJECT}}`,
-  `{{LINEAR_TEAM}}`, `{{ISSUE_PREFIX}}`, `{{ISSUE_PREFIX_LOWER}}`,
-  `{{HIGH_RISK_PATHS}}`, `{{RELEASE_SCRIPT_PATHS}}`, `{{TEMPLATE_REPO_URL}}`
+- `{{PROJECT_NAME}}`, `{{PROJECT_DESCRIPTION}}`, `{{ISSUE_PREFIX}}`, `{{ISSUE_PREFIX_LOWER}}`,
+  `{{HIGH_RISK_PATHS}}`, `{{RELEASE_SCRIPT_PATHS}}`, `{{TEMPLATE_REPO_URL}}`;
+- the chosen tracker's markers only: `{{LINEAR_PROJECT}}` and `{{LINEAR_TEAM}}` for `linear`,
+  `{{GITHUB_REPO}}` for `github`. They live only in the installed binding.
 
 Then verify (SETUP.md itself is exempt — it gets deleted in step 6):
 
 ```bash
-grep -rnE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}' \
+grep -rnE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|GITHUB_REPO|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}' \
   --include='*.md' --include='*.toml' --include='*.yml' --include='*.py' \
   --exclude=SETUP.md --exclude-dir=.git .
 ```
@@ -164,6 +182,17 @@ Also:
    that one) on `main` and `dev` where branch protection is available. Never require `lint`
    or `smoke-e2e` — they are skipped on docs-only PRs. If CI is unavailable, follow
    `docs/CI.md` § CI unavailable.
+8. **GitHub tracker only: initialise the labels** (idempotent: `--force` updates an existing
+   label). The state labels, the `governance` / `backlog` / `orchestration` / `needs-design` /
+   `hotfix` labels and the five triage roles (`docs/agents/triage-labels.md`). Create a
+   milestone only if the owner asked for one in §1.4:
+   ```bash
+   for label in todo in-progress in-review governance backlog orchestration needs-design hotfix \
+     needs-triage needs-info ready-for-agent ready-for-human wontfix; do
+     gh label create "$label" --repo "$GITHUB_REPO" --force
+   done
+   gh api -X POST "repos/$GITHUB_REPO/milestones" -f title=vX.Y.Z   # only on the owner's request
+   ```
 
 ## 4. Verify the skeleton
 
@@ -216,7 +245,7 @@ Finally, confirm agents actually load `AGENTS.md` — the template ships no `CLA
 
 Tell the user the project is bootstrapped, and that the next step is producing the spec
 of record: run `/grill-me <the project idea>` and then `/to-spec` to fill
-`docs/DESIGN.md`. After the spec lands, `/to-tickets` breaks it into Linear issues.
+`docs/DESIGN.md`. After the spec lands, `/to-tickets` breaks it into tracker issues.
 
 ## 6. Self-destruct
 
@@ -253,10 +282,14 @@ git ls-files -co --exclude-standard -z | xargs -0 sha256sum > "$ADOPT_TMP/manife
 **A.1 Interview** ([interview], one question at a time; this is the subset of §1 whose
 values land in the copied files):
 
-1. `PROJECT_NAME` (default: the directory name), 2. `LINEAR_PROJECT`, 3. `LINEAR_TEAM`
-   (→ `ISSUE_PREFIX` uppercase, `ISSUE_PREFIX_LOWER` lowercase), 4. `HIGH_RISK_PATHS` and
-   5. `RELEASE_SCRIPT_PATHS`, both exactly as asked in §1.5, 6. `TEMPLATE_REPO_URL` (default:
-   `git -C "$TEMPLATE" remote get-url origin`).
+1. `PROJECT_NAME` (default: the directory name), 2. the **issue tracker**, `linear` or `github`
+   (→ `TRACKER`; asked before any tracker value; the target may already use one: ask which
+   binding fits it), 3. only that tracker's values, as in §1.4 — `linear`: `LINEAR_PROJECT`,
+   `LINEAR_TEAM` (→ `ISSUE_PREFIX` uppercase, `ISSUE_PREFIX_LOWER` lowercase); `github`:
+   `GITHUB_REPO` (`ISSUE_PREFIX` = `GH`, `ISSUE_PREFIX_LOWER` = `gh`; ask whether to create the
+   first milestone `vX.Y.Z`, default no — milestones are the owner's call),
+   4. `HIGH_RISK_PATHS` and 5. `RELEASE_SCRIPT_PATHS`, both exactly as asked in §1.5,
+   6. `TEMPLATE_REPO_URL` (default: `git -C "$TEMPLATE" remote get-url origin`).
 7. **Verification commands** — the repo's *own* commands for **lint**, **type check**,
    **smoke** (a fast scenario that needs no model CLI or credentials) and **full** (every
    E2E/test command the repo has). `none` is allowed for each; an empty smoke or full slot is
@@ -277,31 +310,52 @@ PROCESS_PATHS=(.claude/skills docs/agents docs/GIT_WORKFLOW.md docs/REVIEW.md do
   scripts .githooks .github tests/test_agent_dispatch.py TEMPLATE_VERSION)   # scripts/ carries roles.sh
 : > "$ADOPT_TMP/copied.txt"; : > "$ADOPT_TMP/conflicts.txt"
 git -C "$TEMPLATE" ls-files -z -- "${PROCESS_PATHS[@]}" | while IFS= read -r -d '' f; do
+  case "$f" in docs/agents/trackers/*|docs/agents/issue-tracker.md) continue ;; esac   # handled below
   if [ ! -e "$TARGET/$f" ] && [ ! -L "$TARGET/$f" ]; then
     mkdir -p "$(dirname "$TARGET/$f")"; cp -p "$TEMPLATE/$f" "$TARGET/$f"; echo "$f" >> "$ADOPT_TMP/copied.txt"
   elif ! cmp -s "$TEMPLATE/$f" "$TARGET/$f"; then
     echo "$f" >> "$ADOPT_TMP/conflicts.txt"            # exists and differs: leave it alone
   fi                                                    # identical: nothing to do
 done
+# The chosen tracker binding becomes docs/agents/issue-tracker.md, under the same no-overwrite
+# rule; the other binding and docs/agents/trackers/ are never copied.
+f=docs/agents/issue-tracker.md; binding="$TEMPLATE/docs/agents/trackers/$TRACKER.md"   # TRACKER=linear|github
+if [ ! -e "$TARGET/$f" ] && [ ! -L "$TARGET/$f" ]; then
+  mkdir -p "$(dirname "$TARGET/$f")"; cp -p "$binding" "$TARGET/$f"; echo "$f" >> "$ADOPT_TMP/copied.txt"
+elif ! cmp -s "$binding" "$TARGET/$f"; then
+  echo "$f" >> "$ADOPT_TMP/conflicts.txt"
+fi
 ```
 
 Not copied, on purpose: `main.py`, `pyproject.toml`, `tests/e2e/` (the template's smoke test
 runs the template's `main.py`), `docs/DESIGN.md`, `Dockerfile`, `docker-compose.yml`,
 `.env.example`, `CHANGELOG.md`, `README.md`, `SETUP.md`, `skills-lock.json`. A file the target
 already has — typically `.github/workflows/ci.yml`, `.github/pull_request_template.md`, an
-existing `scripts/` or `.githooks/` file — goes to `conflicts.txt` and is reported in A.6.
+existing `scripts/` or `.githooks/` file, or its own `docs/agents/issue-tracker.md` — goes to
+`conflicts.txt` and is reported in A.6.
 Do not set `core.hooksPath`: the target may already use its own hooks.
 
 Then fill the markers **in the copied files only** (`copied.txt`; never in the target's own
 files):
 
 ```bash
-export PROJECT_NAME LINEAR_PROJECT LINEAR_TEAM ISSUE_PREFIX ISSUE_PREFIX_LOWER \
+export PROJECT_NAME LINEAR_PROJECT LINEAR_TEAM GITHUB_REPO ISSUE_PREFIX ISSUE_PREFIX_LOWER \
   HIGH_RISK_PATHS RELEASE_SCRIPT_PATHS TEMPLATE_REPO_URL
 while IFS= read -r f; do
-  perl -pi -e 's/\{\{(PROJECT_NAME|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX_LOWER|ISSUE_PREFIX|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}/$ENV{$1}/g' "$f"
+  perl -pi -e 's/\{\{(PROJECT_NAME|LINEAR_PROJECT|LINEAR_TEAM|GITHUB_REPO|ISSUE_PREFIX_LOWER|ISSUE_PREFIX|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}/$ENV{$1}/g' "$f"
 done < "$ADOPT_TMP/copied.txt"
-tr '\n' '\0' < "$ADOPT_TMP/copied.txt" | xargs -0 grep -nE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}'   # must print nothing
+tr '\n' '\0' < "$ADOPT_TMP/copied.txt" | xargs -0 grep -nE '\{\{(PROJECT_NAME|PROJECT_DESCRIPTION|LINEAR_PROJECT|LINEAR_TEAM|GITHUB_REPO|ISSUE_PREFIX|ISSUE_PREFIX_LOWER|HIGH_RISK_PATHS|RELEASE_SCRIPT_PATHS|TEMPLATE_REPO_URL)\}\}'   # must print nothing
+```
+
+For `github`, also initialise the labels the binding uses (idempotent; adopt changes no git
+remote, but the labels live on the GitHub repo) — skip if `gh` cannot reach `$GITHUB_REPO` and
+say so in A.6:
+
+```bash
+for label in todo in-progress in-review governance backlog orchestration needs-design hotfix \
+  needs-triage needs-info ready-for-agent ready-for-human wontfix; do
+  gh label create "$label" --repo "$GITHUB_REPO" --force
+done
 ```
 
 **A.3 Merge `AGENTS.md`.** If `$TARGET/AGENTS.md` does not exist, create it with the title

@@ -1,13 +1,14 @@
 # Issue Template
 
-The canonical shape for every Linear issue in this workspace. Copy the skeleton in
+The canonical shape for every tracker issue (Linear or GitHub Issues) in this repo. Copy the skeleton in
 [§ Copy-paste skeleton](#copy-paste-skeleton), fill each section, and delete the inline
 guidance (the `> _italic_` hints). **All issue content is written in English.**
 
 It pairs with:
 
-- `docs/agents/issue-tracker.md` — how to read/write Linear via the MCP tools.
-- `docs/agents/triage-labels.md` — the five canonical triage labels.
+- `docs/agents/issue-tracker.md` — how to read/write the tracker (Linear or GitHub Issues).
+- `docs/agents/triage-labels.md` — the five canonical triage labels (and, on GitHub, the state
+  labels).
 - `docs/DESIGN.md` — the PRD these issues implement; every issue should trace back to a
   section there.
 
@@ -42,7 +43,8 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 [X.Y.Z] [Component] <imperative, specific description>
 ```
 
-- **`[X.Y.Z]`** — the **version / Release** this issue ships in (e.g. `[0.2.0]`).
+- **`[X.Y.Z]`** — the **version / Release** this issue ships in (e.g. `[0.2.0]`; on GitHub
+  the milestone `v0.2.0`).
   This is the **primary git-routing signal** (`docs/GIT_WORKFLOW.md` § Resolving
   the base branch). An implementing agent that cannot read a version prefix, or
   whose prefix disagrees with the tracker's release field, **refuses to start**.
@@ -56,23 +58,24 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 - **Description** — short, specific, and imperative. Prefer
   `Add request dedup to the scheduler` over `Scheduler stuff`.
 
-Do **not** put the milestone in the title. Milestone and Release can both render
+In Linear, do **not** put the milestone in the title. Milestone and Release can both render
 as `0.2.0` and have already disagreed in practice (title `[0.2.0]`, milestone
-`0.3.0`). Milestone is a tracker field; the title prefix is the version.
+`0.3.0`). Milestone is a tracker field; the title prefix is the version. On GitHub the
+milestone `vX.Y.Z` is the Release and must match the prefix.
 
 ---
 
-## Metadata (set on the Linear issue, not in the body)
+## Metadata (set on the tracker issue, not in the body)
 
 | Field         | How to set it                                                            |
 | ------------- | ------------------------------------------------------------------------ |
-| **Project**   | `{{LINEAR_PROJECT}}` (always — the only project in scope for this repo). |
-| **Release**   | Required-by-convention for every version-scoped issue. Must match the `[X.Y.Z]` title prefix. **A missing Release blocks implementation** — the agent refuses rather than guessing `dev`. This table is a prompt, not a gate: trackers generally do not enforce non-empty fields; enforcement is the refusal in `docs/GIT_WORKFLOW.md`. Omit only for repo-wide governance (no version prefix). |
-| **Milestone** | Capability stage (`docs/DESIGN.md` §6). Orthogonal to Release. Do not use it to express the version or to route git. |
+| **Project**   | Linear: the project `docs/agents/issue-tracker.md` names (always — the only project in scope for this repo). GitHub: the repository; no field. |
+| **Release**   | Linear: the Release field. GitHub: the milestone `vX.Y.Z`. Required-by-convention for every version-scoped issue. Must match the `[X.Y.Z]` title prefix. **A missing Release blocks implementation** — the agent refuses rather than guessing `dev`. This table is a prompt, not a gate: trackers generally do not enforce non-empty fields; enforcement is the refusal in `docs/GIT_WORKFLOW.md`. Omit only for repo-wide governance (no version prefix). |
+| **Milestone** | Linear: capability stage (`docs/DESIGN.md` §6), orthogonal to Release; do not use it to express the version or to route git. GitHub: the Release itself (above); a capability stage is a label. |
 | **Priority**  | `Urgent` / `High` / `Medium` / `Low` — see the table below.             |
 | **Labels**    | Triage role from `triage-labels.md` + any type label (`bug`, `feature`, `research`, `chore`, `hotfix`). `hotfix` changes the git base branch — see `triage-labels.md`. |
 | **Assignee**  | Set when claimed; leave empty in the backlog.                           |
-| **Relations** | Use Linear's native `blocks` / `blocked-by` relations.                  |
+| **Relations** | Use the tracker's native dependencies (Linear `blocks` / `blocked-by`; GitHub issue dependencies). |
 
 ### Priority guide
 
@@ -98,9 +101,9 @@ Background a newcomer needs: the relevant `docs/DESIGN.md` section, prior resear
 or an external platform fact. Skip if the Objective is fully self-explanatory.
 
 ### `## Blocked By` / `## Blocks`
-Dependency graph. List issue identifiers (e.g. `{{ISSUE_PREFIX}}-42`) and a short
-reason. Prefer to *also* wire these as Linear `blocked-by` / `blocks` relations; the
-body lines are the human-readable mirror. Use `None (entry point)` when there are no
+Dependency graph. List issue identifiers (e.g. Linear `WHI-42`, GitHub `#42`) and a short
+reason. Prefer to *also* wire these as native dependencies (`docs/agents/issue-tracker.md`
+§ Operations); the body lines are the human-readable mirror. Use `None (entry point)` when there are no
 blockers.
 
 ### `## Execution`
@@ -210,7 +213,8 @@ Bare URLs are fine.
 ## Appendix: Milestones
 
 Issues carry an `[X.Y.Z]` title prefix because they belong to a **Release**
-(the git-routing signal). They may also sit under a **milestone** (capability
+(the git-routing signal). In Linear they may also sit under a **milestone** (capability
 stage), per `docs/DESIGN.md` §6 — that is a tracker field, not the title tag.
 Keep the milestone list in §6; if Releases change, that is the tracker
-Release entity, not this file.
+Release entity, not this file. On GitHub the milestone `vX.Y.Z` is the Release, so a
+capability stage is expressed with a label instead.

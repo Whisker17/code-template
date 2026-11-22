@@ -53,3 +53,10 @@ workflow was dogfooded. Stack-specific traps belong in the downstream project's 
    not generated reports — regenerating a report per fix turns every prose finding into a
    full re-measurement. If the tree is dirty at generation time, stamp provenance accordingly
    rather than silently attributing a dirty run to a later commit.
+8. **Several `gh` accounts on one machine: the active one acts, not the one you meant.**
+   A project on the GitHub tracker (`docs/agents/issue-tracker.md`) makes every issue, label
+   and milestone call through `gh`, so a wrong active account fails as a misleading 404 on a
+   private repo or attributes writes to the wrong user. Run `gh auth status` before the first
+   write of a session; if the repo's account is not the active one,
+   `gh auth switch --user <account>`. **Write the account for this repo here, in this entry,
+   when the project is set up** — it is project knowledge the template cannot supply.

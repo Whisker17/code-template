@@ -41,7 +41,7 @@ Draft the spec in the conversation first. Write nothing — not `docs/DESIGN.md`
 1. Dispatch `REVIEWER` with `scripts/agent-dispatch.sh REVIEWER <prompt-file> --effort high`, in a fresh context. The prompt carries the draft, the source discussion and the repo docs it touches (`docs/DESIGN.md`, `docs/adr/`, `docs/agents/domain.md`). Ask for blocking issues and suggestions only: gaps, contradictions, unverifiable acceptance, unstated decisions.
 2. Address each finding: change the draft, or record why not. Re-dispatch with the revised draft and the previous findings, so the next round checks the diff.
 3. **At most 3 rounds.** Whatever is still disputed goes into the draft's "Open questions" (§8 for the project spec). After round 3 the owner decides those; do not start a fourth round.
-4. Record the consensus — rounds, what changed, open disagreements, reviewer role/model/effort — in a Linear project document (for a release, a "Design review" section of the Release orchestration document; see `docs/agents/issue-tracker.md` § Release orchestration document). If it cannot be written, stop and say so.
+4. Record the consensus — rounds, what changed, open disagreements, reviewer role/model/effort — in the tracker (for a release, a "Design review" section of the Release orchestration document; see `docs/agents/issue-tracker.md` § Release orchestration document; with no release yet, a Linear project document or a GitHub issue labelled `orchestration`). If it cannot be written, stop and say so.
 5. **Only then write** the spec.
 
 If `REVIEWER` is unavailable, follow `docs/agents/runtime.md`; do not substitute a model or review your own draft.

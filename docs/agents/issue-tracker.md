@@ -3,6 +3,24 @@
 Issues and PRDs for this repo live in **Linear**, project **"{{LINEAR_PROJECT}}"**, team
 `{{LINEAR_TEAM}}`.
 
+This is the Linear binding. The template ships a second one for GitHub Issues; both define
+the same operations (below), and `SETUP.md` installs the chosen one as this file, the only
+tracker file skills and shared docs name.
+
+## Operations
+
+The operations every binding defines, in the same order. A binding that cannot fill a row is
+not a binding.
+
+| Operation | Linear |
+| --- | --- |
+| Release entity | The Linear **Release** (`releases[]` on the issue), not `projectMilestone` |
+| Version signal | Title prefix `[X.Y.Z]` and the issue's Release `X.Y.Z`; a missing signal or a mismatch refuses, never guessed |
+| Workflow states | `Todo` / `In Progress` / `In Review` / `Done` / `Canceled` (Linear workflow states) |
+| Dependencies | Native `blocks` / `blockedBy` via `save_issue({ id, blocks, blockedBy })`; the `## Blocked By` body section mirrors them |
+| Orchestration document | One Linear project document named `Release X.Y.Z — orchestration` |
+| Release → Released | The Release's state and `commitSha` (`git rev-parse 'vX.Y.Z^{commit}'`) |
+
 ## How to reach Linear
 
 Tracker state moves in lockstep with the PR (below), so this access path is **mandatory,
@@ -25,9 +43,9 @@ workflow. Take the first rung of this ladder that your runtime actually offers:
    has shell/network access but no MCP.
 3. **Neither available:** stop and report the step as blocked. Do **not** switch to a
    local-markdown tracker or `gh issue` — the tracker is shared state, and a divergent
-   shadow copy is worse than an honest block. A project that genuinely uses another
+   shadow copy is worse than an honest block. A project that genuinely uses a third
    tracker replaces **this file** with a binding for it, so every skill agrees on where
-   issues live. That binding must define the same operations, including
+   issues live. That binding must define the same [§ Operations](#operations), including
    [§ Release ↔ version binding](#release--version-binding) (or declare that it has no
    release entity — git routing reads that section) and
    [§ Release orchestration document](#release-orchestration-document).
@@ -62,6 +80,8 @@ write, re-read to confirm it.
 
 Other core tools:
 
+- **Sub-issue**: `linear.save_issue({ ..., parentId })` makes the new issue a native
+  sub-issue of `parentId`; re-read it to confirm. A parent link is not a blocking edge.
 - **Create / update an issue**: `linear.save_issue({...})`. When creating, `title` and
   `team` are required; also set `project` to `"{{LINEAR_PROJECT}}"` so it's scoped
   correctly. Omit `id` on create; pass `id` to update. Use `assignee` (a user id, name,
@@ -137,7 +157,7 @@ all of which have already caused a real mis-resolution in the source project
   cross-check has not been performed: say so and stop, rather than proceeding on
   the title prefix alone as though both signals had agreed.
 
-**Swapping trackers:** a replacement binding for another tracker must define this
+**Swapping trackers:** a replacement binding for a third tracker must define this
 section too — naming its own release
 entity and how to read it — or state explicitly that it has **no** release
 entity, which drops the cross-check per `docs/GIT_WORKFLOW.md` § Version
