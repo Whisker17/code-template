@@ -9,6 +9,8 @@ one edit point.
 - **Mapping (the only place a model ID lives):** `config/agent-roles.conf`, read from the
   **primary clone** by every worktree (§ Dispatch)
 - **Executable seam:** `scripts/agent-dispatch.sh`
+- **Read, verify and change the bindings:** `scripts/roles.sh` (§ Content roles and
+  `scripts/roles.sh`); optional content roles: `config/content-roles.conf`
 - **Tests (fake runtimes, no model calls):** `tests/test_agent_dispatch.py`
 
 ## Roles
@@ -22,6 +24,55 @@ one edit point.
 
 Ordinary exploration is done by whichever role owns the task. There is no escalation role:
 unresolved findings past the review budget go to a human.
+
+## Content roles and `scripts/roles.sh`
+
+Content work (a slide deck) needs a model too, but it is not code review and never goes
+through `scripts/agent-dispatch.sh`. The optional `config/content-roles.conf` binds
+`DECK_WRITER` (drafts the deck) and `DECK_REVIEWER` (reviews the outline in a fresh context,
+preferably another vendor than the writer). Each has `_RUNTIME`, `_MODEL` and a single
+`_EFFORT`; a project with no content roles deletes the file, and every command below then
+skips it silently. The `slide` skill names these roles, never a model.
+
+```text
+scripts/roles.sh list                          # a table of code roles, one of content roles
+scripts/roles.sh check [ROLE ...]              # exit 1 if any role is unusable
+scripts/roles.sh get ROLE [--effort medium|high]
+scripts/roles.sh set ROLE [--runtime R] [--model M] [--effort E | --effort-medium E --effort-high E] --reason "why"
+```
+
+- Files are read from the **primary clone**, exactly like the dispatcher, and parsed, never
+  sourced: only exact `KEY="value"` lines count.
+- `check` never invokes a model. The runtime must be `claude`, `codex` or `pi` and on `PATH`,
+  and every non-empty effort must be in its runtime's set (below). `pi --list-models` is the
+  one call it makes: the model must be column 2 exactly or `<column 1>/<column 2>` exactly
+  (the header row is skipped). `claude` and `codex` cannot list models: that is a warning
+  (`not verified`), not a failure. An all-empty `REVIEWER_FALLBACK` is `unset` (fine); a
+  half-declared one fails. A code role may leave one of `_EFFORT_MEDIUM` / `_EFFORT_HIGH`
+  empty (that effort then fails closed at dispatch) but not both.
+- `get` prints what a caller needs to start the role: `<model>:<effort>` for `pi`,
+  `<runtime> <model> <effort>` for `claude` and `codex`. Code roles need `--effort`
+  (`medium|high`); content roles use their own `_EFFORT` and refuse `--effort`. An unusable
+  binding exits `3` and prints nothing.
+- `set` is the mechanical form of the role-binding lane (`docs/GIT_WORKFLOW.md`). It checks
+  the whole candidate tuple like `check`, rewrites only the targeted lines, makes one commit
+  `roles: <KEY> <old> → <new>[, ...] (<reason>)` and pushes it to the trunk through
+  `.githooks/pre-push`. It refuses, changing nothing (tree, index, local refs, remote), when it
+  is not in the primary clone, not on the trunk, the index is not empty, the target conf has
+  unstaged changes, `HEAD` is not at the remote trunk (compared with `git ls-remote`, so no
+  ref moves), the key does not exist, the candidate fails `check`, a value contains `$`,
+  backtick, `\`, `"` or whitespace, or `--reason` is missing. If the commit or push fails it
+  rolls back without `reset --hard`: other unstaged edits survive. It signs (`-S`) only when
+  `roles.requireSignedCommits` is true.
+
+Valid efforts per runtime (what `check` and `set` accept; `agent-dispatch.sh` passes the
+value through, so a runtime that renames one needs this table and `roles.sh` changed together):
+
+| Runtime | Efforts |
+| --- | --- |
+| `pi` | `off` `minimal` `low` `medium` `high` `xhigh` `max` |
+| `claude` | `low` `medium` `high` `xhigh` `max` |
+| `codex` | `minimal` `low` `medium` `high` `xhigh` |
 
 ## The invariant
 

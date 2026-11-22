@@ -79,6 +79,13 @@ Ask **one at a time** ([interview]):
    a configuration error; `docs/agents/runtime.md` § Reviewer unavailable); default: leave it
    empty. Every value kept or changed is proven in §4 by a real call.
 
+   **Content roles (optional).** `config/content-roles.conf` binds `DECK_WRITER` and
+   `DECK_REVIEWER` for the `slide` skill (one effort each; defaults copy `IMPLEMENTER`'s
+   and `REVIEWER`'s bindings). Ask whether the project makes slide decks: if yes, keep or
+   change each role exactly as above (`scripts/roles.sh check` verifies the runtime, effort
+   and, for `pi`, that the model is listed; `scripts/roles.sh set` changes a binding);
+   if no, **delete `config/content-roles.conf`** — `scripts/roles.sh` skips an absent file.
+
 ## 2. Replace placeholders
 
 Every placeholder marker in the repo must be gone when you finish. Replace across all
@@ -172,6 +179,7 @@ call succeeds** — `--probe` alone checks the file and `PATH`, not authenticati
 
 ```bash
 scripts/agent-dispatch.sh --probe            # every role ok; REVIEWER_FALLBACK ok or unset
+scripts/roles.sh check                       # code and content roles; exit 0 (content skipped if the file is deleted)
 for role in ORCHESTRATOR IMPLEMENTER REVIEWER; do
   printf 'Reply with exactly: DISPATCH-OK\n' \
     | scripts/agent-dispatch.sh "$role" - --effort high   # must print DISPATCH-OK, exit 0
@@ -254,7 +262,9 @@ values land in the copied files):
    reported as a gap in A.6, never filled with a template test.
 8. **Agent roles** — present `$TEMPLATE/config/agent-roles.conf` and keep or change it
    exactly as §1.9 describes (exact model IDs from the runtime itself, optional
-   `REVIEWER_FALLBACK`).
+   `REVIEWER_FALLBACK`). Also ask whether the target makes slide decks: if so, keep or change
+   `config/content-roles.conf` the same way; if not, delete that file again after A.2 and drop
+   it from `copied.txt` (`scripts/roles.sh` skips an absent file).
 9. **UI project?** If yes, the optional UI line in A.5.
 
 **A.2 Copy the process layer — never overwrite.** For every path below, taken from
@@ -262,8 +272,8 @@ values land in the copied files):
 
 ```bash
 PROCESS_PATHS=(.claude/skills docs/agents docs/GIT_WORKFLOW.md docs/REVIEW.md docs/CI.md
-  docs/TRAPS.md docs/DEFERRED_ISSUES.md config/agent-roles.conf scripts .githooks .github
-  tests/test_agent_dispatch.py TEMPLATE_VERSION)
+  docs/TRAPS.md docs/DEFERRED_ISSUES.md config/agent-roles.conf config/content-roles.conf
+  scripts .githooks .github tests/test_agent_dispatch.py TEMPLATE_VERSION)   # scripts/ carries roles.sh
 : > "$ADOPT_TMP/copied.txt"; : > "$ADOPT_TMP/conflicts.txt"
 git -C "$TEMPLATE" ls-files -z -- "${PROCESS_PATHS[@]}" | while IFS= read -r -d '' f; do
   if [ ! -e "$TARGET/$f" ] && [ ! -L "$TARGET/$f" ]; then
@@ -367,6 +377,7 @@ call succeeds):
 
 ```bash
 scripts/agent-dispatch.sh --probe
+scripts/roles.sh check
 for role in ORCHESTRATOR IMPLEMENTER REVIEWER; do
   printf 'Reply with exactly: DISPATCH-OK\n' | scripts/agent-dispatch.sh "$role" - --effort high
 done

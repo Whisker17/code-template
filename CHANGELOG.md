@@ -47,6 +47,30 @@ Format: date — what changed and why — which project surfaced it (if any).
   above and the two test files; no config change. The lane is active once a clone has
   `core.hooksPath` set to `.githooks`; if you keep a server-side require-PR rule on `dev`,
   give the owner a bypass for it.
+- **Content roles and `scripts/roles.sh`; the slide skill names roles, not a model (WHI-2628).**
+  New optional `config/content-roles.conf` binds `DECK_WRITER` and `DECK_REVIEWER`
+  (`_RUNTIME`, `_MODEL`, one `_EFFORT`; defaults copy `IMPLEMENTER`'s and `REVIEWER`'s
+  bindings, effort `high`). New `scripts/roles.sh`: `list` (code and content tables), `check`
+  (runtime on `PATH`, effort in the runtime's set, model listed by `pi --list-models` by
+  column 2 or `<col1>/<col2>`, a warning for `claude`/`codex`, which cannot list; never invokes a
+  model; an undeclared `REVIEWER_FALLBACK` is `unset`, a half-declared one fails), `get`
+  (`<model>:<effort>` for `pi`, `<runtime> <model> <effort>` otherwise) and `set` (validates the
+  whole candidate tuple, rewrites only the targeted lines, one commit `roles: <KEY> <old> → <new>
+  (<reason>)`, pushed to the trunk through the WHI-2627 hook; it refuses, changing nothing, outside
+  the primary clone or the trunk, with a dirty index or target conf, or when `HEAD` is not the remote
+  trunk, and rolls a failed commit or push back without `reset --hard`). Files are read from the
+  primary clone like the dispatcher. `.claude/skills/slide` drafts with `DECK_WRITER` and reviews
+  the outline in a fresh-context `DECK_REVIEWER` sub-agent from `scripts/roles.sh get`;
+  `answer-me-with-html/references/research-post.md` names the same role. No model name is left in
+  those skills. `docs/agents/runtime.md` documents content roles and the per-runtime effort sets;
+  `SETUP.md` §1.9 / A.1.8 / A.2 ask about, copy or delete the content file; `AGENTS.md`,
+  `README.md`, `config/README.md` and `scripts/e2e.sh` inputs updated. E2E:
+  `tests/e2e/test_roles_cli.py` (smoke; fake `pi`, real hook, scratch primary clone and remote).
+  Downstream migration: merge `scripts/roles.sh`, `config/content-roles.conf` (delete it if you
+  make no decks; keep the model values that your runtime lists), the two skill files and the docs
+  above; add `scripts/roles.sh` to your e2e inputs. **Sync the Notion "Slide" page** (and "slide
+  风格" if affected) per the slide skill's sync rule: the review step now names `DECK_REVIEWER`
+  instead of a model.
 
 ## Unreleased — v0.3.0
 

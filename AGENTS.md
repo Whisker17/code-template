@@ -176,6 +176,9 @@ model ID and effort values; `scripts/agent-dispatch.sh` dispatches them. Contrac
 - A failed or missing role fails closed — no model substitution, no lower effort — except
   the declared `REVIEWER_FALLBACK` under `docs/agents/runtime.md` § Reviewer unavailable
   (only after a real `REVIEWER` call failed; never for exit 2/3).
+- `scripts/roles.sh list|check|get|set` reads, verifies and changes the bindings, including
+  the optional content roles `DECK_WRITER` / `DECK_REVIEWER` in `config/content-roles.conf`
+  (the `slide` skill names them); `set` is the role-binding lane's one-commit push.
 - When a model generation turns over, edit `config/agent-roles.conf` and nothing else. A
   value-only change is the owner's role-binding commit straight to the trunk, admitted by
   `.githooks/pre-push`; every worktree's dispatcher reads the primary clone's conf
