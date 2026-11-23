@@ -23,16 +23,26 @@ def read(rel: str) -> str:
     return (ROOT / rel).read_text()
 
 
+FIVE_PASSAGES = (
+    ("AGENTS.md", "the only direct pushes are five:"),
+    ("docs/GIT_WORKFLOW.md", "five direct pushes are the documented exceptions"),
+    ("docs/GIT_WORKFLOW.md", "the only direct pushes are five:"),
+)
+
+
 @pytest.mark.smoke
 def test_direct_push_exceptions_are_five_everywhere() -> None:
     stale = re.compile(
-        r"four direct pushes|direct pushes are four|only direct pushes are the three"
+        r"four direct pushes|direct pushes are four|only direct pushes are the three",
+        re.IGNORECASE,
     )
     for rel in ("AGENTS.md", "docs/GIT_WORKFLOW.md"):
-        assert not stale.search(re.sub(r"\s+", " ", read(rel))), rel
-    for rel in ("AGENTS.md", "docs/GIT_WORKFLOW.md"):
         text = re.sub(r"\s+", " ", read(rel))
-        assert "five" in text and "agent release cut" in text, rel
+        assert not stale.search(text), rel
+        assert "agent release cut" in text, rel
+    # Each of the three passages is pinned on its own, so one reverted passage cannot hide.
+    for rel, passage in FIVE_PASSAGES:
+        assert passage in re.sub(r"\s+", " ", read(rel)).lower(), f"{rel}: {passage}"
 
 
 @pytest.mark.smoke
@@ -60,9 +70,9 @@ def test_every_github_gh_issue_call_carries_repo() -> None:
         rel = "docs/agents/issue-tracker.md"
         if not read(rel).startswith("# Issue tracker: GitHub"):
             pytest.skip("the installed tracker is not GitHub")
-    for n, line in enumerate(read(rel).splitlines(), 1):
-        for call in re.findall(r"`(gh issue [^`]*)`", line):
-            assert "--repo" in call, f"{rel}:{n}: {call}"
+    # Whole-file scan: several calls span lines inside one backticked span.
+    for call in re.findall(r"`(gh issue [^`]*)`", read(rel), re.S):
+        assert "--repo" in call, f"{rel}: {call}"
 
 
 @pytest.mark.smoke
