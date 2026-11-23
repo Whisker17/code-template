@@ -6,7 +6,8 @@
 #
 # Homes (docs/agents/trackers/github.md § Issue homes):
 #   version      title prefix [X.Y.Z] (three or four segments) AND milestone vX.Y.Z, equal;
-#                an `orchestration` issue needs the milestone only
+#                an `orchestration` issue needs the milestone only, exactly vX.Y.Z, and no other
+#                home; only then is it exempt from the state label
 #   governance   label `governance`          backlog   label `backlog`
 #   non-code     one label from NON_CODE_HOMES below (no worktree, no PR, no state label)
 # Work issues (version, governance, backlog) carry exactly one state label. `ready-for-agent`
@@ -31,7 +32,8 @@ usage() { echo "issue-audit: $*" >&2; echo "usage: issue-audit.sh --repo owner/r
 
 [ "$#" -eq 2 ] && [ "$1" = "--repo" ] || usage "expected exactly: --repo owner/repo"
 REPO="$2"
-[[ "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] || usage "--repo must be owner/repo"
+[[ "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ && "/$REPO/" != *"/./"* && "/$REPO/" != *"/../"* ]] ||
+    usage "--repo must be owner/repo (no . or .. segment)"
 command -v gh >/dev/null 2>&1 || { echo "issue-audit: gh not found" >&2; exit 2; }
 command -v python3 >/dev/null 2>&1 || { echo "issue-audit: python3 not found" >&2; exit 2; }
 
@@ -83,11 +85,12 @@ def audit(item, non_code, states):
     labels = {lb["name"] for lb in item["labels"]}
     match = PREFIX.match(item["title"])
     prefix = match.group(1) if match else None
-    milestone = item["milestone"]["title"] if item["milestone"] else None
+    # any milestone object is a version home, whatever its title (even "")
+    milestone = item["milestone"]["title"] if item["milestone"] is not None else None
     orchestration = "orchestration" in labels
 
     homes = []
-    if prefix or milestone:
+    if prefix or milestone is not None:
         homes.append("version")
     homes += [h for h in ("governance", "backlog") if h in labels]
     homes += [h for h in non_code if h in labels]
@@ -98,9 +101,9 @@ def audit(item, non_code, states):
     elif len(homes) > 1:
         out.append("multiple homes: " + ", ".join(homes))
     elif homes == ["version"]:
-        if prefix and not milestone:
+        if prefix and milestone is None:
             out.append("version prefix without milestone")
-        elif milestone and not prefix:
+        elif milestone is not None and not prefix:
             if not orchestration:
                 out.append("milestone without version prefix")
         else:
@@ -111,7 +114,16 @@ def audit(item, non_code, states):
                     f"(expected v{prefix})"
                 )
 
-    exempt = orchestration or any(h in labels for h in non_code)
+    orchestration_ok = (
+        orchestration
+        and homes == ["version"]
+        and milestone is not None
+        and MILESTONE.match(milestone) is not None
+    )
+    if orchestration and not orchestration_ok:
+        out.append("orchestration needs exactly the version home with milestone vX.Y.Z")
+
+    exempt = orchestration_ok or any(h in labels for h in non_code)
     if homes and not exempt:
         have = [s for s in states if s in labels]
         if not have:
