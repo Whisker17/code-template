@@ -42,7 +42,8 @@ done
 if [ -n "$GITHUB_REPO" ] && [ "$HAVE_LINEAR" -eq 1 ]; then usage "give exactly one of --github-repo and --linear-release-open"; fi
 if [ -z "$GITHUB_REPO" ] && [ "$HAVE_LINEAR" -eq 0 ]; then usage "give exactly one of --github-repo and --linear-release-open"; fi
 if [ -n "$GITHUB_REPO" ]; then
-    [[ "$GITHUB_REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] || usage "--github-repo must be owner/repo"
+    [[ "$GITHUB_REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ && "/$GITHUB_REPO/" != *"/./"* && "/$GITHUB_REPO/" != *"/../"* ]] ||
+        usage "--github-repo must be owner/repo (no . or .. segment)"
 else
     [ -n "$LINEAR_URL" ] || usage "--linear-release-open needs a non-empty release url"
 fi

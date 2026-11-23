@@ -138,6 +138,18 @@ FAILURE_MODES: dict[str, tuple[Issue, str]] = {
         issue(90, "[0.3.1] [Docs] x", ("todo", "in-review"), "v0.3.1"),
         "state label",
     ),
+    "orchestration-and-governance-without-milestone-or-state": (
+        issue(90, "Release 0.3.1 — orchestration", ("orchestration", "governance")),
+        "state label",
+    ),
+    "orchestration-milestone-not-vxyz": (
+        issue(91, "Release 0.3.1 — orchestration", ("orchestration",), "0.3.1"),
+        "milestone vX.Y.Z",
+    ),
+    "governance-with-empty-milestone-title": (
+        issue(92, "[Docs] x", ("todo", "governance"), ""),
+        "multiple homes",
+    ),
     "ready-with-needs-design": (
         issue(90, "[0.3.1] [UI] x", ("todo", "ready-for-agent", "needs-design"), "v0.3.1"),
         "needs-design",
@@ -241,7 +253,7 @@ def test_each_failure_mode_is_listed_with_its_reason_and_exits_1(
     assert result.returncode == 1, result.stdout + result.stderr
     lines = result.stdout.splitlines()
     assert lines, "no finding printed"
-    assert all(line.startswith("#90 ") for line in lines), result.stdout
+    assert all(line.startswith(f"#{bad['number']} ") for line in lines), result.stdout
     assert any(reason in line for line in lines), result.stdout
 
 
@@ -357,6 +369,10 @@ def test_invalid_or_unexpected_json_exits_2(a: Audit, body: str) -> None:
         [],
         ["--repo"],
         ["--repo", "no-slash"],
+        ["--repo", "../user"],
+        ["--repo", "owner/.."],
+        ["--repo", "./r"],
+        ["--repo", "o/."],
         ["--repo", "o/r", "extra"],
         ["extra", "--repo", "o/r"],
     ],
@@ -364,6 +380,10 @@ def test_invalid_or_unexpected_json_exits_2(a: Audit, body: str) -> None:
         "no-args",
         "repo-without-value",
         "repo-not-owner-slash-name",
+        "repo-dotdot-owner",
+        "repo-dotdot-name",
+        "repo-dot-owner",
+        "repo-dot-name",
         "extra-arg",
         "leading-arg",
     ],
