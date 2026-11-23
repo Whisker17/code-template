@@ -9,11 +9,18 @@ failure after the edit must roll back surgically, keeping an unrelated unstaged 
   unstaged changes, HEAD ahead of / behind the remote trunk, unknown role or missing key, a
   candidate tuple that fails `check`, a forbidden character in a value, `--reason` missing, a
   no-op, an invalid `roles.requireSignedCommits`
+* set refuses, before any write, while a merge, cherry-pick, revert or rebase is in progress (the
+  state file must survive: a rollback would delete it)
 * set rolls back: the remote rejects the push, or the commit fails (signing is required but cannot
-  sign); the saved conf bytes come back, HEAD is `$ORIG`, other unstaged edits survive
+  sign), or SIGTERM/SIGINT arrives during a slow push; the saved conf bytes come back, HEAD is
+  `$ORIG`, other unstaged edits survive
 * check: never invokes a model (a fake `pi` records every call); a model the runtime does not list,
   an unknown or missing runtime, an invalid effort, a half-declared fallback all exit 1
-* an absent config/content-roles.conf is skipped silently by list, check and get
+* an absent config/content-roles.conf is skipped silently by list, check and get, also in a linked
+  worktree whose own checkout still has one (only the primary clone's files are read)
+* a multi-word effort, runtime or role is never a member of a word list (check exit 1, get exit 3
+  for an unusable binding and 2 for an unknown or empty role)
+* the shipped config/content-roles.conf parses, and its writer/reviewer equal IMPLEMENTER/REVIEWER
 
 `set` pushes through the real WHI-2627 hook (core.hooksPath), without ALLOW_DIRECT_PUSH, so each
 success also proves the lane admitted it. Real git against a scratch bare remote; fake `pi`,
@@ -22,7 +29,9 @@ success also proves the lane admitted it. Real git against a scratch bare remote
 
 import os
 import shutil
+import signal
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -534,6 +543,61 @@ def test_set_rolls_back_when_the_commit_cannot_be_signed(r: Roles) -> None:
     assert r.snapshot() == before
 
 
+@pytest.mark.smoke
+@pytest.mark.parametrize(
+    "state",
+    ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply"],
+)
+def test_set_refuses_while_a_merge_cherry_pick_revert_or_rebase_is_in_progress(
+    r: Roles, state: str
+) -> None:
+    path = r.clone / r.git("rev-parse", "--git-path", state)
+    if state.startswith("rebase"):
+        path.mkdir()
+    else:
+        # A commit with HEAD's own tree keeps the index empty; without the refusal `set` would
+        # commit a merge (or a cherry-pick) that the hook refuses, and its rollback would delete
+        # the state file.
+        other = r.git("commit-tree", "HEAD^{tree}", "-m", "other side")
+        path.write_text(other + "\n")
+    r.refuse("IMPLEMENTER", "--model", "prov/impl2", "--reason", "x", why="in progress")
+    assert path.exists(), "the in-progress state was lost"
+    assert r.remote() == r.base
+
+
+@pytest.mark.smoke
+@pytest.mark.parametrize("sig", [signal.SIGTERM, signal.SIGINT], ids=["SIGTERM", "SIGINT"])
+def test_set_rolls_back_when_signalled_during_a_slow_push(r: Roles, sig: signal.Signals) -> None:
+    marker = r.tmp / "push-started"
+    slow = r.tmp / "hooks" / "pre-push"
+    slow.write_text(f'#!/bin/sh\ntouch "{marker}"\nsleep 30\nexec "{r.bash}" "{HOOK}" "$@"\n')
+    dirty_agent_free = b"unrelated unstaged edit\n"
+    (r.clone / "other.txt").write_bytes(dirty_agent_free)
+    before = r.snapshot()
+    proc = subprocess.Popen(
+        [r.bash, str(r.clone / "scripts" / "roles.sh")]
+        + ["set", "IMPLEMENTER", "--model", "prov/impl2", "--reason", "x"],
+        cwd=r.clone,
+        env=r.env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,  # one process group: git push and the hook get the signal too
+    )
+    deadline = time.monotonic() + 15
+    while not marker.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert marker.exists(), "the push never started"
+    os.killpg(proc.pid, sig)
+    _, stderr = proc.communicate(timeout=15)
+    assert proc.returncode != 0, stderr
+    assert r.git("rev-parse", "HEAD") == r.base == r.remote()
+    assert (r.clone / AGENT_PATH).read_bytes() == AGENT
+    assert (r.clone / "other.txt").read_bytes() == dirty_agent_free
+    assert r.snapshot() == before
+    assert r.git("diff", "--cached", "--name-only") == ""
+
+
 # --- check --------------------------------------------------------------------------------------
 
 
@@ -688,6 +752,64 @@ def test_check_validates_a_content_role_with_its_single_effort(
 
 
 @pytest.mark.smoke
+@pytest.mark.parametrize(
+    ("old", "new", "role", "effort", "why"),
+    [
+        (
+            'IMPLEMENTER_EFFORT_MEDIUM="medium"',
+            'IMPLEMENTER_EFFORT_MEDIUM="low medium"',
+            "IMPLEMENTER",
+            "medium",
+            "'low medium'",
+        ),
+        (
+            'IMPLEMENTER_EFFORT_HIGH="high"',
+            'IMPLEMENTER_EFFORT_HIGH="medium high"',
+            "IMPLEMENTER",
+            "high",
+            "'medium high'",
+        ),
+        (
+            'REVIEWER_RUNTIME="pi"',
+            'REVIEWER_RUNTIME="claude codex"',
+            "REVIEWER",
+            "high",
+            "unknown runtime",
+        ),
+        (
+            'REVIEWER_RUNTIME="pi"',
+            'REVIEWER_RUNTIME="pi claude"',
+            "REVIEWER",
+            "high",
+            "unknown runtime",
+        ),
+    ],
+)
+def test_check_and_get_refuse_a_multi_word_effort_or_runtime(
+    r: Roles, old: str, new: str, role: str, effort: str, why: str
+) -> None:
+    r.write({AGENT_PATH: sub(old, new)})
+    checked = r.run("check", role)
+    assert checked.returncode == 1 and "UNUSABLE" in checked.stdout, checked.stdout
+    assert why in checked.stdout, checked.stdout
+    got = r.run("get", role, "--effort", effort)
+    assert got.returncode == 3 and got.stdout == "", got.stdout + got.stderr
+
+
+@pytest.mark.smoke
+def test_check_and_set_refuse_a_multi_word_or_empty_role(r: Roles) -> None:
+    for words in ("ORCHESTRATOR IMPLEMENTER", "DECK_WRITER DECK_REVIEWER", " "):
+        assert r.run("get", words, "--effort", "high").returncode == 2
+        assert r.run("get", words).returncode == 2
+    assert r.run("get", "").returncode == 2
+    assert r.run("get", "", "--effort", "high").returncode == 2
+    r.refuse(
+        "ORCHESTRATOR IMPLEMENTER", "--model", "prov/impl2", "--reason", "x", why="unknown role"
+    )
+    r.refuse("", "--model", "prov/impl2", "--reason", "x", why="unknown role")
+
+
+@pytest.mark.smoke
 def test_check_an_unknown_role_is_a_usage_error(r: Roles) -> None:
     assert r.run("check", "NOSUCH").returncode == 2
     assert r.run("bogus").returncode == 2
@@ -786,3 +908,43 @@ def test_a_linked_worktree_reads_the_primary_clones_binding(r: Roles) -> None:
     assert (linked / AGENT_PATH).read_bytes() == AGENT  # the branch still has the old value
     got = r.run("get", "IMPLEMENTER", "--effort", "high", script=linked / "scripts" / "roles.sh")
     assert got.stdout == "prov/impl2:high\n", got.stderr
+
+
+@pytest.mark.smoke
+def test_a_linked_worktree_ignores_its_own_content_file_when_the_primary_has_none(
+    bash: str, tmp_path: Path
+) -> None:
+    r = Roles(tmp_path, bash, content=False)  # the primary clone deleted the optional file
+    linked = r.tmp / "linked"
+    r.git("worktree", "add", "-q", "-b", "feat", str(linked), "dev")
+    (linked / CONTENT_PATH).write_bytes(CONTENT)  # a stale copy in the worktree's checkout
+    script = linked / "scripts" / "roles.sh"
+    listing = r.run("list", script=script)
+    assert listing.returncode == 0 and "Content roles" not in listing.stdout, listing.stderr
+    assert "DECK_" not in listing.stdout and listing.stderr == ""
+    checked = r.run("check", script=script)
+    assert checked.returncode == 0 and "DECK_" not in checked.stdout, checked.stdout
+    assert r.run("get", "DECK_WRITER", script=script).returncode == 2
+    assert r.run("check", "DECK_WRITER", script=script).returncode == 2
+
+
+@pytest.mark.smoke
+def test_the_shipped_content_roles_conf_parses_and_matches_the_code_roles(r: Roles) -> None:
+    """Copied beside a roles.sh outside any repository, so the shipped bytes are what is read."""
+    shipped = r.tmp / "shipped"
+    (shipped / "scripts").mkdir(parents=True)
+    (shipped / "config").mkdir()
+    shutil.copy(ROLES_SH, shipped / "scripts" / "roles.sh")
+    for name in ("agent-roles.conf", "content-roles.conf"):
+        shutil.copy(ROOT / "config" / name, shipped / "config" / name)
+    script = shipped / "scripts" / "roles.sh"
+    listing = r.run("list", script=script)
+    assert listing.returncode == 0 and listing.stderr == "", listing.stderr
+    assert "Content roles" in listing.stdout
+    for content_role, code_role in (("DECK_WRITER", "IMPLEMENTER"), ("DECK_REVIEWER", "REVIEWER")):
+        assert content_role in listing.stdout
+        got = r.run("get", content_role, script=script)
+        want = r.run("get", code_role, "--effort", "high", script=script)
+        assert got.returncode == 0, got.stderr
+        assert want.returncode == 0, want.stderr
+        assert got.stdout == want.stdout and got.stdout.split()[-1].endswith("high"), got.stdout

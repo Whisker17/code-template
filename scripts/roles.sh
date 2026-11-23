@@ -22,8 +22,9 @@
 # `set` is the role-binding lane (docs/GIT_WORKFLOW.md § Role binding lane): it validates the whole
 # candidate tuple with `check`, rewrites only the targeted lines, makes ONE commit and pushes it to
 # the trunk, where .githooks/pre-push admits it. It refuses, changing nothing, unless it runs in
-# the primary clone on the trunk, with an empty index, no unstaged edit in the target conf and HEAD
-# equal to the remote trunk. If the commit or push fails it rolls back (never `reset --hard`).
+# the primary clone on the trunk, with an empty index, no merge, cherry-pick, revert or rebase in
+# progress, no unstaged edit in the target conf and HEAD equal to the remote trunk. If the commit or
+# push fails, or SIGINT/SIGTERM arrives after the edit, it rolls back (never `reset --hard`).
 #
 # Exit codes: 0 ok; 1 a check failed or `set` refused; 2 usage error; 3 `get`: role unavailable.
 
@@ -53,13 +54,11 @@ primary_root() {
 }
 PRIMARY="$(primary_root)"
 
-conf_path() {
-    if [ -n "$PRIMARY" ] && [ -f "$PRIMARY/config/$1" ]; then
-        printf '%s' "$PRIMARY/config/$1"
-    elif [ -f "$REPO_ROOT/config/$1" ]; then
-        printf '%s' "$REPO_ROOT/config/$1"
-    fi
-}
+# Both files come from one place: the primary clone when it has the role mapping, else this repo. A
+# worktree's own copy of an optional file the primary deleted is never read.
+CONF_DIR="$REPO_ROOT/config"
+[ -z "$PRIMARY" ] || [ ! -f "$PRIMARY/config/agent-roles.conf" ] || CONF_DIR="$PRIMARY/config"
+conf_path() { if [ -f "$CONF_DIR/$1" ]; then printf '%s' "$CONF_DIR/$1"; fi; }
 AGENT_CONF="$(conf_path agent-roles.conf)"
 CONTENT_CONF="$(conf_path content-roles.conf)"
 [ -n "$AGENT_CONF" ] || usage "no role mapping: config/agent-roles.conf not found (see docs/agents/runtime.md)"
@@ -84,20 +83,29 @@ conf_scan() {
 conf_get() { local s; s="$(conf_scan "$1" "$2")"; printf '%s' "${s#*$'\t'}"; }
 conf_count() { local s; s="$(conf_scan "$1" "$2")"; printf '%s' "${s%%$'\t'*}"; }
 
+# in_words LIST WORD: exact membership of one whole word; an empty WORD is never a member (a
+# substring match would accept a multi-word value such as "low medium").
+in_words() {
+    local w
+    [ -n "$2" ] || return 1
+    for w in $1; do [ "$w" = "$2" ] && return 0; done
+    return 1
+}
+
 # Content roles: every <ROLE>_RUNTIME key of the content file that is not a code role.
 content_roles() {
     [ -n "$CONTENT_CONF" ] || return 0
     local role
     LC_ALL=C awk -F= '/^[A-Z][A-Z0-9_]*_RUNTIME="/ { k = $1; sub(/_RUNTIME$/, "", k); if (!seen[k]++) print k }' "$CONTENT_CONF" |
         while IFS= read -r role; do
-            case " $CODE_ROLES " in *" $role "*) ;; *) echo "$role" ;; esac
+            in_words "$CODE_ROLES" "$role" || echo "$role"
         done
 }
 
 # Prints code | content; returns 1 for an unknown role.
 role_kind() {
-    case " $CODE_ROLES " in *" $1 "*) echo code; return 0 ;; esac
-    case " $(content_roles | tr '\n' ' ') " in *" $1 "*) echo content; return 0 ;; esac
+    if in_words "$CODE_ROLES" "$1"; then echo code; return 0; fi
+    if in_words "$(content_roles | tr '\n' ' ')" "$1"; then echo content; return 0; fi
     return 1
 }
 role_file() { if [ "$(role_kind "$1")" = code ]; then printf '%s' "$AGENT_CONF"; else printf '%s' "$CONTENT_CONF"; fi; }
@@ -111,7 +119,7 @@ efforts_of() {
         codex) echo "minimal low medium high xhigh" ;;
     esac
 }
-is_runtime() { case " $RUNTIMES " in *" $1 "*) [ -n "$1" ] ;; *) return 1 ;; esac; }
+is_runtime() { in_words "$RUNTIMES" "$1"; }
 
 # One plain token, as scripts/agent-dispatch.sh requires: no whitespace, quote or leading dash.
 plain() { case "$1" in -*|*[!A-Za-z0-9._/:@+=-]*) return 1 ;; esac; }
@@ -169,7 +177,7 @@ tuple_check() {
         [ -n "$e" ] || continue
         any=1
         if [ -n "$valid" ]; then
-            case " $valid " in *" $e "*) ;; *) problem "effort '$e' is not valid for $runtime (valid: $valid)" ;; esac
+            in_words "$valid" "$e" || problem "effort '$e' is not valid for $runtime (valid: $valid)"
         fi
     done
     [ "$any" -eq 1 ] || problem "no effort is set"
@@ -263,11 +271,7 @@ cmd_get() {
     if ! is_runtime "$R_RUNTIME"; then why="runtime '$R_RUNTIME' is not one of: $RUNTIMES"
     elif [ -z "$R_MODEL" ] || ! plain "$R_MODEL"; then why="model '$R_MODEL' is unset or not a single plain token"
     elif [ "$R_RUNTIME" = pi ] && [ "${R_MODEL#*:}" != "$R_MODEL" ]; then why="pi model '$R_MODEL' embeds a thinking level"
-    else
-        case " $(efforts_of "$R_RUNTIME") " in
-            *" $R_E "*) ;;
-            *) why="effort '$R_E' is unset or not valid for $R_RUNTIME" ;;
-        esac
+    elif ! in_words "$(efforts_of "$R_RUNTIME")" "$R_E"; then why="effort '$R_E' is unset or not valid for $R_RUNTIME"
     fi
     if [ -n "$why" ]; then echo "roles: $role unavailable: $why" >&2; exit 3; fi
     if [ "$R_RUNTIME" = pi ]; then echo "$R_MODEL:$R_E"; else echo "$R_RUNTIME $R_MODEL $R_E"; fi
@@ -278,6 +282,7 @@ cmd_get() {
 refuse() { echo "roles: set refused: $*" >&2; exit 1; }
 shown() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '""'; fi; }
 KEYS=(); OLDS=(); NEWS=()
+NEED_ROLLBACK=0
 G() { git -C "$REPO_ROOT" "$@"; }
 
 # One refusal for every character that could break the KEY="value" line, a shell word or the hook.
@@ -327,7 +332,7 @@ cmd_set() {
     fi
 
     # 2. The repository: primary clone, on the trunk, nothing else pending.
-    local primary_real repo_real trunk rc out remote_sha branch rel conf key
+    local primary_real repo_real trunk rc out remote_sha branch rel conf key state sp
     [ -n "$PRIMARY" ] || refuse "not a git repository root: cannot locate the primary clone"
     primary_real="$(cd "$PRIMARY" && pwd -P)"; repo_real="$(cd "$REPO_ROOT" && pwd -P)"
     [ "$primary_real" = "$repo_real" ] || refuse "not the primary clone ($PRIMARY): run $PRIMARY/scripts/roles.sh"
@@ -340,6 +345,13 @@ cmd_set() {
     branch="$(G symbolic-ref -q --short HEAD 2>/dev/null)" || branch=""
     [ "$branch" = "$trunk" ] || refuse "not on the trunk: HEAD is '${branch:-detached}', the trunk is '$trunk'"
     G diff --cached --quiet || refuse "the index is not empty; commit or unstage first"
+    # An empty index does not mean a clean repository: the commit would conclude the operation and
+    # the rollback (`reset --soft`) would delete its state file.
+    for state in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD rebase-merge rebase-apply; do
+        sp="$(G rev-parse --git-path "$state")"
+        case "$sp" in /*) ;; *) sp="$REPO_ROOT/$sp" ;; esac
+        [ ! -e "$sp" ] || refuse "a merge, cherry-pick, revert or rebase is in progress ($state exists); finish or abort it first"
+    done
     rel="$(role_rel "$role")"; conf="$REPO_ROOT/$rel"
     G ls-files --error-unmatch -- "$rel" >/dev/null 2>&1 || refuse "$rel is not tracked"
     G diff --quiet -- "$rel" || refuse "$rel has unstaged changes"
@@ -387,9 +399,14 @@ cmd_set() {
     local orig i msg sign=""
     orig="$(G rev-parse HEAD)"
     saved="$(mktemp)"; work="$(mktemp)"   # globals: the EXIT trap runs after this function returns
-    trap 'rm -f "$saved" "$work" "$work.next"' EXIT
+    # A signal exits through the EXIT trap, which rolls back while NEED_ROLLBACK=1 (only inside this
+    # function, so its locals are still in scope), then removes the temp files.
+    trap 'st=$?; trap - EXIT INT TERM; [ "$NEED_ROLLBACK" != 1 ] || rollback; rm -f "$saved" "$work" "$work.next"; exit "$st"' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
     cat "$conf" > "$saved"
     rollback() {
+        NEED_ROLLBACK=0
         G reset -q --soft "$orig" || true
         G reset -q HEAD -- "$rel" || true
         cat "$saved" > "$conf"
@@ -409,6 +426,7 @@ cmd_set() {
         cat "$work.next" > "$work"
         msg="${msg:+$msg, }$key $(shown "$old") → $(shown "$new")"
     done
+    NEED_ROLLBACK=1
     cat "$work" > "$conf"
     if [ "$(diff "$saved" "$conf" | grep -c '^<')" -ne "$n" ] || [ "$(diff "$saved" "$conf" | grep -c '^>')" -ne "$n" ]; then
         rollback; refuse "internal error: the edit changed more than the $n targeted line(s); rolled back"
@@ -421,6 +439,7 @@ cmd_set() {
     if ! G push origin "HEAD:refs/heads/$trunk"; then
         rollback; refuse "push to origin/$trunk failed; rolled back to ${orig:0:7}"
     fi
+    NEED_ROLLBACK=0
     echo "roles: $msg -> pushed to origin/$trunk"
 }
 
