@@ -65,6 +65,14 @@ soon — anything touching {{HIGH_RISK_PATHS}} defaults to at least High), **Med
   runtime accepts these flags or that authentication works. That is SETUP step 4's real
   `DISPATCH-OK` call per role. Fix: run it in a configured environment and correct any
   adapter that fails.
+- **`known_role` / runtime membership is a substring match** (Low, R1-F15).
+  `scripts/agent-dispatch.sh` tests role and runtime names by substring, so a multi-word
+  role argument exits 3 (unknown runtime/role) instead of the usage exit 2. Pre-existing,
+  not security-relevant: the call still fails closed. Fix: exact-word membership.
+- **Manifest environment lacks tool versions** (Low, R1-F23). `scripts/e2e.sh` records
+  neither the git nor the bash version, and pytest is unpinned (`--with pytest`), so a
+  manifest cannot fully reproduce a run. Pre-existing; the artifact still carries SHA,
+  commands and input hashes. Fix: record the versions and pin pytest.
 
 ---
 

@@ -47,12 +47,12 @@ Documented `gh` and REST shapes, not exercised against a live repository by this
 | Need | Call |
 | --- | --- |
 | One issue | `gh issue view N --repo R --json number,title,body,state,stateReason,labels,milestone,comments` |
-| Every issue of a release | `gh api --paginate "repos/R/issues?milestone=<milestone number>&state=all&per_page=100"`, then drop entries that have a `pull_request` key (the endpoint also lists PRs). `gh issue list --milestone vX.Y.Z --state all --limit 500` is the short form; its default limit is 30 |
+| Every issue of a release | `gh api --paginate "repos/R/issues?milestone=<milestone number>&state=all&per_page=100"`, then drop entries that have a `pull_request` key (the endpoint also lists PRs). `gh issue list --repo R --milestone vX.Y.Z --state all --limit 500` is the short form; its default limit is 30 |
 | Milestone number of `vX.Y.Z` | `gh api "repos/R/milestones?state=all&per_page=100" --paginate --jq '.[] \| select(.title=="vX.Y.Z") \| .number'` |
-| REST id of an issue | `gh api repos/R/issues/N --jq .id` (the `id` that `gh issue view --json id` prints is the GraphQL node id, not this one) |
+| REST id of an issue | `gh api repos/R/issues/N --jq .id` (the `id` that `gh issue view --repo R --json id` prints is the GraphQL node id, not this one) |
 | Read dependencies | `gh api repos/R/issues/N/dependencies/blocked_by` and `…/blocking` |
 | Wire a dependency | `gh api -X POST repos/R/issues/N/dependencies/blocked_by -F issue_id=<REST id of the blocker>` |
-| Make a native sub-issue | `gh api -X POST repos/R/issues/<parent N>/sub_issues -F sub_issue_id=<REST id of the child>`; read it back with `gh issue view <parent> --json subIssues` |
+| Make a native sub-issue | `gh api -X POST repos/R/issues/<parent N>/sub_issues -F sub_issue_id=<REST id of the child>`; read it back with `gh issue view <parent> --repo R --json subIssues` |
 | Create | `gh issue create --repo R --title … --body-file <file> --label todo,ready-for-agent --milestone vX.Y.Z` |
 | Move state | `gh issue edit N --repo R --remove-label todo --add-label in-progress` (one call, so there is never zero or two state labels) |
 | Rewrite the body | `gh issue edit N --repo R --body-file <file>` (read the current body first; this replaces it) |
@@ -114,7 +114,7 @@ against **this tracker's release entity**. For GitHub the release entity is the 
 - **GitHub does not enforce a milestone.** An issue can be created without one. The
   enforcement is the agent's **refusal**, not the tracker.
 - **Read it through the access path above:** `gh issue view <N> --repo {{GITHUB_REPO}}
-  --json milestone` (a list from `gh issue list` carries it too, but re-read the one issue
+  --json milestone` (a list from `gh issue list --repo {{GITHUB_REPO}}` carries it too, but re-read the one issue
   you act on). Whether the milestone is open: `gh api "repos/{{GITHUB_REPO}}/milestones?state=all"`;
   `scripts/cut-release.sh X.Y.Z --github-repo {{GITHUB_REPO}}` checks it when it cuts a branch. If
   the tracker is unreachable, the cross-check has not been performed: say so and stop, rather
@@ -204,13 +204,13 @@ this:
    --state all --search '"<title>" in:title' --json number,title`) **before retrying**: the
    write may have landed, and a blind retry creates a duplicate. If it exists, adopt it and fix
    it up with an edit; if two exist, stop and report. Never report an unconfirmed write as
-   done: re-read each issue with `gh issue view` and list the set's confirmed numbers in the
+   done: re-read each issue with `gh issue view --repo {{GITHUB_REPO}}` and list the set's confirmed numbers in the
    report.
 2. **Blocking edges** (only after **all** issues exist): fetch each blocker's REST id
    (`gh api repos/{{GITHUB_REPO}}/issues/N --jq .id`) and wire the edge with the `blocked_by`
    call in § Operations, then `GET` `…/dependencies/blocked_by` to confirm. Then mirror each
    edge as a human-readable `## Blocked By` line in the body per `issue-template.md`
-   (`gh issue edit --body-file`; the numbers do not exist before creation). The native
+   (`gh issue edit --repo {{GITHUB_REPO}} --body-file`; the numbers do not exist before creation). The native
    dependency is the source of truth, the body line is the mirror.
 3. **Scoping**: if the set belongs to a version, every issue gets the milestone `vX.Y.Z`
    (`--milestone`, confirmed by re-reading it) **and** the `[X.Y.Z]` title prefix per
@@ -234,7 +234,7 @@ number,title,body,state,stateReason,labels,milestone,comments`, then its depende
 
 `/orchestrate` works from an explicit repository and Release — never a similar title. Resolve
 the milestone number of `vX.Y.Z`, then page through **every** page of the milestone's issues
-(`gh api --paginate`, § Reference calls; PRs filtered out). Then, for each issue, `gh issue view`
+(`gh api --paginate`, § Reference calls; PRs filtered out). Then, for each issue, `gh issue view --repo {{GITHUB_REPO}}`
 for its state, labels, milestone, the `## Execution` section, acceptance criteria and comments
 (amendments), and `…/dependencies/blocked_by` and `…/blocking` for its edges. A list page
 alone is not enough. Native dependencies are the source of truth; the body lines mirror
@@ -266,7 +266,7 @@ Look it up first: `gh issue list --repo {{GITHUB_REPO}} --label orchestration --
 vX.Y.Z --state all --json number,title`. Update it by reading the whole current body,
 changing it and writing it back with `gh issue edit N --repo {{GITHUB_REPO}} --body-file <file>`,
 then re-reading it; the orchestrator is the single writer. Only if none exists, create it
-(`gh issue create` with the label and milestone), then link it from the issues. After the
+(`gh issue create --repo {{GITHUB_REPO}}` with the label and milestone), then link it from the issues. After the
 release, close it (`--reason completed`) together with the milestone (§ Operations,
 Release → Released). If the issue cannot be written, say so and stop the step that needed it —
 do not keep the state only in chat or a temp file.

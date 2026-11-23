@@ -140,7 +140,7 @@ never an unobserved background process.
 - Run it **once at the start of a release** (or before a standalone `/implement` relies on
   `REVIEWER`) — not before every issue. A binding change does not need its own real call:
   it is verified in three tiers (`docs/GIT_WORKFLOW.md` § Role binding lane): at bind time
-  by the static `--probe`, at the first real dispatch of the changed role (a failed call
+  by `scripts/roles.sh check`, at the first real dispatch of the changed role (a failed call
   stops as above), and at the next release start by one `DISPATCH-OK` per role. Run it
   again also when a real dispatch hits an authentication or call error.
 

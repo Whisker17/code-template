@@ -54,7 +54,8 @@ esac
 
 INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh scripts/roles.sh scripts/cut-release.sh scripts/issue-audit.sh config/content-roles.conf .githooks/pre-push
     SETUP.md docs/agents/issue-tracker.md docs/agents/trackers/linear.md docs/agents/trackers/github.md
-    TEMPLATE_VERSION AGENTS.md .claude/skills/implement/SKILL.md .claude/skills/orchestrate/SKILL.md)
+    TEMPLATE_VERSION AGENTS.md .claude/skills/implement/SKILL.md .claude/skills/orchestrate/SKILL.md
+    .claude/skills/to-tickets/SKILL.md .claude/skills/to-spec/SKILL.md docs/agents/runtime.md docs/GIT_WORKFLOW.md)
 while IFS= read -r f; do INPUTS+=("$f"); done < <(find tests/e2e -type f ! -path '*/__pycache__/*' | sort)
 [ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py config/agent-roles.conf scripts/e2e.sh scripts/wt-gc.sh)
 # <<< E2E SUITES <<<
