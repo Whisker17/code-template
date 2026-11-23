@@ -25,6 +25,19 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ## v0.3.1
 
+- **Bootstrap simulation applies every SETUP § 1.9 choice (WHI-2638).** Second occurrence of the
+  bug class "broken bootstrap verification": R1-F16 (WHI-2636, the smoke suite red after SETUP
+  §2) and R2-F2 (the shipped-`content-roles.conf` test in `tests/e2e/test_roles_cli.py` raised
+  `FileNotFoundError` when the optional file was deleted and `AssertionError` when a `DECK_*`,
+  `IMPLEMENTER` or `REVIEWER` role was rebound, although SETUP §4 promises a green smoke test).
+  Fix: in the template (`docs/agents/trackers/` present) the test asserts as before; downstream it
+  skips an absent file and, when present, only requires `roles.sh list` and `get DECK_WRITER` /
+  `DECK_REVIEWER` to exit 0. Preventive check: `test_smoke_is_green_after_setup_selection` now runs
+  per tracker × choice (defaults kept, `config/content-roles.conf` deleted, a code and a content role
+  rebound) and runs the smoke suite in each scratch copy, so any template-only assertion that breaks
+  under a documented SETUP choice fails there. Recorded in `docs/REVIEW.md` § Recurring bug classes.
+  Downstream projects can merge the two test files directly.
+
 - **Issue homes with `scripts/issue-audit.sh`, a UI/UX design gate, and the 0.3.1 version bump (WHI-2631).**
   Every open issue has exactly one home: version (`[X.Y.Z]` prefix, three or four segments, plus
   milestone / Release `vX.Y.Z`, equal), `governance` (carve-out files only, no version), `backlog`

@@ -20,7 +20,8 @@ failure after the edit must roll back surgically, keeping an unrelated unstaged 
   worktree whose own checkout still has one (only the primary clone's files are read)
 * a multi-word effort, runtime or role is never a member of a word list (check exit 1, get exit 3
   for an unusable binding and 2 for an unknown or empty role)
-* the shipped config/content-roles.conf parses, and its writer/reviewer equal IMPLEMENTER/REVIEWER
+* the shipped config/content-roles.conf parses, and in the template its writer/reviewer equal
+  IMPLEMENTER/REVIEWER (a bootstrapped repo may delete or rebind it: SETUP § 1.9)
 
 `set` pushes through the real WHI-2627 hook (core.hooksPath), without ALLOW_DIRECT_PUSH, so each
 success also proves the lane admitted it. Real git against a scratch bare remote; fake `pi`,
@@ -39,6 +40,7 @@ from test_role_binding_lane import BASHES, GIT_ENV, HOOK
 
 ROOT = Path(__file__).resolve().parents[2]
 ROLES_SH = ROOT / "scripts" / "roles.sh"
+TRACKERS = ROOT / "docs" / "agents" / "trackers"  # SETUP § 2 deletes it: absent = bootstrapped
 RUNTIMES = ("pi", "claude", "codex")
 TOOLS = "git awk sed grep diff mktemp tail wc tr cat rm cut head sort dirname basename".split()
 
@@ -943,7 +945,15 @@ def test_a_linked_worktree_ignores_its_own_content_file_when_the_primary_has_non
 
 @pytest.mark.smoke
 def test_the_shipped_content_roles_conf_parses_and_matches_the_code_roles(r: Roles) -> None:
-    """Copied beside a roles.sh outside any repository, so the shipped bytes are what is read."""
+    """Copied beside a roles.sh outside any repository, so the shipped bytes are what is read.
+
+    The template (docs/agents/trackers/ still present) must ship the file with the default
+    bindings. A bootstrapped repo may have deleted it or rebound any role (SETUP § 1.9): it
+    then only has to parse (R2-F2).
+    """
+    template = TRACKERS.is_dir()
+    if not template and not (ROOT / CONTENT_PATH).exists():
+        pytest.skip("bootstrapped repo without the optional config/content-roles.conf")
     shipped = r.tmp / "shipped"
     (shipped / "scripts").mkdir(parents=True)
     (shipped / "config").mkdir()
@@ -957,7 +967,8 @@ def test_the_shipped_content_roles_conf_parses_and_matches_the_code_roles(r: Rol
     for content_role, code_role in (("DECK_WRITER", "IMPLEMENTER"), ("DECK_REVIEWER", "REVIEWER")):
         assert content_role in listing.stdout
         got = r.run("get", content_role, script=script)
-        want = r.run("get", code_role, "--effort", "high", script=script)
         assert got.returncode == 0, got.stderr
-        assert want.returncode == 0, want.stderr
-        assert got.stdout == want.stdout and got.stdout.split()[-1].endswith("high"), got.stdout
+        if template:
+            want = r.run("get", code_role, "--effort", "high", script=script)
+            assert want.returncode == 0, want.stderr
+            assert got.stdout == want.stdout and got.stdout.split()[-1].endswith("high")

@@ -389,18 +389,63 @@ echo "uv shim"
 """
 
 
+def rebind(path: Path, **keys: str) -> None:
+    """Change the quoted value of existing KEY="value" lines, as SETUP § 1.9 does."""
+    text = path.read_text()
+    for key, value in keys.items():
+        text, n = re.subn(rf'^{key}="[^"]*"$', f'{key}="{value}"', text, flags=re.M)
+        assert n == 1, f"{path}: {key} is not a single KEY=\"value\" line"
+    path.write_text(text)
+
+
+def keep_defaults(scratch: Path) -> None:
+    """SETUP § 1.9 with every default kept."""
+
+
+def delete_content_roles(scratch: Path) -> None:
+    """SETUP § 1.9: no slide decks, so `config/content-roles.conf` is deleted."""
+    (scratch / "config/content-roles.conf").unlink()
+
+
+def rebind_a_code_and_a_content_role(scratch: Path) -> None:
+    """SETUP § 1.9: IMPLEMENTER and DECK_WRITER moved to another runtime, model and effort."""
+    rebind(
+        scratch / "config/agent-roles.conf",
+        IMPLEMENTER_RUNTIME="claude",
+        IMPLEMENTER_MODEL="claude-other-model",
+        IMPLEMENTER_EFFORT_HIGH="xhigh",
+    )
+    rebind(
+        scratch / "config/content-roles.conf",
+        DECK_WRITER_RUNTIME="codex",
+        DECK_WRITER_MODEL="other-writer-model",
+        DECK_WRITER_EFFORT="medium",
+    )
+
+
+# Each documented SETUP § 1.9 choice a bootstrapped project may make; a template-only
+# assertion that breaks under one of them fails the matching case (R1-F16, R2-F2).
+SETUP_CHOICES = {
+    "defaults-kept": keep_defaults,
+    "content-roles-deleted": delete_content_roles,
+    "roles-rebound": rebind_a_code_and_a_content_role,
+}
+
+
 @pytest.mark.smoke
+@pytest.mark.parametrize("choice", SETUP_CHOICES)
 @pytest.mark.parametrize(
     ("tracker", "values"), [("github", GITHUB_VALUES), ("linear", LINEAR_VALUES)]
 )
 def test_smoke_is_green_after_setup_selection(
-    tracker: str, values: dict[str, str], tmp_path: Path
+    tracker: str, values: dict[str, str], choice: str, tmp_path: Path
 ) -> None:
     """The bootstrapped project's smoke E2E passes ("the smoke test must pass", SETUP § 4)."""
     scratch = copy_tree(tmp_path / "bootstrap")
     done = run_bash(setup_block("rm -r docs/agents/trackers"), scratch, {"TRACKER": tracker})
     assert done.returncode == 0, done.stderr
     fill_markers(scratch, values)
+    SETUP_CHOICES[choice](scratch)
     sweep = run_bash(setup_block("grep -rnE", "--exclude=SETUP.md"), scratch, {})
     assert (sweep.returncode, sweep.stdout) == (1, ""), sweep.stdout
     for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "bootstrap"]):
