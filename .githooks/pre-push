@@ -158,7 +158,7 @@ check_commit() {
         check_blob_pair "$osha" "$nsha" "$path in commit $short" || return 1
     done 4< "$TMP/raw"
     if [ "$2" = true ]; then
-        sig="$(git log -1 --format=%G? "$c" </dev/null)"
+        sig="$(git log -1 --no-show-signature --format=%G? "$c" </dev/null)"
         [ "$sig" = G ] ||
             { lane_refuse signed-commits "commit $short is not validly signed (%G? = '$sig'; roles.requireSignedCommits is true)"; return 1; }
     fi

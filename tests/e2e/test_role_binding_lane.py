@@ -474,6 +474,14 @@ def test_unsigned_commit_is_refused_with_the_switch_on_and_admitted_with_it_off(
 
 
 @pytest.mark.smoke
+def test_an_unsigned_commit_is_refused_with_show_signature_on(s: Scratch) -> None:
+    s.commit(value_only())
+    s.git("config", "log.showSignature", "true")
+    s.git("config", "roles.requireSignedCommits", "true")
+    s.refused(s.push("HEAD:dev"), "signed-commits")
+
+
+@pytest.mark.smoke
 def test_an_invalid_switch_value_fails_closed(s: Scratch) -> None:
     s.commit(value_only())
     s.git("config", "roles.requireSignedCommits", "maybe")
@@ -482,7 +490,9 @@ def test_an_invalid_switch_value_fails_closed(s: Scratch) -> None:
 
 @pytest.mark.smoke
 @pytest.mark.skipif(shutil.which("ssh-keygen") is None, reason="needs ssh-keygen for ssh signing")
-def test_a_signed_commit_is_admitted_with_the_switch_on(s: Scratch) -> None:
+@pytest.mark.parametrize("show_signature", ["false", "true"])
+def test_a_signed_commit_is_admitted_with_the_switch_on(s: Scratch, show_signature: str) -> None:
+    s.git("config", "log.showSignature", show_signature)
     key = s.tmp / "key"
     subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(key)], check=True)
     (s.tmp / "signers").write_text(f"t@example.com {(s.tmp / 'key.pub').read_text()}")
