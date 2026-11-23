@@ -29,6 +29,7 @@
 # Exit codes: 0 ok; 1 a check failed or `set` refused; 2 usage error; 3 `get`: role unavailable.
 
 set -euo pipefail
+set -f   # no pathname expansion: every unquoted word list below is a fixed, plain list
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -219,10 +220,12 @@ check_role() {
 all_roles() { echo "$CODE_ROLES $(content_roles | tr '\n' ' ')"; }
 
 cmd_check() {
-    local role roles failed=0
-    roles="${*:-$(all_roles)}"
-    for role in $roles; do role_kind "$role" >/dev/null || usage "unknown role '$role' (known: $(all_roles))"; done
-    for role in $roles; do check_role "$role" || failed=1; done
+    local role failed=0
+    # No argument: every role. Otherwise iterate "$@" as given, so an empty or multi-word argument
+    # reaches role_kind whole and is refused.
+    [ "$#" -gt 0 ] || set -- $(all_roles)
+    for role in "$@"; do role_kind "$role" >/dev/null || usage "unknown role '$role' (known: $(all_roles))"; done
+    for role in "$@"; do check_role "$role" || failed=1; done
     [ "$failed" -eq 0 ] || exit 1
 }
 
