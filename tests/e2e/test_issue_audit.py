@@ -397,16 +397,22 @@ def test_usage_errors_exit_2_without_calling_gh(a: Audit, args: list[str]) -> No
 # --- the documented rules the audit and the design gate rest on ----------------------------------
 
 HOME_HEADINGS = ["Issue homes", "Issue home audit", "UI/UX design gate"]
+TRACKERS = ROOT / "docs" / "agents" / "trackers"
+# SETUP § 2 deletes the bindings and installs one as issue-tracker.md (all a bootstrapped repo has).
+BINDINGS = (
+    {name: TRACKERS / f"{name}.md" for name in ("linear", "github")}
+    if TRACKERS.is_dir()
+    else {"installed": ROOT / "docs" / "agents" / "issue-tracker.md"}
+)
 
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("heading", HOME_HEADINGS)
-@pytest.mark.parametrize("binding", ["linear", "github"])
+@pytest.mark.parametrize("binding", list(BINDINGS))
 def test_each_tracker_binding_documents_homes_audit_and_design_gate(
     binding: str, heading: str
 ) -> None:
-    text = (ROOT / "docs" / "agents" / "trackers" / f"{binding}.md").read_text()
-    assert f"\n## {heading}\n" in text
+    assert f"\n## {heading}\n" in BINDINGS[binding].read_text()
 
 
 @pytest.mark.smoke

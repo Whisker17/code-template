@@ -52,15 +52,17 @@ case "$MODE" in
     *) SUITES=("${PY[*]} -m pytest tests/e2e" "${PY[*]} -m pytest tests/test_agent_dispatch.py") ;;
 esac
 
-INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh scripts/roles.sh scripts/cut-release.sh scripts/issue-audit.sh config/content-roles.conf .githooks/pre-push
+INPUTS=(pyproject.toml main.py scripts/agent-dispatch.sh scripts/roles.sh scripts/cut-release.sh scripts/issue-audit.sh config/agent-roles.conf config/content-roles.conf
+    .githooks/pre-push
     SETUP.md docs/agents/issue-tracker.md docs/agents/trackers/linear.md docs/agents/trackers/github.md
     TEMPLATE_VERSION AGENTS.md .claude/skills/implement/SKILL.md .claude/skills/orchestrate/SKILL.md
     .claude/skills/to-tickets/SKILL.md .claude/skills/to-spec/SKILL.md docs/agents/runtime.md docs/GIT_WORKFLOW.md)
 while IFS= read -r f; do INPUTS+=("$f"); done < <(find tests/e2e -type f ! -path '*/__pycache__/*' | sort)
-[ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py config/agent-roles.conf scripts/e2e.sh scripts/wt-gc.sh)
+[ "$MODE" = smoke ] || INPUTS+=(tests/test_agent_dispatch.py scripts/e2e.sh scripts/wt-gc.sh)
 # <<< E2E SUITES <<<
 
 SHA="$(git rev-parse HEAD)"
+TREE="$(git rev-parse 'HEAD^{tree}')"   # pins the tracked content the suites ran against
 if [ -z "$(git status --porcelain --untracked-files=no)" ]; then CLEAN=true; else CLEAN=false; fi
 [ "$MODE" != release ] || [ "$CLEAN" = true ] || die "refusing release E2E: tracked tree is dirty"
 
@@ -87,7 +89,7 @@ for cmd in "${SUITES[@]}"; do
 done
 FINISHED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-python3 - "$OUT" "$SHA" "$MODE" "$VERSION" "$STARTED" "$FINISHED" "$CLEAN" "${INPUTS[@]}" <<'PYEOF'
+python3 - "$OUT" "$SHA" "$MODE" "$VERSION" "$STARTED" "$FINISHED" "$CLEAN" "$TREE" "${INPUTS[@]}" <<'PYEOF'
 import hashlib
 import json
 import platform
@@ -96,7 +98,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-out, sha, mode, version, started, finished, clean, *inputs = sys.argv[1:]
+out, sha, mode, version, started, finished, clean, tree, *inputs = sys.argv[1:]
 out_dir = Path(out)
 
 
@@ -114,6 +116,7 @@ for line in (out_dir / "commands.tsv").read_text().splitlines():
 
 manifest = {
     "sha": sha,
+    "tree": tree,
     "mode": mode,
     "version": version,
     "started_at": started,

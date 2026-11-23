@@ -54,9 +54,15 @@ def test_runtime_names_roles_check_not_the_static_probe() -> None:
 
 @pytest.mark.smoke
 def test_every_github_gh_issue_call_carries_repo() -> None:
-    for n, line in enumerate(read("docs/agents/trackers/github.md").splitlines(), 1):
+    # After SETUP § 2 the bindings are gone and the installed one is issue-tracker.md.
+    rel = "docs/agents/trackers/github.md"
+    if not (ROOT / rel).exists():
+        rel = "docs/agents/issue-tracker.md"
+        if not read(rel).startswith("# Issue tracker: GitHub"):
+            pytest.skip("the installed tracker is not GitHub")
+    for n, line in enumerate(read(rel).splitlines(), 1):
         for call in re.findall(r"`(gh issue [^`]*)`", line):
-            assert "--repo" in call, f"github.md:{n}: {call}"
+            assert "--repo" in call, f"{rel}:{n}: {call}"
 
 
 @pytest.mark.smoke
