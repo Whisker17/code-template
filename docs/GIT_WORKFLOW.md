@@ -481,13 +481,14 @@ For the human-gated rows, a human reviewer:
 ### Post-merge cleanup (mandatory, in order)
 
 Drive these from the **primary clone**. Never commit **feature work** to
-`dev` or a `release/v*` integration branch directly. Four direct pushes are the
+`dev` or a `release/v*` integration branch directly. Five direct pushes are the
 documented exceptions. Three are merges that are not PR-gated and push with
 `ALLOW_DIRECT_PUSH=1`: fan-out of `dev` into live integration branches
 (step 5), the hotfix backmerge of `main` into `dev`
 ([§ Hotfix](#hotfix) step 7), and the first push of a freshly cut
 `release/v*` ([§ Releasing to `main`](#releasing-to-main)). The fourth, the owner's
-[role-binding lane](#role-binding-lane), needs no override: the hook admits it.
+[role-binding lane](#role-binding-lane), and the fifth, the
+[agent release cut](#agent-release-cut), need no override: the hook admits them.
 
 0. **If the PR is CONFLICTING** (the resolved base advanced since you
    branched): inside the feature worktree,
@@ -938,8 +939,8 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 
 - Developing an issue in the primary clone's working tree (always use a worktree)
 - Pushing feature commits directly to `main` / `dev` (always via PR). The only direct
-  pushes are the three `ALLOW_DIRECT_PUSH=1` merges and the owner's
-  [role-binding lane](#role-binding-lane)
+  pushes are five: the three `ALLOW_DIRECT_PUSH=1` merges, the owner's
+  [role-binding lane](#role-binding-lane) and the [agent release cut](#agent-release-cut)
 - Force-pushing to `main` / `dev`
 - Long-lived giant branches with no PR
 - Bundling multiple unrelated issues in one PR

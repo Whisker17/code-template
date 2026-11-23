@@ -164,8 +164,9 @@ only on branches that carry it. Merge strategy is per lane: squash into `dev` an
 holds unshippable work → hotfix lane (`docs/GIT_WORKFLOW.md` § Choosing a promotion lane).
 A role-binding commit on `dev` needs no immediate fan-out; it rides the next one.
 Never commit feature work directly to `main`, `dev` or a `release/v*`; the only direct
-pushes are four: three merges (fan-out, hotfix backmerge, first push of a new cut) with
-`ALLOW_DIRECT_PUSH=1`, and the owner's role-binding lane, which the hook admits without it.
+pushes are five: three merges (fan-out, hotfix backmerge, first push of a new cut) with
+`ALLOW_DIRECT_PUSH=1`, the owner's role-binding lane, and the agent release cut, which the
+hook admits without it.
 
 ## Agent runtime
 

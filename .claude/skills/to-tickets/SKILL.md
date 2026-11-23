@@ -74,8 +74,7 @@ Follow `docs/agents/issue-tracker.md` § Publishing ticket sets:
 
 - One writer, one issue at a time, blockers first; record each created id. On a timeout, query by title before retrying. Wire the relations only after all issues exist. Never report an unconfirmed write as done (`docs/agents/issue-tracker.md` § Publishing ticket sets).
 - Wire **native** `blocked-by` relations and mirror them in the body.
-- If the source is an existing issue, create each ticket as its native sub-issue (Linear:
-  `parentId`; GitHub: the sub-issues API; mechanics in `docs/agents/issue-tracker.md`, using the
+- If the source is an existing issue, create each ticket as its native sub-issue (Linear: `parentId`; GitHub: the sub-issues API; mechanics in `docs/agents/issue-tracker.md`, using the
   discovered schema). Re-read each ticket to confirm the parent and blocking relations; a
   parent link is not a blocking edge.
 - Use the template skeleton, including `## Execution`.
@@ -85,5 +84,5 @@ Follow `docs/agents/issue-tracker.md` § Publishing ticket sets:
 - A ticket that changes a user interface or interaction is published `todo` + `needs-design` without `ready-for-agent`, with a `## Design Draft v1` (`docs/agents/issue-tracker.md` § UI/UX design gate); `/implement` and `/orchestrate` refuse it until the owner approves.
 - Reach the tracker through the access path in `docs/agents/issue-tracker.md`. If no tracker is reachable, report that publishing is blocked. Do not write local files as a stand-in.
 
-Do NOT close or otherwise modify the source parent issue; setting `parentId` on the new
-child tickets is required.
+Do NOT close or otherwise modify the source parent issue; linking the new child tickets as
+its native sub-issues is required (`docs/agents/issue-tracker.md`).
