@@ -1,13 +1,14 @@
 # Issue Template
 
-The canonical shape for every Linear issue in this workspace. Copy the skeleton in
+The canonical shape for every tracker issue (Linear or GitHub Issues) in this repo. Copy the skeleton in
 [§ Copy-paste skeleton](#copy-paste-skeleton), fill each section, and delete the inline
 guidance (the `> _italic_` hints). **All issue content is written in English.**
 
 It pairs with:
 
-- `docs/agents/issue-tracker.md` — how to read/write Linear via the MCP tools.
-- `docs/agents/triage-labels.md` — the five canonical triage labels.
+- `docs/agents/issue-tracker.md` — how to read/write the tracker (Linear or GitHub Issues).
+- `docs/agents/triage-labels.md` — the five canonical triage labels (and, on GitHub, the state
+  labels).
 - `docs/DESIGN.md` — the PRD these issues implement; every issue should trace back to a
   section there.
 
@@ -42,12 +43,14 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 [X.Y.Z] [Component] <imperative, specific description>
 ```
 
-- **`[X.Y.Z]`** — the **version / Release** this issue ships in (e.g. `[0.2.0]`).
+- **`[X.Y.Z]`** — the **version / Release** this issue ships in (e.g. `[0.2.0]`; on GitHub
+  the milestone `v0.2.0`).
   This is the **primary git-routing signal** (`docs/GIT_WORKFLOW.md` § Resolving
   the base branch). An implementing agent that cannot read a version prefix, or
   whose prefix disagrees with the tracker's release field, **refuses to start**.
   Omit the prefix only for repo-wide governance (the carve-out file list in
-  that section) — those issues target `dev` and have no version. A `hotfix`-labelled
+  that section) — those issues target `dev` and have no version — and for `backlog` and
+  project-defined non-code homes (see [§ Issue homes](#issue-homes)). A `hotfix`-labelled
   issue keeps a prefix too, using the four-segment hotfix version (`[0.1.5.1]`, per
   `docs/GIT_WORKFLOW.md` § Version axis), but it routes off the **label**, not the
   prefix.
@@ -56,23 +59,35 @@ can open it cold and know *what* to build, *why*, *where* in the codebase, what 
 - **Description** — short, specific, and imperative. Prefer
   `Add request dedup to the scheduler` over `Scheduler stuff`.
 
-Do **not** put the milestone in the title. Milestone and Release can both render
+In Linear, do **not** put the milestone in the title. Milestone and Release can both render
 as `0.2.0` and have already disagreed in practice (title `[0.2.0]`, milestone
-`0.3.0`). Milestone is a tracker field; the title prefix is the version.
+`0.3.0`). Milestone is a tracker field; the title prefix is the version. On GitHub the
+milestone `vX.Y.Z` is the Release and must match the prefix.
 
 ---
 
-## Metadata (set on the Linear issue, not in the body)
+## Issue homes
+
+Every open issue has exactly one home: a **version** (`[X.Y.Z]` prefix plus Release / milestone),
+`governance` (label; carve-out files only; no version), `backlog` (label; the owner agreed; the
+reason is in the body) or a project-defined non-code type such as `topic`. Pick it when you write
+the ticket; the rules, the audit and how to register a custom home are in
+`docs/agents/issue-tracker.md` § Issue homes. A follow-up defaults to the next open version; a
+carve-out-only one is `governance`.
+
+---
+
+## Metadata (set on the tracker issue, not in the body)
 
 | Field         | How to set it                                                            |
 | ------------- | ------------------------------------------------------------------------ |
-| **Project**   | `{{LINEAR_PROJECT}}` (always — the only project in scope for this repo). |
-| **Release**   | Required-by-convention for every version-scoped issue. Must match the `[X.Y.Z]` title prefix. **A missing Release blocks implementation** — the agent refuses rather than guessing `dev`. This table is a prompt, not a gate: trackers generally do not enforce non-empty fields; enforcement is the refusal in `docs/GIT_WORKFLOW.md`. Omit only for repo-wide governance (no version prefix). |
-| **Milestone** | Capability stage (`docs/DESIGN.md` §6). Orthogonal to Release. Do not use it to express the version or to route git. |
+| **Project**   | Linear: the project `docs/agents/issue-tracker.md` names (always — the only project in scope for this repo). GitHub: the repository; no field. |
+| **Release**   | Linear: the Release field. GitHub: the milestone `vX.Y.Z`. Required-by-convention for every version-scoped issue. Must match the `[X.Y.Z]` title prefix. **A missing Release blocks implementation** — the agent refuses rather than guessing `dev`. This table is a prompt, not a gate: trackers generally do not enforce non-empty fields; enforcement is the refusal in `docs/GIT_WORKFLOW.md`. Omit only for repo-wide governance, `backlog` and non-code homes (no version prefix). |
+| **Milestone** | Linear: capability stage (`docs/DESIGN.md` §6), orthogonal to Release; do not use it to express the version or to route git. GitHub: the Release itself (above); a capability stage is a label. |
 | **Priority**  | `Urgent` / `High` / `Medium` / `Low` — see the table below.             |
-| **Labels**    | Triage role from `triage-labels.md` + any type label (`bug`, `feature`, `research`, `chore`, `hotfix`). `hotfix` changes the git base branch — see `triage-labels.md`. |
+| **Labels**    | Triage role from `triage-labels.md` + any type label (`bug`, `feature`, `research`, `chore`, `hotfix`) + the home label (`governance`, `backlog`) where it applies. `hotfix` changes the git base branch — see `triage-labels.md`. `needs-design` marks a UI/UX issue that has no approved design yet (below). |
 | **Assignee**  | Set when claimed; leave empty in the backlog.                           |
-| **Relations** | Use Linear's native `blocks` / `blocked-by` relations.                  |
+| **Relations** | Use the tracker's native dependencies (Linear `blocks` / `blocked-by`; GitHub issue dependencies). |
 
 ### Priority guide
 
@@ -98,9 +113,9 @@ Background a newcomer needs: the relevant `docs/DESIGN.md` section, prior resear
 or an external platform fact. Skip if the Objective is fully self-explanatory.
 
 ### `## Blocked By` / `## Blocks`
-Dependency graph. List issue identifiers (e.g. `{{ISSUE_PREFIX}}-42`) and a short
-reason. Prefer to *also* wire these as Linear `blocked-by` / `blocks` relations; the
-body lines are the human-readable mirror. Use `None (entry point)` when there are no
+Dependency graph. List issue identifiers (e.g. Linear `WHI-42`, GitHub `#42`) and a short
+reason. Prefer to *also* wire these as native dependencies (`docs/agents/issue-tracker.md`
+§ Operations); the body lines are the human-readable mirror. Use `None (entry point)` when there are no
 blockers.
 
 ### `## Execution`
@@ -128,6 +143,16 @@ section is completed before it is scheduled — no guessing.
 Required when the issue tests a component in isolation (parsing, money, concurrency, a
 security boundary): list every way it could fail **before** the plan, then write the code.
 Otherwise drop it: after-the-fact unit tests are not allowed (`AGENTS.md` § Testing).
+
+### `## Design Draft vN` / `## Design` _(UI/UX issues)_
+Required before implementation when the issue changes a user interface or interaction
+(`docs/agents/issue-tracker.md` § UI/UX design gate). While the design is open the issue has the
+label `needs-design`, no `ready-for-agent`, and a `## Design Draft v1` section: Markdown / ASCII
+wireframes, a state matrix, breakpoints and accessibility notes. Each revision adds a
+`## Design Draft v2`, `v3`… section. When the owner approves in the session, `## Design` holds the
+approved design,
+`needs-design` is removed and `ready-for-agent` added. An issue with a `## Design Draft` and no
+`## Design` is not implemented. Drop these sections for work with no UI/UX change.
 
 ### `## Implementation`
 The plan of record. Numbered steps, each anchored to a concrete file/module. Include:
@@ -183,6 +208,10 @@ Bare URLs are fine.
 > _(optional) Required when testing a component in isolation: every way it could fail,
 > listed before the plan._
 
+## Design Draft v1
+> _(UI/UX issues only, with label `needs-design`) Wireframes, state matrix, breakpoints,
+> accessibility. Replaced by `## Design` once the owner approves._
+
 ## Implementation
 > _Numbered, file-anchored plan. Signatures, config keys, schema, code blocks._
 1.
@@ -210,7 +239,8 @@ Bare URLs are fine.
 ## Appendix: Milestones
 
 Issues carry an `[X.Y.Z]` title prefix because they belong to a **Release**
-(the git-routing signal). They may also sit under a **milestone** (capability
+(the git-routing signal). In Linear they may also sit under a **milestone** (capability
 stage), per `docs/DESIGN.md` §6 — that is a tracker field, not the title tag.
 Keep the milestone list in §6; if Releases change, that is the tracker
-Release entity, not this file.
+Release entity, not this file. On GitHub the milestone `vX.Y.Z` is the Release, so a
+capability stage is expressed with a label instead.

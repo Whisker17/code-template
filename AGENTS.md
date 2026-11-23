@@ -76,12 +76,17 @@ issue fits not exactly one row, **stop and surface it**.
 | Version-scoped work | everything else | `origin/release/v{version}` | `release/v{version}` |
 | Quick-fix | the owner says "just change it" **and names an existing `dev` or `release/v*`** | `origin/<named base>` | `<named base>` |
 
-- **Version:** the title prefix `[X.Y.Z]`, cross-checked against the tracker Release. If
-  they disagree, or one is missing while the other exists, refuse. Never infer it from a
-  milestone. Before the first production tag the version-scoped row resolves to `dev`
+- **Version:** the title prefix `[X.Y.Z]`, cross-checked against the tracker Release (GitHub: the
+  milestone `vX.Y.Z`). If they disagree, or one is missing while the other exists, refuse.
+  Never infer it from a Linear milestone (a capability stage) or a similar title. Before the
+  first production tag the version-scoped row resolves to `dev`
   (bootstrap — a resolved value, not a default).
-- A missing `origin/release/v{version}` is a refusal. Cutting an integration branch is the
-  owner's deliberate act, never a side effect of picking up a ticket.
+- A missing `origin/release/v{version}` is cut only by `scripts/cut-release.sh`, from the trunk
+  tip, when four conditions hold (title prefix and milestone/Release agree, the milestone/Release
+  is open, tag `vX.Y.Z` absent, `X.Y.Z` above the highest three-segment `v*` tag; no tag at all
+  refuses): the `/orchestrate` preflight or a standalone `/implement` does it
+  (`docs/GIT_WORKFLOW.md` § Agent release cut); an orchestrated implementer never does. Otherwise
+  stop and surface it.
 - **Quick-fix** (`docs/GIT_WORKFLOW.md` § Quick-fix lane): no named base (or `main`, or a
   missing branch) → refuse, never a default. Branch `quick/<short-topic>`, PR type
   `quick-fix` quoting the owner's request. Waives only the tracker issue/Release binding and
@@ -110,6 +115,7 @@ issue fits not exactly one row, **stop and surface it**.
 | Bootstrap issue → `dev` (no production tag yet), under `/orchestrate` | Same | Yes — first release still gets a full release review |
 | Governance → `dev`; standalone `/implement` | Required project checks, relevant checks and full E2E, plus one independent PR review passed on the final commit | Yes, then fan out (unless a human row below applies) |
 | Quick-fix → owner-named `dev` / `release/v*` | Required project checks and smoke E2E on the final HEAD; PR quotes the owner's request; no high-risk or mandatory human path in the diff | Yes — no independent review; never into `main` |
+| Role-binding commit: value-only change of a binding line in `config/agent-roles.conf` / `config/content-roles.conf` → trunk (`dev`) | None at push time: `.githooks/pre-push` is the gate (`docs/GIT_WORKFLOW.md` § Role binding lane); verified at bind time, first dispatch and release start | No agent merge: the owner pushes it from the primary clone — no PR, review, E2E or fan-out |
 | Touches **{{HIGH_RISK_PATHS}}** | Its lane's checks + documented verification | **No** — human; a quick-fix is never eligible |
 | Touches a **mandatory human path**: `.github/workflows/**` or the project's release/promotion scripts (`{{RELEASE_SCRIPT_PATHS}}`), in every lane, whatever `{{HIGH_RISK_PATHS}}` says | Its lane's checks + documented verification | **No** — human; no waiver, no `--through tag` scope and no quick-fix request covers it |
 | `hotfix/*` → `main` | Required and relevant checks, full E2E, independent review | **No** — human |
@@ -119,7 +125,7 @@ issue fits not exactly one row, **stop and surface it**.
 `/orchestrate <Release> --through tag` is the owner's declared scope for one Release: after a
 passed release review and release E2E on the current SHA it covers only the merge into `dev`,
 the temporary cut and its merge into `main`, the annotated tag, the GitHub Release with the
-release E2E artifact, the tracker Release `commitSha`/stage and post-merge cleanup. It never
+release E2E artifact, the tracker's Release → Released step and post-merge cleanup. It never
 covers a mandatory human path (`.github/workflows/**`, the project's release/promotion
 scripts) or a high-risk path, running those scripts, deploy or a hotfix. The recorded scope
 and the rule are `docs/GIT_WORKFLOW.md` § 4 *Unattended promotion*.
@@ -143,7 +149,7 @@ ends. Layout: `../<repo>-wt/<issue-id>`; verification worktrees
 - `scripts/wt-gc.sh` reports leftovers (dry run) and, with `--apply`, removes only items it
   can prove `done`. It never deletes active or unknown-state work: `gh` errors, a branch equal
   to its base, a missing upstream, a locked, conflicted or (unless `--select`ed) dirty
-  worktree are all preserved. Linear `Done` **and** `Canceled` require the worktree removed.
+  worktree are all preserved. Tracker `Done` **and** `Canceled` require the worktree removed.
   Details: `docs/GIT_WORKFLOW.md` § Post-merge cleanup.
 
 ### After a merge
@@ -156,9 +162,11 @@ only on branches that carry it. Merge strategy is per lane: squash into `dev` an
 `main` equals production; deploy **only from a tag**. Promote via a temporary
 `release/vX.Y.Z` cut from `dev`, never a `dev` → `main` PR. Production broken while `dev`
 holds unshippable work → hotfix lane (`docs/GIT_WORKFLOW.md` § Choosing a promotion lane).
+A role-binding commit on `dev` needs no immediate fan-out; it rides the next one.
 Never commit feature work directly to `main`, `dev` or a `release/v*`; the only direct
-pushes are the three documented merges (fan-out, hotfix backmerge, first push of a new
-cut), with `ALLOW_DIRECT_PUSH=1`.
+pushes are five: three merges (fan-out, hotfix backmerge, first push of a new cut) with
+`ALLOW_DIRECT_PUSH=1`, the owner's role-binding lane, and the agent release cut, which the
+hook admits without it.
 
 ## Agent runtime
 
@@ -174,7 +182,13 @@ model ID and effort values; `scripts/agent-dispatch.sh` dispatches them. Contrac
 - A failed or missing role fails closed — no model substitution, no lower effort — except
   the declared `REVIEWER_FALLBACK` under `docs/agents/runtime.md` § Reviewer unavailable
   (only after a real `REVIEWER` call failed; never for exit 2/3).
-- When a model generation turns over, edit `config/agent-roles.conf` and nothing else.
+- `scripts/roles.sh list|check|get|set` reads, verifies and changes the bindings, including
+  the optional content roles `DECK_WRITER` / `DECK_REVIEWER` in `config/content-roles.conf`
+  (the `slide` skill names them); `set` is the role-binding lane's one-commit push.
+- When a model generation turns over, edit `config/agent-roles.conf` and nothing else. A
+  value-only change is the owner's role-binding commit straight to the trunk, admitted by
+  `.githooks/pre-push`; every worktree's dispatcher reads the primary clone's conf
+  (`docs/GIT_WORKFLOW.md` § Role binding lane).
 
 ## Agent skills
 
@@ -196,11 +210,16 @@ Skills live in `.claude/skills/<name>/SKILL.md`. Runtimes that auto-discover the
 
 ### Issue tracker
 
-Issues and specs live in **Linear** (project `{{LINEAR_PROJECT}}`, team `{{LINEAR_TEAM}}`),
-reached via MCP, else the GraphQL API with `LINEAR_API_KEY`. No tracker reachable = stop
-and report; never a shadow tracker. Issue shape: `docs/agents/issue-template.md` (English).
+Issues and specs live in the tracker this project chose at setup — **Linear** or
+**GitHub Issues** — bound by `docs/agents/issue-tracker.md`, the one file that says how to
+reach it. No tracker reachable = stop and report; never a shadow tracker. Issue shape:
+`docs/agents/issue-template.md` (English).
 Access, release binding and state ownership: `docs/agents/issue-tracker.md`. Triage labels:
 `docs/agents/triage-labels.md`.
+Every open issue has exactly one home (version, `governance`, `backlog` or a project-defined
+non-code type); on GitHub `scripts/issue-audit.sh --repo o/r` checks it. A UI/UX issue is
+refused until the owner approves its `## Design` (the `needs-design` gate); both rules are in
+`docs/agents/issue-tracker.md` (§ Issue homes, § UI/UX design gate).
 
 ### Domain docs
 
@@ -217,4 +236,4 @@ When work here surfaces a **template-layer** improvement — a workflow rule tha
 skill or config fix, a doc convention worth standardizing — tell the user so they can port
 it back (and record it in the template's `CHANGELOG.md`). Project-specific learnings stay.
 
-Template version: 0.3.0
+Template version: 0.3.1

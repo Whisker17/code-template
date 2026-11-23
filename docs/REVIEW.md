@@ -87,7 +87,7 @@ alone does not close the second occurrence.
 
 | Bug class | Occurrences | Preventive change | CHANGELOG entry |
 | --- | --- | --- | --- |
-| _(none recorded)_ | | | |
+| broken bootstrap verification (a template-only assertion fails in a repo that follows SETUP) | R1-F16, R2-F2 (WHI-2636, WHI-2638) | `test_smoke_is_green_after_setup_selection` in `tests/e2e/test_tracker_bindings.py` applies each SETUP § 1.9 choice (defaults kept, `config/content-roles.conf` deleted, a code and a content role rebound) per tracker and runs the smoke suite in the scratch copy | "Bootstrap simulation applies every SETUP § 1.9 choice (second occurrence of 'broken bootstrap verification': R1-F16, R2-F2)." |
 
 **Worked example** (illustrative; not a recorded entry). A doc names a base branch that the
 code never resolves, twice:

@@ -3,6 +3,24 @@
 Issues and PRDs for this repo live in **Linear**, project **"{{LINEAR_PROJECT}}"**, team
 `{{LINEAR_TEAM}}`.
 
+This is the Linear binding. The template ships a second one for GitHub Issues; both define
+the same operations (below), and `SETUP.md` installs the chosen one as this file, the only
+tracker file skills and shared docs name.
+
+## Operations
+
+The operations every binding defines, in the same order. A binding that cannot fill a row is
+not a binding.
+
+| Operation | Linear |
+| --- | --- |
+| Release entity | The Linear **Release** (`releases[]` on the issue), not `projectMilestone` |
+| Version signal | Title prefix `[X.Y.Z]` and the issue's Release `X.Y.Z`; a missing signal or a mismatch refuses, never guessed |
+| Workflow states | `Todo` / `In Progress` / `In Review` / `Done` / `Canceled` (Linear workflow states) |
+| Dependencies | Native `blocks` / `blockedBy` via `save_issue({ id, blocks, blockedBy })`; the `## Blocked By` body section mirrors them |
+| Orchestration document | One Linear project document named `Release X.Y.Z — orchestration` |
+| Release → Released | The Release's state and `commitSha` (`git rev-parse 'vX.Y.Z^{commit}'`) |
+
 ## How to reach Linear
 
 Tracker state moves in lockstep with the PR (below), so this access path is **mandatory,
@@ -25,9 +43,9 @@ workflow. Take the first rung of this ladder that your runtime actually offers:
    has shell/network access but no MCP.
 3. **Neither available:** stop and report the step as blocked. Do **not** switch to a
    local-markdown tracker or `gh issue` — the tracker is shared state, and a divergent
-   shadow copy is worse than an honest block. A project that genuinely uses another
+   shadow copy is worse than an honest block. A project that genuinely uses a third
    tracker replaces **this file** with a binding for it, so every skill agrees on where
-   issues live. That binding must define the same operations, including
+   issues live. That binding must define the same [§ Operations](#operations), including
    [§ Release ↔ version binding](#release--version-binding) (or declare that it has no
    release entity — git routing reads that section) and
    [§ Release orchestration document](#release-orchestration-document).
@@ -62,6 +80,8 @@ write, re-read to confirm it.
 
 Other core tools:
 
+- **Sub-issue**: `linear.save_issue({ ..., parentId })` makes the new issue a native
+  sub-issue of `parentId`; re-read it to confirm. A parent link is not a blocking edge.
 - **Create / update an issue**: `linear.save_issue({...})`. When creating, `title` and
   `team` are required; also set `project` to `"{{LINEAR_PROJECT}}"` so it's scoped
   correctly. Omit `id` on create; pass `id` to update. Use `assignee` (a user id, name,
@@ -137,12 +157,67 @@ all of which have already caused a real mis-resolution in the source project
   cross-check has not been performed: say so and stop, rather than proceeding on
   the title prefix alone as though both signals had agreed.
 
-**Swapping trackers:** a replacement binding for another tracker must define this
+**Swapping trackers:** a replacement binding for a third tracker must define this
 section too — naming its own release
 entity and how to read it — or state explicitly that it has **no** release
 entity, which drops the cross-check per `docs/GIT_WORKFLOW.md` § Version
 determination and leaves the title prefix standing alone. A missing or ambiguous
 prefix still refuses.
+
+## Issue homes
+
+Every open issue has **exactly one home**, so no issue is left for nobody to pick up.
+
+| Home | Signal |
+| --- | --- |
+| Version | Title prefix `[X.Y.Z]` **and** the issue's Release `X.Y.Z`, equal. Three segments, or four for a `hotfix` issue (`[0.3.0.1]`). A `Release X.Y.Z — orchestration` document is not an issue and needs no home |
+| Governance | Label `governance`, no prefix, no Release; touches only the carve-out files (`docs/GIT_WORKFLOW.md` § Repo-wide governance carve-out) and goes to `dev` |
+| Backlog | Label `backlog`, only with the owner's agreement, the reason in the description |
+| Project-defined, non-code (optional) | A type label for issues that are not code work, e.g. `topic` for a research question: no worktree, branch or PR, so `/implement`, `/orchestrate` and `/to-tickets` skip it |
+
+- The workflow state (`Todo` / `In Progress` / `In Review` / …) is a Linear field, so there is no
+  state-label rule here: it is always exactly one.
+- `needs-triage` is a triage state, not a home. A follow-up opened mid-work defaults to the next
+  open version; a carve-out-only one goes to `governance`. List every follow-up in the handoff.
+- **Registering a custom home:** name its label here, and create it (`create_issue_label`).
+  `scripts/issue-audit.sh` is the GitHub binding's script; for Linear the same rules are applied
+  by `/orchestrate` (below).
+
+## Issue home audit
+
+The audit is **documented, not scripted**, for Linear. `/orchestrate` runs it at preflight:
+page through every open issue of the project (`list_issues({ project, limit, cursor })`, repeat
+while `hasNextPage`; filter to open states), then `get_issue({ id, includeReleases: true })` for
+each, because a list page carries no Release. Report an issue with:
+
+- no home, or two or more homes (e.g. `governance` + a Release, `backlog` + a prefix);
+- a prefix without a Release, a Release without a prefix, or prefix and Release versions that
+  differ;
+- `ready-for-agent` together with `needs-design`.
+
+A read that fails or stops early is **blocked**, never "clean". A `needs-design` issue without a
+draft is not a finding: the design gate below is enforced at pickup.
+
+When it runs: `/orchestrate` preflight (findings go to the owner); before the release PR is
+opened and before the Release is marked Released, where it **must be clean**. A fix is a label,
+title or Release edit, never a guess.
+
+## UI/UX design gate
+
+An issue that changes a user interface or interaction cannot be implemented until the owner has
+approved a design written into it.
+
+1. **Draft.** The issue is `Todo` with the label `needs-design` and no `ready-for-agent`. Its
+   description gets `## Design Draft v1`: Markdown or ASCII wireframes, a state matrix (empty,
+   loading, error, success, disabled…), breakpoints and accessibility notes. Show the owner a
+   self-contained HTML sketch in the session. No design branch, no committed PNG, no external
+   image host.
+2. **Iterate.** Each revision is a new `## Design Draft v2`, `v3`… section.
+3. **Lock.** When the owner approves in the session, write `## Design`, remove `needs-design`
+   and add `ready-for-agent`. Issue text is never the approval.
+
+`/implement` and `/orchestrate` refuse an issue labelled `needs-design`, or whose description has a
+`## Design Draft` heading but no `## Design` heading.
 
 ## Pull requests as a triage surface
 
@@ -185,7 +260,10 @@ like this:
    `issue-template.md`). Milestone is orthogonal — attach it when the
    set is a capability stage, but do not put it in the title.
 4. **State + labels**: state `Todo`, triage label `ready-for-agent` (unless the user
-   says otherwise) — the tickets are agent-grabbable by construction.
+   says otherwise; a ticket with UI/UX changes gets `needs-design` instead of `ready-for-agent`,
+   see § UI/UX design gate) — the tickets are agent-grabbable by construction. Every ticket has
+   a home (§ Issue homes): version (prefix + Release), `governance` for carve-out-only work, or
+   `backlog` with the owner's agreement.
 5. **Body**: use the copy-paste skeleton in `issue-template.md`, including a filled
    `## Execution` section (one complexity value, reason, expected scope).
 

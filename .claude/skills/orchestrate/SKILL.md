@@ -20,7 +20,7 @@ chat, not a running process, not an agent saying "done".
 - **Unattended.** Decide everything the rules allow; do not stop to ask. Append each
   decision (what, and the rule or evidence behind it) to the `Decision log` section of the
   orchestration document as you make it.
-- **Stop only for:** a missing release branch; an unmet external dependency; the review
+- **Stop only for:** a missing release branch that § 1 step 2 may not cut; an unmet external dependency; the review
   budget exhausted (§ 3); a mandatory human path (below); a failed real dispatch with no
   usable fallback (`docs/agents/runtime.md` § Reviewer unavailable); a human-gated step
   outside the declared authorization scope. Stopping means: record the blocker in the
@@ -38,24 +38,38 @@ chat, not a running process, not an agent saying "done".
 
 ## 1. Preflight
 
-Input is an explicit Linear project **and** Release. Never guess from a similar title or a
-milestone.
+Input is an explicit tracker scope (the Linear project, or the GitHub repository) **and**
+Release. Never guess from a similar title. "Release" below is the tracker's release entity:
+a Linear Release or a GitHub milestone `vX.Y.Z` (`docs/agents/issue-tracker.md` § Operations).
 
 0. If this session is not running `ORCHESTRATOR_MODEL`, warn once, record the actual model
    and effort in the orchestration document and continue. A config file cannot switch a
    running session, and this is no reason to start another one.
 1. Read the whole Release (`docs/agents/issue-tracker.md` § Reading a release — every page).
 2. For each issue, check its version signals and resolve the Git base
-   (`docs/GIT_WORKFLOW.md` § Resolving the base branch). A missing version branch is a
-   blocker to report, never something to create.
+   (`docs/GIT_WORKFLOW.md` § Resolving the base branch). If `origin/release/vX.Y.Z` is
+   missing, cut it yourself, here, before any dispatch (implementers never cut), only when
+   all four conditions of `docs/GIT_WORKFLOW.md` § Agent release cut hold: (1) the title
+   prefix and the Release agree (you checked them in this step), (2) the Release is open
+   (Linear: read it via MCP and pass `--linear-release-open <release-url>`; GitHub:
+   `--github-repo o/r`), (3) tag `vX.Y.Z` absent and (4) `X.Y.Z` above the highest
+   three-segment `v*` tag, both checked by `scripts/cut-release.sh`. Record its
+   `cut release/vX.Y.Z at <sha> (agent)` line in the orchestration document's `Decision log`
+   (and on the milestone for GitHub). If any condition fails or the script refuses, that is
+   the blocker to report; the Release itself stays owner-created.
 3. Check for external blockers, dependency cycles, unmeetable acceptance criteria and
    missing `## Execution` data. A cycle or a version-signal mismatch blocks those issues;
-   fix the issue set, do not pick an order anyway.
+   fix the issue set, do not pick an order anyway. **Design gate:** an issue labelled
+   `needs-design`, or whose body has a `## Design Draft` heading but no `## Design` heading, is
+   refused: it is not scheduled or dispatched, and the owner is told its design needs approval
+   (`docs/agents/issue-tracker.md` § UI/UX design gate). Issues whose home is a project-defined
+   non-code type (e.g. `topic`) are skipped.
 4. Mark issues that hit high-risk paths, and pairs whose expected scopes share a module,
    schema, public interface or generated file.
-5. Check GitHub, Linear and the project's real verification commands. Make one real
+5. Check GitHub, the tracker and the project's real verification commands. Make one real
    `DISPATCH-OK` call per role you will use (`docs/agents/runtime.md` § Preflight) — once
-   per release, again only after a config change or an auth/call error.
+   per release, again only after an auth/call error. A role-binding change is verified in
+   tiers instead (`docs/GIT_WORKFLOW.md` § Role binding lane).
 6. Run `scripts/wt-gc.sh` (dry run) and clear leftovers before dispatching anything
    (`docs/GIT_WORKFLOW.md` § No worktree left behind). `--apply` removes only what it proves
    `done`; pass `--select <path>` only for a worktree you can attribute to a finished or
@@ -69,6 +83,11 @@ milestone.
    progress, establish B from the record — never from today's HEAD, which would hide work
    already merged. If you cannot establish it, recover that evidence first. Issues already
    running under an older contract finish or pause with a handoff before the switch.
+8. Run the issue home audit (`docs/agents/issue-tracker.md` § Issue home audit): GitHub
+   `scripts/issue-audit.sh --repo o/r`, Linear the same rules by hand with `list_issues` and
+   `get_issue`. Report the findings to the owner and record them in the `Decision log`; a read
+   that fails (exit 2) is a blocker, never "clean". The audit must be **clean** before you open
+   the release PR (§ 3 "Release ready") and before the milestone / Release is closed (§ 4 step 5).
 
 A canceled blocker is not a satisfied one: an issue that needed its output needs an
 explicit substitute or a corrected relation. An unfinished external blocker blocks only
@@ -89,8 +108,8 @@ the issues that depend on it.
   where you can watch it to completion. Never an unobserved background process. Effort comes from the
   issue's `Complexity`. You may raise it to `high` on evidence — record why on the issue —
   never lower it. The prompt is [`implementer-prompt.md`](implementer-prompt.md), filled.
-- Tracker: `In Progress` when you dispatch, `In Review` as soon as you see the PR, `Done`
-  after merge and cleanup. Waiting for a human or failed verification stays `In Review`
+- Tracker (`docs/agents/issue-tracker.md` § Issue lifecycle ↔ Git): `In Progress` when you
+  dispatch, `In Review` as soon as you see the PR, `Done` after merge and cleanup. Waiting for a human or failed verification stays `In Review`
   with the reason. On resume, reconcile against real PR states before doing anything.
 - You own the worktrees of the implementers you dispatch (layout `../<repo>-wt/<issue-id>`,
   verification `../<repo>-wt/<issue-id>-verify`). `Done` after merge and `Canceled`
@@ -206,7 +225,8 @@ scope error, not a pass.
   `REVIEWER_FALLBACK` is eligible only as it defines. If no review can be completed, the
   release is blocked and never advances.
 
-Release ready = the evidence is bound to H. Before declaring it, run `scripts/wt-gc.sh`:
+Release ready = the evidence is bound to H. Before declaring it, run the home audit (step 8 of
+§ 1; it must be clean) and `scripts/wt-gc.sh`:
 no worktree of this release (implementers', verification, review) may remain, and every
 leftover is removed or named with path and reason in the orchestration document. Without
 `--through tag`, stop here: merging the integration branch into `dev`, the cut, the `main`
@@ -235,7 +255,8 @@ log`:
    `dev` (merge commit). A difference is a new resolution or code change that needs
    verification and review, so stop.
 3. Cut the temporary `release/vX.Y.Z` from `dev` (deleting the merged integration branch of
-   that name first) and commit nothing on it. Open its PR into `main` at once. Require
+   that name first) and commit nothing on it. Run the home audit (§ 1 step 8): it must be clean
+   before the PR into `main` is opened. Open that PR at once. Require
    `git diff --quiet <H> origin/release/vX.Y.Z` and
    `git diff --quiet <H> "$(git merge-tree --write-tree origin/main origin/release/vX.Y.Z)"`
    to pass, `ci-ok` green (or the `CI unavailable` evidence) and MERGEABLE/CLEAN, then merge
@@ -244,8 +265,10 @@ log`:
 4. After `git fetch origin`, `git diff --quiet <H> origin/main` must pass; if it fails, do not
    tag, stop. Then the annotated tag `vX.Y.Z`, pushed; GitHub Release for it with English
    notes and the release E2E artifact of H attached (`artifacts/e2e/release/<X.Y.Z>/<H>/`).
-5. Linear Release: `commitSha` = `git rev-parse 'vX.Y.Z^{commit}'` and the released stage;
-   re-read to confirm.
+5. The tracker's Release → Released step (`docs/agents/issue-tracker.md` § Operations; Linear:
+   `commitSha` = `git rev-parse 'vX.Y.Z^{commit}'` and the released stage; GitHub: close the
+   milestone, description `released at <sha>`, and close the orchestration issue); the home audit
+   must be clean first; re-read to confirm.
 6. Post-merge cleanup and fan-out (`docs/GIT_WORKFLOW.md` § Post-merge cleanup), then
    `scripts/wt-gc.sh`: remove or name every leftover with path and reason in the
    orchestration document, and report them.

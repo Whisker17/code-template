@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Refuse direct pushes to protected branches.
+# Refuse direct pushes to protected branches -- except the role-binding lane.
 #
 # This is a local stand-in for GitHub branch protection, which is unavailable on
 # private repos on the Free plan (the API returns 403 "Upgrade to GitHub Pro or make
@@ -18,8 +18,52 @@
 # clone: fan-out of origin/dev into a live release/v* integration branch, the
 # hotfix backmerge of main into dev, and the first push of a freshly cut
 # release/v* (no PR exists yet). See docs/GIT_WORKFLOW.md.
+#
+# The fourth direct push needs no override: the role-binding lane (docs/GIT_WORKFLOW.md
+# § Role binding lane). This hook is its trust boundary, because the lane files are
+# sourced by shell. A push is admitted only if ALL hold, else it is refused with the rule
+# named as `[rule]`:
+#   single-ref          one ref is pushed
+#   existing-ref-only   that ref already exists on the remote and is not deleted
+#   trunk-only          it is the trunk: `dev` if the remote has one, `main` if the
+#                       remote is reachable and has none; unreachable -> refuse
+#   fast-forward-only   remote_sha is an ancestor of local_sha
+#   no-merge-commits    every commit in remote_sha..local_sha has one parent
+#   per commit, vs its parent:
+#     lane-paths        only LANE_FILES change, as status M (no add/delete/rename/copy)
+#     file-mode         mode 100644 before and after (no symlink, no chmod)
+#     nul-byte, format  no NUL, no CR, non-empty, ends with a newline
+#     key-set           same line count; each changed line keeps its key and position
+#     binding-lines     each changed line, old and new, matches BINDING_LINE
+#     value-chars       no `$`, backtick or backslash in a changed line
+#   signed-commits      with `git config roles.requireSignedCommits true`, every
+#                       commit has `%G?` = G (default off)
+# Blobs are compared as temp files, never captured with $(...), so NULs and trailing
+# newlines survive. bash 3.2+ and git only.
+#
+# The fifth direct push is the agent release cut (docs/GIT_WORKFLOW.md § Agent release cut):
+# the creation of `release/vX.Y.Z` at the remote trunk tip, which scripts/cut-release.sh
+# performs. It is the ONLY thing admitted under `release/v*` without the override; updates,
+# deletes, multi-ref pushes and any other sha stay refused. A push is admitted only if ALL
+# hold, else it is refused with the rule named as `[rule]`:
+#   single-ref       one ref is pushed
+#   release-name     the ref is exactly refs/heads/release/vX.Y.Z (three numeric segments, no
+#                    leading zeros)
+#   new-ref-only     remote_sha is zero and `git ls-remote --heads` lists no such branch
+#   ls-remote        both `ls-remote` calls succeed
+#   trunk-tip        local_sha is the remote trunk tip (`dev` if the remote has one, else `main`)
+#   tag-absent       tag vX.Y.Z is absent from `git ls-remote --tags`
+#   version-greater  X.Y.Z is numerically greater than the highest three-segment v* tag there,
+#                    and at least one such tag exists (none = bootstrap, which resolves to dev)
+# shortcut: the tag verdict awk is duplicated in scripts/cut-release.sh; the hook stays
+# self-contained because it is a trust boundary. Change both or neither (test_cut_release.py).
 
 set -euo pipefail
+
+# The role-binding lane: the only files a value-only push may change.
+LANE_FILES=(config/agent-roles.conf config/content-roles.conf)
+RELEASE_REF='^refs/heads/release/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+BINDING_LINE='^[A-Z][A-Z_]*_(RUNTIME|MODEL|EFFORT|EFFORT_MEDIUM|EFFORT_HIGH)="[^"]*"$'
 
 is_protected() {
     case "$1" in
@@ -28,19 +72,229 @@ is_protected() {
     esac
 }
 
-BLOCKED=0
+is_zero_sha() {
+    case "$1" in
+        *[!0]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
 
-# stdin: <local-ref> <local-sha> <remote-ref> <remote-sha>, one line per ref pushed
-while read -r _local_ref _local_sha remote_ref _remote_sha; do
+lane_refuse() { echo "pre-push: role-binding lane refused [$1]: $2" >&2; return 1; }
+
+in_lane_files() {
+    local f
+    for f in "${LANE_FILES[@]}"; do
+        [ "$f" = "$1" ] && return 0
+    done
+    return 1
+}
+
+# $1 file, $2 label. Byte-level checks on a blob that was written to a temp file.
+check_blob_bytes() {
+    local size
+    size="$(LC_ALL=C wc -c < "$1")"
+    [ "$size" -gt 0 ] || { lane_refuse format "$2 is empty"; return 1; }
+    [ "$(LC_ALL=C tr -d '\000' < "$1" | wc -c)" -eq "$size" ] ||
+        { lane_refuse nul-byte "$2 contains a NUL byte"; return 1; }
+    [ "$(LC_ALL=C tr -d '\r' < "$1" | wc -c)" -eq "$size" ] ||
+        { lane_refuse format "$2 contains a carriage return (CRLF)"; return 1; }
+    [ "$(tail -c 1 "$1" | wc -l)" -eq 1 ] ||
+        { lane_refuse format "$2 does not end with a newline"; return 1; }
+}
+
+# $1 old blob sha, $2 new blob sha, $3 label. Every changed line must be a binding line
+# in the same position with the same key and a plain value.
+check_blob_pair() {
+    local out rule msg
+    git cat-file blob "$1" > "$TMP/old" </dev/null || { lane_refuse binding-lines "cannot read $3 before the commit"; return 1; }
+    git cat-file blob "$2" > "$TMP/new" </dev/null || { lane_refuse binding-lines "cannot read $3 after the commit"; return 1; }
+    check_blob_bytes "$TMP/old" "$3 before the commit" || return 1
+    check_blob_bytes "$TMP/new" "$3 after the commit" || return 1
+    [ "$(wc -l < "$TMP/old")" -eq "$(wc -l < "$TMP/new")" ] ||
+        { lane_refuse key-set "$3 changes its line count (a key, comment or blank line was added or removed)"; return 1; }
+    # shortcut: an awk that reads both files line by line; fine for a few dozen lines.
+    out="$(LC_ALL=C awk -v rx="$BINDING_LINE" '
+        function key(l) { return substr(l, 1, index(l, "=") - 1) }
+        function unsafe(l) { return index(l, "$") || index(l, "`") || index(l, "\\") }
+        NR == FNR { old[FNR] = $0; next }
+        $0 == old[FNR] { next }
+        {
+            if (old[FNR] !~ rx || $0 !~ rx) {
+                print "binding-lines\tline " FNR " is not a KEY=\"value\" binding line before and after the change (comment, blank or format edit)"
+                exit 1
+            }
+            if (key(old[FNR]) != key($0)) {
+                print "key-set\tline " FNR " changes its key (a key was renamed or the order changed)"
+                exit 1
+            }
+            if (unsafe(old[FNR]) || unsafe($0)) {
+                print "value-chars\tline " FNR " has a value containing $, a backtick or a backslash"
+                exit 1
+            }
+        }' "$TMP/old" "$TMP/new" </dev/null)" || {
+        [ -n "$out" ] || out=$'binding-lines\tcould not compare the lines'
+        rule="${out%%$'\t'*}"; msg="${out#*$'\t'}"
+        lane_refuse "$rule" "$3: $msg"
+        return 1
+    }
+}
+
+# $1 commit sha, $2 "true" when signatures are required.
+check_commit() {
+    local c="$1" short omode nmode osha nsha status meta path sig
+    short="${1:0:12}"
+    git diff-tree -r --no-renames --raw "$c^" "$c" > "$TMP/raw" 2>/dev/null </dev/null ||
+        { lane_refuse lane-paths "commit $short has no parent to compare against"; return 1; }
+    [ -s "$TMP/raw" ] || { lane_refuse lane-paths "commit $short changes no lane file"; return 1; }
+    while IFS=$'\t' read -r meta path <&4; do
+        read -r omode nmode osha nsha status <<< "${meta#:}"
+        in_lane_files "$path" ||
+            { lane_refuse lane-paths "commit $short touches $path, outside the lane files (${LANE_FILES[*]})"; return 1; }
+        case "$status" in
+            A|D|R|C) lane_refuse lane-paths "commit $short adds, deletes, renames or copies $path"; return 1 ;;
+        esac
+        [ "$status" = M ] && [ "$omode" = 100644 ] && [ "$nmode" = 100644 ] ||
+            { lane_refuse file-mode "commit $short changes the mode or type of $path (must stay a regular 100644 file)"; return 1; }
+        check_blob_pair "$osha" "$nsha" "$path in commit $short" || return 1
+    done 4< "$TMP/raw"
+    if [ "$2" = true ]; then
+        sig="$(git log -1 --no-show-signature --format=%G? "$c" </dev/null)"
+        [ "$sig" = G ] ||
+            { lane_refuse signed-commits "commit $short is not validly signed (%G? = '$sig'; roles.requireSignedCommits is true)"; return 1; }
+    fi
+}
+
+# Admit a single-ref, fast-forward, value-only push to the trunk. $1 is the remote name.
+# Prints the violated rule and returns 1 otherwise.
+lane_push() {
+    local remote="$1" rc trunk signed c count
+    [ "$NREFS" -eq 1 ] ||
+        { lane_refuse single-ref "the lane admits exactly one pushed ref, got $NREFS"; return 1; }
+    if is_zero_sha "$REMOTE_SHA" || is_zero_sha "$LOCAL_SHA"; then
+        lane_refuse existing-ref-only "the lane never creates or deletes a ref"; return 1
+    fi
+    rc=0
+    git ls-remote --exit-code --heads "$remote" refs/heads/dev >/dev/null 2>&1 </dev/null || rc=$?
+    case "$rc" in
+        0) trunk=dev ;;
+        2) trunk=main ;;
+        *) lane_refuse trunk-only "cannot determine the trunk of '$remote' (ls-remote exit $rc)"; return 1 ;;
+    esac
+    [ "$REMOTE_REF" = "refs/heads/$trunk" ] ||
+        { lane_refuse trunk-only "$REMOTE_REF is not the trunk (refs/heads/$trunk)"; return 1; }
+    rc=0
+    git merge-base --is-ancestor "$REMOTE_SHA" "$LOCAL_SHA" </dev/null 2>/dev/null || rc=$?
+    [ "$rc" -eq 0 ] ||
+        { lane_refuse fast-forward-only "$LOCAL_SHA is not a fast-forward of the remote $trunk $REMOTE_SHA"; return 1; }
+
+    TMP="$(mktemp -d)" || { lane_refuse lane-paths "cannot create a temp dir"; return 1; }
+    trap 'rm -rf "$TMP"' EXIT
+    git rev-list --min-parents=2 "$REMOTE_SHA..$LOCAL_SHA" > "$TMP/merges" </dev/null ||
+        { lane_refuse no-merge-commits "cannot list the pushed commits"; return 1; }
+    [ ! -s "$TMP/merges" ] || { lane_refuse no-merge-commits "the push contains a merge commit"; return 1; }
+    git rev-list --reverse "$REMOTE_SHA..$LOCAL_SHA" > "$TMP/commits" </dev/null ||
+        { lane_refuse no-merge-commits "cannot list the pushed commits"; return 1; }
+    [ -s "$TMP/commits" ] || { lane_refuse fast-forward-only "the push carries no new commit"; return 1; }
+
+    rc=0
+    signed="$(git config --bool roles.requireSignedCommits </dev/null 2>/dev/null)" || rc=$?
+    case "$rc" in
+        0) ;;
+        1) signed=false ;;
+        *) lane_refuse signed-commits "roles.requireSignedCommits is not a boolean"; return 1 ;;
+    esac
+
+    count=0
+    while read -r c <&3; do
+        check_commit "$c" "$signed" || return 1
+        count=$((count + 1))
+    done 3< "$TMP/commits"
+    echo "pre-push: role-binding lane: $count value-only binding commit(s) to $trunk admitted (no ALLOW_DIRECT_PUSH needed)." >&2
+}
+
+cut_refuse() { echo "pre-push: release cut refused [$1]: $2" >&2; return 1; }
+
+# Admit the single-ref creation of release/vX.Y.Z at the remote trunk tip. $1 is the remote name.
+cut_push() {
+    local remote="$1" heads tags tip verdict
+    [ "$NREFS" -eq 1 ] ||
+        { cut_refuse single-ref "a release cut is exactly one pushed ref, got $NREFS"; return 1; }
+    [[ "$REMOTE_REF" =~ $RELEASE_REF ]] ||
+        { cut_refuse release-name "$REMOTE_REF is not refs/heads/release/vX.Y.Z"; return 1; }
+    local version="${REMOTE_REF#refs/heads/release/v}"
+    if is_zero_sha "$LOCAL_SHA" || ! is_zero_sha "$REMOTE_SHA"; then
+        cut_refuse new-ref-only "only the creation of a new $REMOTE_REF is admitted, not an update or a delete"; return 1
+    fi
+    heads="$(git ls-remote --heads "$remote" </dev/null 2>/dev/null)" ||
+        { cut_refuse ls-remote "cannot list the heads of '$remote'"; return 1; }
+    tags="$(git ls-remote --tags "$remote" </dev/null 2>/dev/null)" ||
+        { cut_refuse ls-remote "cannot list the tags of '$remote'"; return 1; }
+    [ -z "$(printf '%s\n' "$heads" | awk -v r="$REMOTE_REF" '$2 == r')" ] ||
+        { cut_refuse new-ref-only "$REMOTE_REF already exists on '$remote'"; return 1; }
+    tip="$(printf '%s\n' "$heads" | awk '$2 == "refs/heads/dev" { print $1; exit }')"
+    [ -n "$tip" ] || tip="$(printf '%s\n' "$heads" | awk '$2 == "refs/heads/main" { print $1; exit }')"
+    [ -n "$tip" ] || { cut_refuse trunk-tip "'$remote' has neither dev nor main"; return 1; }
+    [ "$LOCAL_SHA" = "$tip" ] ||
+        { cut_refuse trunk-tip "$LOCAL_SHA is not the remote trunk tip $tip"; return 1; }
+    verdict="$(printf '%s\n' "$tags" | LC_ALL=C awk -v want="$version" '
+        function cmp(a, b,   i, x, y) {
+            split(a, x, "."); split(b, y, ".")
+            for (i = 1; i <= 3; i++) {
+                if (length(x[i]) != length(y[i])) return length(x[i]) > length(y[i]) ? 1 : -1
+                if ((x[i] "") != (y[i] "")) return (x[i] "") > (y[i] "") ? 1 : -1
+            }
+            return 0
+        }
+        $2 ~ /^refs\/tags\/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/ {
+            v = substr($2, 12); n++
+            if (v == want) found = 1
+            if (n == 1 || cmp(v, max) > 0) max = v
+        }
+        END {
+            if (!n) print "none"
+            else if (found) print "exists"
+            else if (cmp(want, max) <= 0) print "notgreater " max
+            else print "ok"
+        }')" || { cut_refuse ls-remote "cannot read the tag list"; return 1; }
+    case "$verdict" in
+        ok) ;;
+        exists) cut_refuse tag-absent "tag v$version already exists on '$remote'"; return 1 ;;
+        none) cut_refuse version-greater "'$remote' has no three-segment v* tag (bootstrap resolves to dev)"; return 1 ;;
+        *) cut_refuse version-greater "$version is not greater than the highest tag v${verdict#notgreater }"; return 1 ;;
+    esac
+    echo "pre-push: release cut: release/v$version at the trunk tip $tip admitted (no ALLOW_DIRECT_PUSH needed)." >&2
+}
+
+BLOCKED=0
+NREFS=0
+TRUNKISH=0
+LOCAL_SHA=""; REMOTE_REF=""; REMOTE_SHA=""
+REFUSED=""
+
+# stdin: <local-ref> <local-sha> <remote-ref> <remote-sha>, one line per ref pushed.
+# All lines are read before anything is decided: the lane admits only a single-ref push.
+while read -r _local_ref local_sha remote_ref remote_sha; do
     [ -z "${remote_ref:-}" ] && continue
+    NREFS=$((NREFS + 1))
+    LOCAL_SHA="$local_sha"; REMOTE_REF="$remote_ref"; REMOTE_SHA="$remote_sha"
     branch="${remote_ref#refs/heads/}"
+    case "$branch" in main|dev) TRUNKISH=1 ;; esac
     if is_protected "$branch"; then
-        echo "pre-push: refusing to push directly to '$branch'." >&2
+        REFUSED="${REFUSED}pre-push: refusing to push directly to '$branch'."$'\n'
         BLOCKED=1
     fi
 done
 
+if [ "$BLOCKED" -eq 1 ] && [ "${ALLOW_DIRECT_PUSH:-}" != "1" ]; then
+    if [ "$TRUNKISH" -eq 1 ]; then
+        lane_push "${1:-}" && exit 0
+    else
+        cut_push "${1:-}" && exit 0
+    fi
+fi
+
 if [ "$BLOCKED" -eq 1 ]; then
+    printf '%s' "$REFUSED" >&2
     if [ "${ALLOW_DIRECT_PUSH:-}" = "1" ]; then
         echo "pre-push: ALLOW_DIRECT_PUSH=1 set -- proceeding anyway." >&2
         exit 0
@@ -53,6 +307,16 @@ if [ "$BLOCKED" -eq 1 ]; then
     - fan-out of origin/dev into a live release/v* integration branch
     - the hotfix backmerge of main into dev
     - the first push of a freshly cut release/v* (no PR exists yet)
+
+  A fourth direct push needs no override: the role-binding lane. A single-ref
+  fast-forward push to the trunk whose commits change only binding values in
+  config/agent-roles.conf / config/content-roles.conf is admitted; the lines
+  above `[rule]` say which rule your push broke
+  (docs/GIT_WORKFLOW.md § Role binding lane).
+
+  A fifth needs no override either: the agent release cut. scripts/cut-release.sh
+  creates release/vX.Y.Z at the remote trunk tip when its four conditions hold;
+  the hook admits only that creation (docs/GIT_WORKFLOW.md § Agent release cut).
 
   Everything else goes through one of these four lanes:
 
