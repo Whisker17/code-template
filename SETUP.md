@@ -105,6 +105,10 @@ cp "docs/agents/trackers/$TRACKER.md" docs/agents/issue-tracker.md
 rm -r docs/agents/trackers
 ```
 
+The template-only tracker-binding tests skip themselves once `docs/agents/trackers/` is gone, so
+the §4 smoke run stays green; the tests that name the tracker file read the installed
+`docs/agents/issue-tracker.md` instead.
+
 Every placeholder marker in the repo must be gone when you finish. Replace across all
 tracked files:
 
