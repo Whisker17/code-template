@@ -810,6 +810,19 @@ def test_check_and_set_refuse_a_multi_word_or_empty_role(r: Roles) -> None:
 
 
 @pytest.mark.smoke
+@pytest.mark.parametrize(
+    "arg", ["ORCHESTRATOR IMPLEMENTER", "DECK_WRITER DECK_REVIEWER", " ", "", "*"]
+)
+def test_check_refuses_an_empty_multi_word_or_glob_role_argument(r: Roles, arg: str) -> None:
+    (r.clone / "IMPLEMENTER").write_text("a glob of * would match this\n")
+    result = r.run("check", arg)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "unknown role" in result.stderr and result.stdout == "", result.stdout + result.stderr
+    assert r.calls() == []
+    assert r.run("check", "IMPLEMENTER", arg).returncode == 2
+
+
+@pytest.mark.smoke
 def test_check_an_unknown_role_is_a_usage_error(r: Roles) -> None:
     assert r.run("check", "NOSUCH").returncode == 2
     assert r.run("bogus").returncode == 2
