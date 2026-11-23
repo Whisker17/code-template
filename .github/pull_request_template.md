@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- What this PR does and why. Tracker issue: {{ISSUE_PREFIX}}-NNN. Quick-fix: no issue;
+<!-- What this PR does and why. Tracker issue: Linear `WHI-NNN` / GitHub `#NNN`. Quick-fix: no issue;
 quote the owner's request verbatim instead. -->
 
 ## Base branch
@@ -18,7 +18,7 @@ Resolved from `docs/GIT_WORKFLOW.md` § Resolving the base branch.
       never squash — **human gate** (a hotfix always; a cut only without `--through tag`)
 
 <!-- Signals this base was derived from: title prefix `[X.Y.Z]` / tracker
-Release / hotfix label / carve-out paths. Targeting `main`? If
+Release (GitHub: milestone) / hotfix label / carve-out paths. Targeting `main`? If
 `git log origin/main..origin/dev` holds anything that must not ship yet,
 this has to be a hotfix off `origin/main`, not a release. -->
 

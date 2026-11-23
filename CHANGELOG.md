@@ -8,7 +8,172 @@ Format: date — what changed and why — which project surfaced it (if any).
 
 ---
 
-## Unreleased — v0.3.0
+## Unreleased
+
+- **Sync Matt Pocock skills without overwriting template contracts (WHI-2275).** Reviewed
+  all six vendored skills and their agent metadata against `mattpocock/skills` commit
+  `4ae2317ddb22b046e26455e4f9c9b3aaaf62212d`. `grill-me` folds in upstream's dependency-aware
+  interview rounds; `implement` confirms a fetched ticket's title; `to-spec` uses glossary,
+  ADR and highest-seam context; `to-tickets` creates confirmed native sub-issues;
+  `code-review` explicitly assesses Standards and Spec, discovers standards files and
+  carries a suggestion-only Fowler smell baseline; `handoff` resolves portable temp paths
+  and reports the saved path. E2E-first testing, Linear publishing safeguards, stable spec
+  sections, verified independent review and durable next-session handoffs remain in force.
+  `.claude/skills/UPSTREAM.md` records the sync revision and retained overrides;
+  `skills-lock.json` stays the historical installer baseline, not a local-content checksum.
+  Downstream projects can merge these six skill files and the provenance record directly.
+
+## v0.3.1
+
+- **Bootstrap simulation applies every SETUP § 1.9 choice (WHI-2638).** Second occurrence of the
+  bug class "broken bootstrap verification": R1-F16 (WHI-2636, the smoke suite red after SETUP
+  §2) and R2-F2 (the shipped-`content-roles.conf` test in `tests/e2e/test_roles_cli.py` raised
+  `FileNotFoundError` when the optional file was deleted and `AssertionError` when a `DECK_*`,
+  `IMPLEMENTER` or `REVIEWER` role was rebound, although SETUP §4 promises a green smoke test).
+  Fix: in the template (`docs/agents/trackers/` present) the test asserts as before; downstream it
+  skips an absent file and, when present, only requires `roles.sh list` and `get DECK_WRITER` /
+  `DECK_REVIEWER` to exit 0. Preventive check: `test_smoke_is_green_after_setup_selection` now runs
+  per tracker × choice (defaults kept, `config/content-roles.conf` deleted, a code and a content role
+  rebound) and runs the smoke suite in each scratch copy, so any template-only assertion that breaks
+  under a documented SETUP choice fails there. Recorded in `docs/REVIEW.md` § Recurring bug classes.
+  Downstream projects can merge the two test files directly.
+
+- **Issue homes with `scripts/issue-audit.sh`, a UI/UX design gate, and the 0.3.1 version bump (WHI-2631).**
+  Every open issue has exactly one home: version (`[X.Y.Z]` prefix, three or four segments, plus
+  milestone / Release `vX.Y.Z`, equal), `governance` (carve-out files only, no version), `backlog`
+  (owner's agreement) or a project-defined non-code type (`topic` is the shipped example); an
+  `orchestration` issue is homed by its milestone alone. New read-only `scripts/issue-audit.sh
+  --repo o/r` (`gh api --paginate --slurp`, `python3` stdlib, bash 3.2-safe) prints `#<n> <reason>`
+  for: no home, two or more homes, prefix without milestone or milestone without prefix, prefix
+  version ≠ milestone version, a work issue without exactly one of `todo` / `in-progress` /
+  `in-review`, and `ready-for-agent` together with `needs-design`. It ignores pull requests and
+  closed issues, exempts `orchestration` issues and `NON_CODE_HOMES` from the state-label rule, and
+  exits 0 clean / 1 findings / 2 `gh` failed or JSON invalid (never "clean"). The Linear binding
+  has the same rules, applied by `/orchestrate` with `list_issues` + `get_issue` (documented, not
+  scripted). `/orchestrate` runs the audit at preflight (findings go to the owner) and it must be
+  clean before the release PR and before the milestone / Release is closed. UI/UX design gate
+  (both trackers): `todo` + `needs-design` with `## Design Draft v1` (ASCII wireframes, state
+  matrix, breakpoints, accessibility; a self-contained HTML sketch in the session, no design
+  branch, no PNG, no image host) → `v2`, `v3` → owner approval writes `## Design`, removes
+  `needs-design`, adds `ready-for-agent`; `/implement` and `/orchestrate` refuse an issue labelled
+  `needs-design` or with a `## Design Draft` and no `## Design`. A `needs-design` issue without a
+  draft is not an audit finding (the gate is enforced at pickup, so it cannot deadlock a release).
+  `/to-tickets` assigns a home to every ticket (follow-ups default to the next open version,
+  carve-out-only → `governance`, listed in the handoff). `docs/agents/trackers/{github,linear}.md`
+  and the byte-identical `docs/agents/issue-tracker.md` gain § Issue homes, § Issue home audit and
+  § UI/UX design gate; `triage-labels.md` documents the state, home, `orchestration`,
+  `needs-design` and `hotfix` labels; `issue-template.md` gains `## Design Draft vN` / `## Design`
+  and the homes; `docs/GIT_WORKFLOW.md` puts the design gate in the lifecycle and adds
+  `docs/agents/trackers/`, `config/content-roles.conf`, `scripts/roles.sh`,
+  `scripts/cut-release.sh` and `scripts/issue-audit.sh` to the carve-out list. Version bump:
+  `TEMPLATE_VERSION` and `AGENTS.md` are `0.3.1`. E2E: `tests/e2e/test_issue_audit.py` (smoke;
+  fake `gh` emitting two-page `--slurp` output, one fixture per failure mode, a clean fixture
+  with a PR / orchestration / custom-home / four-segment hotfix issue, `gh` failure and invalid
+  JSON → exit 2); `scripts/issue-audit.sh` and the files it reads join the `scripts/e2e.sh`
+  inputs. Downstream migration: merge `scripts/issue-audit.sh`, the docs and skills above and the
+  test file, add `scripts/issue-audit.sh` to your e2e inputs, create the `governance`, `backlog`,
+  `orchestration`, `needs-design` labels (GitHub) and set `NON_CODE_HOMES` to your own non-code
+  homes (clear `topic` if you have none), then run the audit once and fix what it lists. For
+  research-hub the change is naming alignment only: it already runs these rules (#145, #164).
+
+- **Optional GitHub Issues tracker binding; tracker-neutral SETUP, skills and docs (WHI-2630).**
+  The tracker is now a choice made at SETUP: Linear or GitHub Issues. New
+  `docs/agents/trackers/linear.md` (the old `issue-tracker.md` plus a `## Operations` table) and
+  `docs/agents/trackers/github.md` define the same six operations (Release entity, Version
+  signal, Workflow states, Dependencies, Orchestration document, Release → Released) and the
+  same cross-referenced sections. GitHub: milestone `vX.Y.Z` is the Release (title prefix +
+  milestone, refuse on mismatch), state labels `todo` / `in-progress` / `in-review` (exactly one
+  on an open issue; Done = closed completed, Canceled = closed not planned), native dependencies
+  via `gh api -X POST .../dependencies/blocked_by -F issue_id=<REST id>` (`-F`, not `-f`), one
+  `Release X.Y.Z — orchestration` issue per milestone, milestone closed with `released at <sha>`,
+  `gh` only with `--repo`, PRs into `release/v*` never close issues so they are closed by hand.
+  `docs/agents/issue-tracker.md` is the only file skills and shared docs name; in the template it
+  is a byte-identical copy of `trackers/linear.md`. `SETUP.md` §1.3-1.4 and § A.1 ask the tracker
+  first and collect only that tracker's values (GitHub: `GITHUB_REPO`, prefixes `GH` / `gh`);
+  bootstrap copies the chosen binding over `issue-tracker.md` and deletes `docs/agents/trackers/`,
+  creates the GitHub labels (`gh label create --force`) and adds `GITHUB_REPO` to the placeholder
+  sweep; adopt's § A.2 loop skips `docs/agents/trackers/*` and handles `issue-tracker.md` from the
+  chosen binding under the same no-overwrite rule (a differing one goes to `conflicts.txt`). The
+  five skills, `AGENTS.md`, `README.md`, `docs/GIT_WORKFLOW.md`, `issue-template.md`,
+  `triage-labels.md` and the PR template are tracker-neutral (the Linear markers live only in the
+  Linear binding; `Closes WHI-123` / `#123` shown side by side); `docs/TRAPS.md` gains a
+  multi-`gh`-account entry. E2E: `tests/e2e/test_tracker_bindings.py` (smoke; runs SETUP's
+  tracker selection, placeholder sweep and § A.2 loop extracted from SETUP.md); `SETUP.md` and
+  the binding files join the `scripts/e2e.sh` inputs. Downstream migration: merge the files
+  above, keep your `docs/agents/issue-tracker.md` (it is your Linear binding; add the
+  `## Operations` table from `trackers/linear.md` and the Sub-issue line); to move to GitHub
+  Issues, replace it with `trackers/github.md` (fill in the repo), create the labels and
+  milestone, and record the `gh` account in `docs/TRAPS.md`; add the new files to your e2e inputs.
+- **An agent may cut `release/vX.Y.Z` from the trunk tip under four conditions (WHI-2629).**
+  A missing integration branch used to be a refusal; now `/orchestrate` preflight (or a
+  standalone `/implement`) cuts it with new `scripts/cut-release.sh X.Y.Z (--github-repo o/r |
+  --linear-release-open <url>)` only if (1) the title prefix and milestone/Release agree (the
+  agent checks and records it), (2) the milestone/Release is open (GitHub: an open milestone
+  titled `vX.Y.Z`, `gh` failure aborts; Linear: the agent's evidence URL, recorded verbatim),
+  (3) tag `vX.Y.Z` is absent on the remote, (4) `X.Y.Z` is numerically greater than the highest
+  three-segment `v*` tag (four-segment hotfix tags ignored; no `v*` tag at all refuses, since
+  bootstrap resolves to `dev`). It pushes the remote trunk tip (`dev`, else `main`) with an empty
+  `--force-with-lease` and prints `cut release/vX.Y.Z at <sha> (agent)`. `.githooks/pre-push`
+  admits exactly that creation without `ALLOW_DIRECT_PUSH` (single-ref, absent remote ref, sha =
+  remote trunk tip, conditions 3 and 4 against `ls-remote --tags`, strict `release/vX.Y.Z` name,
+  rules named `[rule]`); updates, deletes, multi-ref pushes and other shas stay refused.
+  `docs/GIT_WORKFLOW.md` gains § Agent release cut; `AGENTS.md`, `README.md`, `SETUP.md`, the
+  `implement` and `orchestrate` skills and `implementer-prompt.md` drop "never create
+  `release/v*`" (an orchestrated implementer still never cuts). E2E:
+  `tests/e2e/test_cut_release.py` (smoke; scratch remote, fake `gh`, real hook);
+  `scripts/cut-release.sh` joins the `scripts/e2e.sh` inputs. Downstream migration: merge
+  `scripts/cut-release.sh`, `.githooks/pre-push`, the docs and skills above and the test file;
+  add `scripts/cut-release.sh` to your e2e inputs; no config change. Do not run the script
+  before your first production tag exists (it refuses).
+
+- **Role binding lane: a value-only binding commit goes straight to the trunk (WHI-2627).**
+  `.githooks/pre-push` now admits a direct push to the trunk without `ALLOW_DIRECT_PUSH`
+  only when it is a single-ref fast-forward of an existing trunk ref (`dev` if the remote has
+  one, `main` if it is reachable and has none, otherwise refused), contains no merge commit,
+  and every commit changes only the quoted values of existing `KEY="value"` binding lines in
+  `config/agent-roles.conf` / `config/content-roles.conf` (no added, removed, renamed or
+  reordered key; no comment, blank-line, CRLF, trailing-newline or mode change; no `$`,
+  backtick, backslash or NUL). Each refusal names its rule as `[rule]`. Opt-in
+  `git config roles.requireSignedCommits true` also requires `%G?` = `G`. Anything else keeps
+  today's protected-branch refusal. `scripts/agent-dispatch.sh` reads the **primary clone's**
+  `config/agent-roles.conf` (first `git worktree list` entry; falls back to its own repo
+  without `git`; `AGENT_ROLES_CONF` still overrides) and `--probe` prints `conf: <path>` first.
+  `docs/GIT_WORKFLOW.md` gains § Role binding lane (and its verification tiers: bind time,
+  first dispatch, release start; a binding commit needs no immediate fan-out);
+  `docs/agents/runtime.md`, `config/agent-roles.conf`, `SETUP.md` §1.9, `README.md` and
+  `AGENTS.md` name no literal model: the conf is the only place. E2E:
+  `tests/e2e/test_role_binding_lane.py` (smoke) plus a primary-clone case in
+  `tests/test_agent_dispatch.py`; `.githooks/pre-push` joins the `scripts/e2e.sh` inputs.
+  Downstream migration: merge `.githooks/pre-push`, `scripts/agent-dispatch.sh`, the docs
+  above and the two test files; no config change. The lane is active once a clone has
+  `core.hooksPath` set to `.githooks`; if you keep a server-side require-PR rule on `dev`,
+  give the owner a bypass for it.
+- **Content roles and `scripts/roles.sh`; the slide skill names roles, not a model (WHI-2628).**
+  New optional `config/content-roles.conf` binds `DECK_WRITER` and `DECK_REVIEWER`
+  (`_RUNTIME`, `_MODEL`, one `_EFFORT`; defaults copy `IMPLEMENTER`'s and `REVIEWER`'s
+  bindings, effort `high`). New `scripts/roles.sh`: `list` (code and content tables), `check`
+  (runtime on `PATH`, effort in the runtime's set, model listed by `pi --list-models` by
+  column 2 or `<col1>/<col2>`, a warning for `claude`/`codex`, which cannot list; never invokes a
+  model; an undeclared `REVIEWER_FALLBACK` is `unset`, a half-declared one fails), `get`
+  (`<model>:<effort>` for `pi`, `<runtime> <model> <effort>` otherwise) and `set` (validates the
+  whole candidate tuple, rewrites only the targeted lines, one commit `roles: <KEY> <old> → <new>
+  (<reason>)`, pushed to the trunk through the WHI-2627 hook; it refuses, changing nothing, outside
+  the primary clone or the trunk, with a dirty index or target conf, or when `HEAD` is not the remote
+  trunk, and rolls a failed commit or push back without `reset --hard`). Files are read from the
+  primary clone like the dispatcher. `.claude/skills/slide` drafts with `DECK_WRITER` and reviews
+  the outline in a fresh-context `DECK_REVIEWER` sub-agent from `scripts/roles.sh get`;
+  `answer-me-with-html/references/research-post.md` names the same role. No model name is left in
+  those skills. `docs/agents/runtime.md` documents content roles and the per-runtime effort sets;
+  `SETUP.md` §1.9 / A.1.8 / A.2 ask about, copy or delete the content file; `AGENTS.md`,
+  `README.md`, `config/README.md` and `scripts/e2e.sh` inputs updated. E2E:
+  `tests/e2e/test_roles_cli.py` (smoke; fake `pi`, real hook, scratch primary clone and remote).
+  Downstream migration: merge `scripts/roles.sh`, `config/content-roles.conf` (delete it if you
+  make no decks; keep the model values that your runtime lists), the two skill files and the docs
+  above; add `scripts/roles.sh` to your e2e inputs. **Sync the Notion "Slide" page** (and "slide
+  风格" if affected) per the slide skill's sync rule: the review step now names `DECK_REVIEWER`
+  instead of a model.
+
+## v0.3.0
 
 - **E2E replaces after-the-fact unit tests (WHI-2195).** `AGENTS.md` opens with
   `## Testing (read first)` (never write unit tests after code; prefer E2E and end each run

@@ -319,3 +319,114 @@ def test_probe_shows_a_declared_fallback_and_warns_when_it_shares_the_implemente
     result = run(env, "--probe")
     assert result.returncode == 0, result.stdout
     assert "warning: REVIEWER_FALLBACK uses IMPLEMENTER's model" in result.stdout
+
+
+def git(cwd: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        env={
+            "PATH": os.environ["PATH"],
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@example.com",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@example.com",
+        },
+    )
+
+
+def test_linked_worktree_reads_the_primary_clones_conf(tmp_path, env, prompt):
+    """docs/GIT_WORKFLOW.md § Role binding lane: a binding change is effective at the next
+    dispatch in every worktree, so the dispatcher reads the primary clone's config."""
+    primary = tmp_path / "primary"
+    (primary / "scripts").mkdir(parents=True)
+    (primary / "config").mkdir()
+    shutil.copy(SCRIPT, primary / "scripts" / "agent-dispatch.sh")
+    conf = primary / "config" / "agent-roles.conf"
+    body = "".join(f'{k}="{v}"\n' for k, v in BASE_CONF.items())
+    conf.write_text(body)
+    git(primary, "init", "-q", "-b", "main")
+    git(primary, "add", "-A")
+    git(primary, "commit", "-q", "-m", "base")
+    linked = tmp_path / "linked"
+    git(primary, "worktree", "add", "-q", "-b", "feat", str(linked))
+    stale = linked / "config" / "agent-roles.conf"
+    stale.write_text(body.replace("impl-model", "stale-worktree-model"))
+    elsewhere = tmp_path / "elsewhere"  # the caller's cwd must never pick the conf
+    elsewhere.mkdir()
+    git(elsewhere, "init", "-q", "-b", "main")
+    (elsewhere / "config").mkdir()
+    (elsewhere / "config" / "agent-roles.conf").write_text(body.replace("impl-model", "pwd-model"))
+
+    git_bin = shutil.which("git")
+    assert git_bin
+    (Path(env["PATH"]) / "git").symlink_to(git_bin)
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    script = linked / "scripts" / "agent-dispatch.sh"
+    shutil.copy(SCRIPT, script)  # the worktree's own copy, as a branch would carry it
+
+    for cwd in (linked, elsewhere):
+        result = subprocess.run(
+            [BASH, str(script), "--probe"], env=env, cwd=cwd, capture_output=True, text=True
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert result.stdout.splitlines()[0] == f"conf: {conf.resolve()}"
+        assert "claude impl-model" in result.stdout
+        assert "stale-worktree-model" not in result.stdout
+
+        result = subprocess.run(
+            [BASH, str(script), "IMPLEMENTER", str(prompt), "--effort", "medium"],
+            env=env,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stderr
+        assert argv(env)[:4] == ["claude", "-p", "--model", "impl-model"]
+
+    # AGENT_ROLES_CONF still overrides, and a primary without the file falls back to the
+    # script's own repo root.
+    write_conf(tmp_path, env, IMPLEMENTER_MODEL="override-model")
+    result = subprocess.run(
+        [BASH, str(script), "--probe", "IMPLEMENTER"],
+        env=env,
+        cwd=linked,
+        capture_output=True,
+        text=True,
+    )
+    assert f"conf: {tmp_path / 'roles.conf'}" == result.stdout.splitlines()[0]
+    assert "override-model" in result.stdout
+    del env["AGENT_ROLES_CONF"]
+    conf.unlink()
+    result = subprocess.run(
+        [BASH, str(script), "--probe", "IMPLEMENTER"],
+        env=env,
+        cwd=linked,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.splitlines()[0] == f"conf: {linked / 'config' / 'agent-roles.conf'}"
+    assert "stale-worktree-model" in result.stdout
+
+
+def test_without_git_on_path_the_conf_is_the_script_repos_own(tmp_path, env):
+    """The isolated PATH of every other test has no git: the lookup must fall back, not fail."""
+    repo = tmp_path / "repo"
+    (repo / "scripts").mkdir(parents=True)
+    (repo / "config").mkdir()
+    shutil.copy(SCRIPT, repo / "scripts" / "agent-dispatch.sh")
+    (repo / "config" / "agent-roles.conf").write_text(
+        "".join(f'{k}="{v}"\n' for k, v in BASE_CONF.items())
+    )
+    result = subprocess.run(
+        [BASH, str(repo / "scripts" / "agent-dispatch.sh"), "--probe"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.splitlines()[0] == f"conf: {repo / 'config' / 'agent-roles.conf'}"

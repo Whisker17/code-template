@@ -2,12 +2,12 @@
 
 A project template for agent-driven development with a standard process. Every new
 project starts from this skeleton and inherits the same workflow: **PRD-first specs,
-Linear-tracked issues, worktree-per-issue git flow, release-level orchestration and review,
-and a small set of core skills**.
+issues tracked in Linear or GitHub Issues (your choice at setup), worktree-per-issue git
+flow, release-level orchestration and review, and a small set of core skills**.
 
 **Runtime-neutral by design.** Skills name a *role* (`ORCHESTRATOR`, `IMPLEMENTER`,
 `REVIEWER`) and an effort (`medium` | `high`), never a model. `config/agent-roles.conf`
-ships verified defaults (Opus 5.5 / Sonnet 5.5 / GPT-6 Astra on pi) and an optional
+ships verified defaults and an optional
 `REVIEWER_FALLBACK`, maps each role to a runtime, an exact model ID and effort values, and
 `scripts/agent-dispatch.sh` dispatches it. The same process runs under Claude Code, Codex,
 pi, or an agent that only has a terminal. See `docs/agents/runtime.md`.
@@ -18,9 +18,10 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 
 1. Create a new repo from this template (GitHub "Use this template", or clone + re-init).
 2. Open it in any coding agent and say: **"Read SETUP.md and execute it."** The agent:
-   - interviews you (project name, Linear project, high-risk paths, stack, Docker, agent
-     roles);
-   - replaces every placeholder marker;
+   - interviews you (project name, issue tracker — Linear or GitHub Issues — and its values,
+     high-risk paths, stack, Docker, agent roles);
+   - installs the chosen tracker binding as `docs/agents/issue-tracker.md` (and, for GitHub,
+     creates the labels), then replaces every placeholder marker;
    - wires up the git/GitHub merge policy;
    - verifies the skeleton, the role config (with a real call per role) and that
      `AGENTS.md` actually loads;
@@ -34,11 +35,13 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
    (conflicts are listed for manual merge), never touches business code, remotes or branches,
    and leaves its changes uncommitted.
 3. Produce the spec of record: `/grill-me <your idea>` → `/to-spec` fills `docs/DESIGN.md`.
-4. Break it down: `/to-tickets` publishes Linear issues from `docs/agents/issue-template.md`,
+4. Break it down: `/to-tickets` publishes tracker issues from `docs/agents/issue-template.md`,
    each with complexity (`medium` | `high`), expected scope and native blocking relations.
 5. Implement. Hand a Release to `/orchestrate <Release> [--through tag]`, which runs the whole
    Release unattended in the current session (visible sub-agents, every decision logged in the
-   orchestration document; it stops only for a missing release branch, an unmet external
+   orchestration document; it cuts a missing `release/v{version}` from the trunk tip only
+   when four conditions hold (`scripts/cut-release.sh`, `docs/GIT_WORKFLOW.md` § Agent release
+   cut), and stops only for a release branch it may not cut, an unmet external
    dependency, an exhausted review budget, a mandatory human path, a failed dispatch with no
    usable fallback, or a human-gated step outside its declared scope):
    - schedules issues by real dependencies and shared-scope conflicts;
@@ -71,11 +74,11 @@ Extracted and generalized from `pm-arbitrage-bot`, where this process was battle
 | Layer | Contents |
 |-------|----------|
 | **Agent guidance** | `AGENTS.md`, the single instruction entry (no `CLAUDE.md`; Claude Code ≥ v2.1.281 loads `AGENTS.md` natively); `TEMPLATE_VERSION` (the template version a repo follows, also recorded in its `AGENTS.md`) |
-| **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; shipped defaults SETUP re-verifies, optional `REVIEWER_FALLBACK`, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py` |
+| **Runtime adapter** | `docs/agents/runtime.md` (roles, effort, preflight, reviewer-unavailable rules), `config/agent-roles.conf` (role → runtime/model/effort; shipped defaults SETUP re-verifies, optional `REVIEWER_FALLBACK`, fails closed), `scripts/agent-dispatch.sh` (dispatch + `--probe`), `tests/test_agent_dispatch.py`, optional `config/content-roles.conf` (`DECK_WRITER`, `DECK_REVIEWER` for the slide skill), `scripts/roles.sh` (`list` / `check` / `get` / `set`: read, verify and change the bindings through the role-binding lane) |
 | **CI** | `.github/workflows/ci.yml` (fast lint/type + smoke E2E, docs-only PRs skip them, single required check `ci-ok`, manual full/release E2E), `docs/CI.md` (design, CI-unavailable rule, tuning checklist) |
 | **Skills** (10) | grill-me, to-spec, to-tickets, implement, orchestrate, code-review, handoff, ponytail, answer-me-with-html, slide + `skills-lock.json` |
-| **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md` (what review counts as failure, output format, escapes), `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime) |
-| **Git workflow** | See below; `scripts/wt-gc.sh` (safe cleanup of leftover worktrees and branches) |
+| **Docs system** | `docs/DESIGN.md` (PRD skeleton, spec of record), `docs/GIT_WORKFLOW.md`, `docs/REVIEW.md` (what review counts as failure, output format, escapes), `docs/DEFERRED_ISSUES.md`, `docs/TRAPS.md` (on-demand trap reference), `docs/adr/`, `docs/references/`, `docs/agents/` (domain / issue-tracker / triage-labels / issue-template / runtime; `issue-tracker.md` is the Linear or GitHub Issues binding chosen at SETUP, both defined operation-for-operation in `## Operations` of `docs/agents/trackers/{linear,github}.md`) |
+| **Git workflow** | See below; `scripts/wt-gc.sh` (safe cleanup of leftover worktrees and branches); `scripts/issue-audit.sh` (read-only audit that every open GitHub issue has exactly one home) |
 | **Stack layer** (default: Python/uv, swappable) | `pyproject.toml` (uv + ruff + mypy strict + pytest), `main.py`, `tests/`, `config/` convention, `.env.example`, optional `Dockerfile` + `docker-compose.yml` |
 
 The Git workflow covers:
@@ -92,7 +95,11 @@ The Git workflow covers:
 - no worktree left behind: every worktree is removed (merged, or archived with a pushed
   `archive/<name>` tag) when its task ends; `scripts/wt-gc.sh` reports leftovers and removes
   only what it can prove finished;
-- Linear state lockstep;
+- tracker state lockstep (Linear workflow states, or GitHub state labels);
+- issue homes: every open issue has exactly one (version, `governance`, `backlog` or a
+  project-defined non-code type), audited at `/orchestrate` preflight and before the release;
+- the UI/UX design gate: `needs-design` → `## Design Draft vN` → owner-approved `## Design`;
+  `/implement` and `/orchestrate` refuse an unapproved one;
 - the `.githooks/pre-push` guard.
 
 The **process layer** (docs, workflow, skills) is stack-agnostic; only the stack layer
@@ -109,8 +116,10 @@ discovers a template-layer improvement, port it back here and record it in
 auto-sync). Projects that want skills outside the core set install them themselves; the
 template does not maintain an optional skill pack.
 
-Vendored skills are pinned by `skills-lock.json`; upgrade them here deliberately, not
-per-project.
+Vendored skills retain their historical installer hashes in `skills-lock.json`. The current
+manual sync revision and the per-skill upstream/local decisions are recorded in
+[`.claude/skills/UPSTREAM.md`](.claude/skills/UPSTREAM.md); upgrade them here deliberately,
+not per-project. The lock file is not a checksum of local adaptations.
 
 > ⚠️ **Locally customized skills** — `skills-lock.json` records the *upstream* hash, so it
 > cannot detect these edits, and **re-vendoring from `mattpocock/skills` will silently
@@ -126,11 +135,14 @@ per-project.
 >   `§` references), free-form docs only under `docs/references/`; publishes only on
 >   instruction; a `REVIEWER` design review (max 3 rounds) precedes any write
 > - `to-tickets/SKILL.md` — uses `docs/agents/issue-template.md` (complexity, scope,
->   native relations); `REVIEWER` design review (max 3 rounds) before any Linear write;
+>   native relations); `REVIEWER` design review (max 3 rounds) before any tracker write;
 >   single-writer, query-before-retry, relations-last publishing; no local-file fallback
-> - `grill-me/SKILL.md` — self-contained (the separate `grilling` skill is gone)
-> - `handoff/SKILL.md` — fixed field list; durable state lives in the PR, issue and
->   orchestration document
+> - `grill-me/SKILL.md` — self-contained (upstream `grilling` is folded in); rounds ask
+>   independent frontier questions together and defer dependent questions until prerequisites
+>   settle; respects a user's one-question preference
+> - `handoff/SKILL.md` — portable temporary directory and absolute saved path, fixed field
+>   list and next-session prompt; durable state lives in the PR, issue and orchestration
+>   document
 > - `orchestrate/` — first-party, not vendored; do not add it to `skills-lock.json`
 >   (unattended in-session; `--through tag` scope and mandatory human paths must stay
 >   identical to `docs/GIT_WORKFLOW.md` § 4)

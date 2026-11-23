@@ -18,7 +18,7 @@ Work from what is already in the conversation. If the user passes a reference (a
 
 ### 2. Explore the codebase (optional)
 
-If you have not explored it yet, do so now. Use the spec's domain vocabulary and respect ADRs. Look for prefactoring that would make the implementation easier: "make the change easy, then make the easy change."
+If you have not explored it yet, do so now. Use the project's domain glossary vocabulary (`docs/agents/domain.md`) and respect ADRs. Look for prefactoring that would make the implementation easier: "make the change easy, then make the easy change."
 
 ### 3. Draft vertical slices
 
@@ -63,7 +63,7 @@ Nothing is written to the tracker until this ends. The ticket set is a design: r
 1. Dispatch `REVIEWER` with `scripts/agent-dispatch.sh REVIEWER <prompt-file> --effort high`, in a fresh context. The prompt carries the full breakdown (every ticket body, blocking edges, complexity, scope), the source discussion and the repo docs it relies on (`docs/DESIGN.md`, `docs/agents/issue-template.md`, `docs/GIT_WORKFLOW.md`). Ask for blocking issues and suggestions only: missing or false edges, shared-file serialization, unverifiable acceptance, slices too large for one context.
 2. Address each finding: change the breakdown, or record why not. Re-dispatch with the revision and the previous findings, so the next round checks the diff.
 3. **At most 3 rounds.** Disagreements still open go to the draft's "Open questions", and after round 3 to the owner. Do not start a fourth round.
-4. Record the consensus — rounds, what changed, open disagreements, reviewer role/model/effort — in a Linear project document. Worked example: the "Design review (issue set)" section of [Release 0.3.0 — orchestration](https://linear.app/whisker-personal/document/release-030-orchestration-7cc551bb0540).
+4. Record the consensus — rounds, what changed, open disagreements, reviewer role/model/effort — in the Release's orchestration document, in a "Design review (issue set)" section (`docs/agents/issue-tracker.md` § Release orchestration document).
 5. **Only then write** to the tracker.
 
 If `REVIEWER` is unavailable, follow `docs/agents/runtime.md`; do not substitute a model or review your own breakdown.
@@ -74,9 +74,15 @@ Follow `docs/agents/issue-tracker.md` § Publishing ticket sets:
 
 - One writer, one issue at a time, blockers first; record each created id. On a timeout, query by title before retrying. Wire the relations only after all issues exist. Never report an unconfirmed write as done (`docs/agents/issue-tracker.md` § Publishing ticket sets).
 - Wire **native** `blocked-by` relations and mirror them in the body.
+- If the source is an existing issue, create each ticket as its native sub-issue (Linear: `parentId`; GitHub: the sub-issues API; mechanics in `docs/agents/issue-tracker.md`, using the
+  discovered schema). Re-read each ticket to confirm the parent and blocking relations; a
+  parent link is not a blocking edge.
 - Use the template skeleton, including `## Execution`.
-- Version-scoped tickets carry the `[X.Y.Z]` title prefix **and** the matching Release. The two must agree. Milestone plays no part in routing.
+- Version-scoped tickets carry the `[X.Y.Z]` title prefix **and** the matching Release (GitHub: the milestone `vX.Y.Z`). The two must agree. A Linear milestone plays no part in routing.
 - Governance tickets carry neither.
-- Reach the tracker via MCP first, then the API fallback. If no tracker is reachable, report that publishing is blocked. Do not write local files as a stand-in.
+- **Every ticket gets exactly one home** (`docs/agents/issue-tracker.md` § Issue homes): version (prefix + Release), `governance` (carve-out files only), or `backlog` (only with the owner's agreement, reason in the body). Skip project-defined non-code homes (e.g. `topic`); they are not tickets. A follow-up opened mid-work defaults to the next open version; a carve-out-only one is `governance`. List every follow-up and its home in the handoff.
+- A ticket that changes a user interface or interaction is published `todo` + `needs-design` without `ready-for-agent`, with a `## Design Draft v1` (`docs/agents/issue-tracker.md` § UI/UX design gate); `/implement` and `/orchestrate` refuse it until the owner approves.
+- Reach the tracker through the access path in `docs/agents/issue-tracker.md`. If no tracker is reachable, report that publishing is blocked. Do not write local files as a stand-in.
 
-Do NOT close or modify any parent issue.
+Do NOT close or otherwise modify the source parent issue; linking the new child tickets as
+its native sub-issues is required (`docs/agents/issue-tracker.md`).

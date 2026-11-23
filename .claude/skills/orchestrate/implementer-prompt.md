@@ -48,8 +48,9 @@ not hold. Omit if none.}}
 
 ## Base
 
-`{{BASE}}`, derived from {{SIGNALS}}. Confirm this yourself. **Do not create
-`release/v*`.** Worktree `{{WORKTREE_PATH}}` on `{{BRANCH_NAME}}` from `origin/{{BASE}}`.
+`{{BASE}}`, derived from {{SIGNALS}}. Confirm this yourself. Confirm
+`origin/{{BASE}}` exists (the orchestrator cut it in preflight if needed); never create a
+`release/v*` yourself. Worktree `{{WORKTREE_PATH}}` on `{{BRANCH_NAME}}` from `origin/{{BASE}}`.
 Assert that `git merge-base HEAD origin/{{BASE}}` == `git rev-parse origin/{{BASE}}`, then
 run `git config core.hooksPath .githooks` in the worktree. Every `gh` call uses
 `--repo {{OWNER_REPO}}`. From a nested worktree, also pass

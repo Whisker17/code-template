@@ -17,14 +17,14 @@ stop and surface it.
 Never develop an issue directly in the primary clone's working tree (it dirties the
 `dev` workspace and blocks parallel work on multiple issues). The primary clone is only
 for: pulling `dev`/`main`/live `release/v*`, creating worktrees, post-merge
-verification, and fan-out merges.
+verification, fan-out merges, and the owner's [role-binding commits](#role-binding-lane).
 
 ## Branch roles
 
 | Branch | Role | Who writes |
 |--------|------|------------|
 | `main` | **Equals production.** Always equals the last deployed tag. Only accepts merges from `release/*` and `hotfix/*`. | PR only |
-| `dev` | **Validated, shippable trunk.** Receives hotfix backmerges, repo-wide governance, and a finished version-integration branch. Not the integration point for unreleased version work — *except* before the first production tag exists, when it is also the integration branch for version-scoped work (see the [bootstrap clause](#before-the-first-production-tag-bootstrap)). | PR from governance / merge of a finished `release/v*` |
+| `dev` | **Validated, shippable trunk.** Receives hotfix backmerges, repo-wide governance, and a finished version-integration branch. Not the integration point for unreleased version work — *except* before the first production tag exists, when it is also the integration branch for version-scoped work (see the [bootstrap clause](#before-the-first-production-tag-bootstrap)). | PR from governance / merge of a finished `release/v*`; the owner's value-only [role-binding commits](#role-binding-lane) go straight to it |
 | `feat/*` `fix/*` `chore/*` | Single-issue implementation branches (inside worktrees) | Short-lived |
 | `quick/*` | Owner-requested quick-fix branches, no tracker issue ([§ Quick-fix lane](#quick-fix-lane-owner-requested)) | Short-lived |
 | `hotfix/*` | Emergency production fixes (branched from `main`) | Sync back to `dev` after merging to `main`, then fan out |
@@ -49,9 +49,10 @@ human approval** applies to both (except what an owner-invoked `--through tag` c
 | When done | PR → `main` (human gate), delete | Once the **current** SHA passed release E2E and the release review (`/orchestrate` § Release review), **merge into `dev`** (merge commit, **human gate** — `dev` is the shippable trunk — unless the owner invoked `--through tag`, [§ 4](#unattended-promotion---through-tag)). If that merge needs a new conflict resolution or code change, verify the merge result and review the changed part; the earlier pass does not cover it. Then promote `dev` → `main` via a **fresh** temporary cut. If the integration branch still occupies `release/vX.Y.Z`, delete it first (its history is on `dev`). Do **not** PR the integration branch to `main` directly — that leaves `dev` vestigial. |
 
 Cutting a version-integration branch is a **deliberate act** (it comes with the
-merge-back decision above). An agent must not create `release/v*` as a side
-effect of picking up a ticket. First push of a newly cut `release/v*` (no
-PR yet) uses `ALLOW_DIRECT_PUSH=1` — the hook protects the name.
+merge-back decision above): the owner does it, or an agent does it under the four
+conditions of [§ Agent release cut](#agent-release-cut). Nothing else creates `release/v*`.
+First push of a newly cut `release/v*` (no PR yet) uses `ALLOW_DIRECT_PUSH=1` — the hook
+protects the name — except the agent cut, which the hook admits itself.
 
 ## Resolving the base branch
 
@@ -78,8 +79,9 @@ request that names no base, names a base that does not exist, or names `main` is
 > there is no hotfix lane and nothing for `dev` to stay shippable *against*), the
 > version-scoped row resolves to `dev` and no `release/v*` integration branch
 > exists yet. This is a resolved value from this table, not a default. The first
-> long-lived integration branch is cut — deliberately, by the owner — when work on
-> the next version begins while a deployed version is live. From that point the
+> long-lived integration branch is cut — by the owner, or by an agent under
+> [§ Agent release cut](#agent-release-cut), which refuses while no `v*` tag exists —
+> when work on the next version begins while a deployed version is live. From that point the
 > table applies in full and falling back to `dev` is forbidden.
 
 ### Repo-wide governance carve-out
@@ -90,11 +92,16 @@ hotfix branches run under stale rules:
 - `AGENTS.md` (the single agent-instruction entry; the template ships no `CLAUDE.md`)
 - `docs/GIT_WORKFLOW.md`
 - `docs/agents/` (issue template, tracker binding, triage labels, runtime)
+- `docs/agents/trackers/` (the Linear and GitHub bindings)
 - `.githooks/`
 - CI config (`.github/workflows/`)
 - `.github/pull_request_template.md`
 - `config/agent-roles.conf`
+- `config/content-roles.conf`
 - `scripts/agent-dispatch.sh`
+- `scripts/roles.sh`
+- `scripts/cut-release.sh`
+- `scripts/issue-audit.sh`
 - `.claude/skills/`
 - `README.md` (locally-customized skills inventory)
 - `CHANGELOG.md` (template feedback loop)
@@ -105,7 +112,7 @@ the feature part goes to its release branch.
 
 ### Quick-fix lane (owner-requested)
 
-When the owner explicitly says to just change something ("改代码，不用走 Linear"), the change
+When the owner explicitly says to just change something ("改代码，不用走 tracker"), the change
 still goes through one worktree, one PR and CI, without a tracker issue or release binding.
 
 - **Named base required.** The owner's request must name the target base, and
@@ -149,11 +156,40 @@ reachability is a fallback ladder — do not hard-bind a git operation to MCP.
 If the two signals disagree, or the cross-check exists and either signal is
 missing, **refuse to start and surface it. Never default to `dev`.** A silent
 fallback recreates the trunk pollution this rule exists to prevent, and does it
-invisibly. If `origin/release/v{version}` does not exist, refuse and ask — do
-not create it as a side effect of picking up a ticket.
+invisibly. If `origin/release/v{version}` does not exist, cut it only under
+[§ Agent release cut](#agent-release-cut); otherwise refuse and ask.
 
 The issue template asks for the release field; that is a prompt, not a gate —
 trackers generally do not enforce non-empty fields. Enforcement is this refusal.
+
+### Agent release cut
+
+When `origin/release/vX.Y.Z` is missing but an open milestone/Release says the owner wants
+that version, `/orchestrate` preflight (or a standalone `/implement`) cuts it from the trunk
+tip with `scripts/cut-release.sh` — only if **all four** conditions hold. Milestones and
+Releases stay owner-created; an orchestrated implementer never cuts (it would race the
+preflight): it confirms `origin/<base>` exists.
+
+| # | Condition | Checked by |
+|---|-----------|------------|
+| 1 | The issue-title prefix and the tracker milestone/Release agree | the agent, against the tracker (`docs/agents/issue-tracker.md`); recorded. Not scriptable for Linear |
+| 2 | The milestone/Release is open | the script for GitHub (`--github-repo o/r`: an open milestone titled `vX.Y.Z`; a `gh` failure aborts). For Linear the agent reads the Release via MCP and passes `--linear-release-open <release-url>`, which the script records verbatim as the agent's evidence |
+| 3 | Tag `vX.Y.Z` is absent on the remote | the script, `git ls-remote --tags` |
+| 4 | `X.Y.Z` is numerically greater than the highest three-segment `v*` tag on the remote | the script. Four-segment hotfix tags are ignored; leading zeros or a malformed version are refused; **no `v*` tag at all refuses** (bootstrap resolves to `dev`) |
+
+```bash
+scripts/cut-release.sh X.Y.Z --github-repo owner/repo            # GitHub milestone
+scripts/cut-release.sh X.Y.Z --linear-release-open <release-url> # Linear Release, read by the agent
+```
+
+The script pushes `refs/remotes/origin/<trunk>:refs/heads/release/vX.Y.Z` with an empty
+`--force-with-lease` (the server refuses if the ref exists) and prints
+`cut release/vX.Y.Z at <sha> (agent)`. The trunk is `dev` if the remote has one, else `main`.
+It creates nothing, and exits non-zero, when condition 2, 3 or 4 fails, the remote has no
+`v*` tag, `release/vX.Y.Z` already exists, `git ls-remote` fails or the version is malformed.
+The agent records that line in the orchestration document (and on the milestone for
+GitHub). The pre-push hook admits exactly this creation without `ALLOW_DIRECT_PUSH`; see
+[§ Fallback hook](#fallback-the-local-pre-push-hook).
 
 ### Base check (mandatory, immediately after worktree creation)
 
@@ -171,7 +207,9 @@ a wrong resolution is auditable.
 
 ## Issue lifecycle (mandatory)
 
-Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Review` → `Done`.
+Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Review` → `Done`
+(GitHub: the labels `todo` / `in-progress` / `in-review`, then closed as completed;
+`docs/agents/issue-tracker.md` § Operations).
 
 ```text
          resolve base (table; fail closed)
@@ -197,6 +235,14 @@ Aligned with the tracker workflow states: `Todo` → `In Progress` → `In Revie
          tracker: state = Done
 ```
 
+**Design gate (UI/UX issues).** Before any of this, an issue labelled `needs-design`, or whose
+body has a `## Design Draft` heading but no `## Design` heading, is **not started**: neither
+`/implement` nor `/orchestrate` resolves a base or creates a worktree for it. The owner's approval
+turns the draft into `## Design`, drops `needs-design` and adds `ready-for-agent`
+(`docs/agents/issue-tracker.md` § UI/UX design gate). Every open issue also has exactly one home
+(`docs/agents/issue-tracker.md` § Issue homes), checked by the audit at `/orchestrate` preflight,
+before the release PR and before the milestone / Release is closed.
+
 ### 1. Start: new worktree off the resolved base
 
 From the primary clone (adjust paths to your machine; a sibling directory is
@@ -207,7 +253,8 @@ The example below uses `origin/dev` (the governance row); substitute
 ```bash
 git fetch origin
 
-# Branch name: type/{{ISSUE_PREFIX_LOWER}}-<id>-short-topic (all lowercase, dash-separated)
+# Branch name: type/{{ISSUE_PREFIX_LOWER}}-<id>-short-topic (all lowercase, dash-separated;
+# a GitHub issue #123 is gh-123)
 ISSUE={{ISSUE_PREFIX_LOWER}}-123
 BRANCH=feat/${ISSUE}-short-topic
 WT="../{{PROJECT_NAME}}-wt/${ISSUE}"
@@ -284,7 +331,7 @@ gh pr create --base "$PR_BASE" \
 - ...
 
 ## Tracker
-Closes {{ISSUE_PREFIX}}-123
+Closes WHI-123        # Linear; on GitHub: Closes #123
 
 ## Base resolution
 - Category: version-scoped | governance | hotfix
@@ -313,7 +360,7 @@ PR conventions:
 - **base is the resolved base** (version-scoped work never targets `dev`;
   features/fixes never target `main` except an issue labelled `hotfix`, see
   [§ Hotfix](#hotfix))
-- Title carries `{{ISSUE_PREFIX}}-NNN`
+- Title carries the issue id (`{{ISSUE_PREFIX}}-NNN`; the body also carries `#NNN` on GitHub)
 - Body links the tracker issue **and states the resolved base plus the
   signals it was derived from**
 - Merge strategy: **squash and merge** into `dev` or a long-lived
@@ -369,7 +416,7 @@ on H, and it follows the normal routing ([§ Two `release/` lifecycles](#two-rel
    the `CI unavailable` evidence) and MERGEABLE/CLEAN;
 3. the annotated tag `vX.Y.Z` and the GitHub Release with the release E2E artifact of H
    attached;
-4. the tracker Release's `commitSha` and released stage;
+4. the tracker's Release → Released step (`docs/agents/issue-tracker.md` § Operations);
 5. post-merge cleanup, fan-out and `scripts/wt-gc.sh`.
 
 It never covers: a mandatory human path (`.github/workflows/**`, the project's
@@ -434,12 +481,14 @@ For the human-gated rows, a human reviewer:
 ### Post-merge cleanup (mandatory, in order)
 
 Drive these from the **primary clone**. Never commit **feature work** to
-`dev` or a `release/v*` integration branch directly. Three merges are the
-documented exceptions — they are not PR-gated and they push with
+`dev` or a `release/v*` integration branch directly. Five direct pushes are the
+documented exceptions. Three are merges that are not PR-gated and push with
 `ALLOW_DIRECT_PUSH=1`: fan-out of `dev` into live integration branches
 (step 5), the hotfix backmerge of `main` into `dev`
 ([§ Hotfix](#hotfix) step 7), and the first push of a freshly cut
-`release/v*` ([§ Releasing to `main`](#releasing-to-main)).
+`release/v*` ([§ Releasing to `main`](#releasing-to-main)). The fourth, the owner's
+[role-binding lane](#role-binding-lane), and the fifth, the
+[agent release cut](#agent-release-cut), need no override: the hook admits them.
 
 0. **If the PR is CONFLICTING** (the resolved base advanced since you
    branched): inside the feature worktree,
@@ -510,6 +559,11 @@ release close, the end of `/implement`, and once in `SETUP.md`.
 `Done` **and** `Canceled` both require the worktree and its local branch to be gone
 (`scripts/wt-gc.sh` shows leftovers); until then the issue is not closed.
 
+The state names are the tracker's workflow states. On GitHub they are the labels `todo` /
+`in-progress` / `in-review`, `Done` is closed as completed and `Canceled` closed as not planned
+(`docs/agents/issue-tracker.md` § Operations); a PR merged into a `release/v*` or `dev` does not
+close the issue, so the agent closes it by hand after the cleanup.
+
 Triage labels (`ready-for-agent` / `ready-for-human` / …) are **orthogonal** to workflow
 state: labels say *who* does the work, state says *how far along* it is.
 
@@ -538,7 +592,9 @@ there will not be caught by review when no human reads the diff.
 **When:** whenever `dev` advances, in that same session — **any** merge landing on
 `dev` triggers it, not just some of them: a hotfix backmerge, a governance PR, and a
 finished version-integration branch merging back (which must reach the *other* live
-version branches) alike. If the resolved base was `dev`, fan out. A version branch
+version branches) alike. The one exception is a [role-binding commit](#role-binding-lane):
+it needs no immediate fan-out and rides the next one (the dispatcher reads the primary
+clone, so it is already in effect everywhere). If the resolved base was `dev`, fan out. A version branch
 more than **one release** behind `dev` is a defect: fix the fan-out before further
 feature work merges into it.
 
@@ -612,6 +668,61 @@ Agents working a `0.2.0` issue read
 `release/v0.2.0`'s copy. Landing governance on `dev` alone recreates the
 problem the next version-scoped PR. Fan out in the same session.
 
+## Role binding lane
+
+Which runtime, model and effort a role uses is the owner's decision, not a code change, so
+changing it takes **one commit pushed straight to the trunk**: no PR, no independent review,
+no E2E run, no fan-out and no real-call evidence at push time. (Origin: a one-line model
+swap once needed a governance PR, an independent review, a full E2E and a fan-out.)
+
+- **Who and where:** the owner, in the primary clone, on the trunk. The hook decides the
+  trunk from the remote: it has `dev` → `dev`; it is reachable and has none → `main`;
+  anything else → refuse. In this template a value-only push to `main` is refused.
+- **What:** existing values of binding lines in `config/agent-roles.conf` and
+  `config/content-roles.conf`: `<ROLE>_RUNTIME`, `_MODEL`, `_EFFORT`, `_EFFORT_MEDIUM`,
+  `_EFFORT_HIGH`, each `KEY="value"`.
+- **How:** by hand, or with `scripts/roles.sh set`, which pushes through this same lane. One
+  commit per change, message `roles: <KEY> <old> → <new> (why)`, then `git push origin dev`
+  without `ALLOW_DIRECT_PUSH`.
+- **Effective at the next dispatch** in every worktree, because
+  `scripts/agent-dispatch.sh` reads the primary clone's `config/agent-roles.conf`
+  (`--probe` prints the path first; `AGENT_ROLES_CONF` overrides). The commit reaches
+  `release/v*` and `main` only through the normal fan-out and release.
+- **Out of the lane**, which stays a governance PR: adding or removing a role or key,
+  comments, blank lines or formatting, and any change to the dispatcher or the hook.
+
+The files are sourced by shell, so `.githooks/pre-push` is the trust boundary: a push is
+admitted only if **all** hold, and each refusal prints the rule as `[rule]` on stderr. Anything
+that is not a lane push keeps the protected-branch refusal unless `ALLOW_DIRECT_PUSH=1`.
+
+| Rule | Holds when |
+| --- | --- |
+| `single-ref` | The push updates exactly one ref (`git push origin dev main` is refused whole) |
+| `existing-ref-only` | The remote ref exists and is not being deleted |
+| `trunk-only` | The ref is the trunk |
+| `fast-forward-only` | `remote_sha` is an ancestor of `local_sha` |
+| `no-merge-commits` | No commit in `remote_sha..local_sha` is a merge |
+| `lane-paths` | Every commit changes only the two lane files, each as a modification (no add, delete, rename or copy) |
+| `file-mode` | The mode stays `100644` (no symlink, no chmod) |
+| `nul-byte`, `format` | No NUL or CR byte; the file is not empty and ends with a newline |
+| `key-set` | Same line count; each changed line keeps its position and key |
+| `binding-lines` | Each changed line, before and after, matches `^[A-Z][A-Z_]*_(RUNTIME\|MODEL\|EFFORT\|EFFORT_MEDIUM\|EFFORT_HIGH)="[^"]*"$` |
+| `value-chars` | No `$`, backtick or backslash in a changed line |
+| `signed-commits` | Only when `git config roles.requireSignedCommits true` (opt-in, per clone): every commit is signed (`%G?` = `G`) |
+
+Every commit in the range is checked, not just the tip. The hook is local to the pushing
+clone and the remote stays unprotected: a `git push --no-verify` or another clone passes
+it, so this is a guard against mistakes, not a server-side gate.
+
+**Verification tiers** replace the per-change real call:
+
+1. **Bind time:** `scripts/roles.sh check`: the static probe, no model call.
+2. **First real dispatch** of the changed role: a failed call is a failed role
+   (`/orchestrate` § Stop only for; `docs/agents/runtime.md` § Reviewer unavailable). Nothing
+   is substituted, so fix the binding with another lane commit.
+3. **Release start:** one real `DISPATCH-OK` call per role
+   (`docs/agents/runtime.md` § Preflight).
+
 ## Choosing a promotion lane: release or hotfix?
 
 Both lanes end in a PR into `main`, and picking the wrong one is how unreviewed work
@@ -676,8 +787,9 @@ After the PR reads MERGEABLE/CLEAN and a human has approved it (`release/*` → 
    `git push origin v0.1.0`, then `gh release create v0.1.0 --verify-tag --notes-file <notes>
    <release E2E artifact of the candidate>` (notes in English)
 3. **Deploy from the tag**, never from a branch
-4. Backfill the tracker Release's `commitSha` (see [§ Version axis](#version-axis)) and move it
-   to its released stage
+4. Do the tracker's Release → Released step (see [§ Version axis](#version-axis); Linear:
+   backfill `commitSha` and move the Release to its released stage; GitHub: close the milestone
+   with the description `released at <sha>`)
 
 Temporary `release/*` branches may be auto-deleted; `dev` lives forever.
 
@@ -703,7 +815,8 @@ Then:
 1. Fix **only** this one issue
 2. **Bump the project version to a patch release** (`0.1.5` → `0.1.5.1`) — otherwise tag
    `v0.1.5.1` points at a tree that calls itself `0.1.5`
-3. `gh pr create --base main`, title/body carry `{{ISSUE_PREFIX}}-NNN`; tracker →
+3. `gh pr create --base main`, title/body carry the issue id (`{{ISSUE_PREFIX}}-NNN`, GitHub
+   also `#NNN`); tracker →
    `In Review`
 4. Required project checks, relevant checks, full E2E and one independent review
    (`/code-review`) pass, then **a human
@@ -727,8 +840,8 @@ Then:
 8. **Fan out `dev` into every live version-integration branch** (see
    [§ Fan-out](#fan-out-dev-into-live-version-branches)). Skip this and the
    next version ships without the hotfix. State the query, never a name list.
-9. Tracker: issue → `Done`, the corresponding Release → `Released`, and fill in that
-   Release's `commitSha`
+9. Tracker: issue → `Done`, and the corresponding Release → `Released` (Linear: fill in that
+   Release's `commitSha`; GitHub: close the milestone, `released at <sha>`)
 
 When production is live, hotfixes outrank regular issues — anything on a
 {{HIGH_RISK_PATHS}} path takes this route.
@@ -750,10 +863,11 @@ If any one of them disagrees, a step was skipped:
   issues have no Release. Once a Release has issues attached, those issues
   leave `Backlog` for `Todo`.
 - After shipping, backfill the tracker Release's **`commitSha`** (the commit the tag points
-  at). This is the only authoritative binding between "a version" and "some code".
-- Milestones and Releases are **orthogonal axes**: a milestone is *which capability stage*,
-  a Release is *when it ships* (and how git routes). Don't use milestones to
-  express release batches, and don't put the milestone in the title.
+  at; GitHub: the closed milestone's description `released at <sha>`). This is the only authoritative binding between "a version" and "some code".
+- In Linear, milestones and Releases are **orthogonal axes**: a milestone is *which capability
+  stage*, a Release is *when it ships* (and how git routes). Don't use milestones to
+  express release batches, and don't put the milestone in the title. In GitHub Issues there is
+  one axis: the milestone `vX.Y.Z` **is** the Release.
 - Hotfixes use a four-segment version (`0.1.5.1` — valid and correctly ordered under
   PEP 440 and semver-tools alike). **Don't** reuse the next minor number; the tracker has
   already promised that number to a feature batch.
@@ -797,7 +911,8 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 | Release | `release/v<version>` | `release/v0.1.0`, `release/v0.1.5.1` |
 
 - All lowercase, words joined with `-`
-- **Must include the tracker id** (`{{ISSUE_PREFIX_LOWER}}-NNN`) for PR ↔ issue tracing —
+- **Must include the tracker id** (`{{ISSUE_PREFIX_LOWER}}-NNN`; a GitHub issue `#123` is
+  `gh-123`) for PR ↔ issue tracing —
   hotfixes included, they are tracked issues too. The only exception is `quick/*`, which has
   no issue by definition; its trace is the owner's request quoted in the PR
 - One PR does one thing
@@ -823,7 +938,9 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 ## Forbidden
 
 - Developing an issue in the primary clone's working tree (always use a worktree)
-- Pushing feature commits directly to `main` / `dev` (always via PR)
+- Pushing feature commits directly to `main` / `dev` (always via PR). The only direct
+  pushes are five: the three `ALLOW_DIRECT_PUSH=1` merges, the owner's
+  [role-binding lane](#role-binding-lane) and the [agent release cut](#agent-release-cut)
 - Force-pushing to `main` / `dev`
 - Long-lived giant branches with no PR
 - Bundling multiple unrelated issues in one PR
@@ -837,7 +954,9 @@ This means the GitHub repo must have **both** `Allow squash merge` and
   with `--force`; deleting unmerged work before an `archive/<name>` tag was pushed
 - **Defaulting a version-scoped issue to `dev`** because the release field is
   empty or the release branch does not exist — refuse and surface it
-- **Creating `release/v*` as a side effect of picking up a ticket**
+- **Creating `release/v*` outside [§ Agent release cut](#agent-release-cut)** (or the owner's
+  deliberate cut): an implementer never cuts under `/orchestrate`, and any cut with a
+  condition unmet is forbidden
 - Committing `.env`, private keys, or API secrets
 - **Deploying from a branch.** The only valid deploy source is a tag — otherwise nobody
   can say which tree production is running
@@ -858,6 +977,7 @@ This means the GitHub repo must have **both** `Allow squash merge` and
 Implementing agents (including unattended ones) **must**:
 
 1. Change code only inside a worktree — never commit directly to `dev` in the primary clone
+   (the owner's [role-binding commit](#role-binding-lane) is the one exception)
 2. Move the tracker in lockstep: `In Progress` on start → `In Review` when the PR opens →
    `Done` only after confirming the merge and the post-merge cleanup
    (under `/orchestrate` the orchestrator owns these transitions and the implementer
@@ -901,8 +1021,9 @@ allows it: require a PR, forbid force-pushes, forbid deletion. On live
 the primary clone; a require-PR ruleset has no `ALLOW_DIRECT_PUSH` equivalent
 and would make the standing cadence impossible.
 
-Require-a-PR on `dev` is still right, but it blocks one legitimate push: the
-hotfix backmerge ([§ Hotfix](#hotfix) step 7) lands on `dev` directly too. Keep a
+Require-a-PR on `dev` is still right, but it blocks two legitimate pushes: the
+hotfix backmerge ([§ Hotfix](#hotfix) step 7) and the owner's
+[role-binding commits](#role-binding-lane) land on `dev` directly too. Keep a
 bypass for the owner (classic protection: leave *Do not allow bypassing the above
 settings* unchecked; rulesets: a bypass entry) — or, where no bypass is available,
 land that backmerge as a PR from a throwaway branch cut off `origin/main` into
@@ -917,13 +1038,22 @@ land that backmerge as a PR from a throwaway branch cut off `origin/main` into
 
 While server-side protection is unavailable, `.githooks/pre-push` (checked in) blocks the
 most common mistake — pushing straight to `main`, `dev`, or a `release/v*`
-integration branch. Enable it **once per clone and per worktree**:
+integration branch. It admits two direct pushes without an override: the
+[role-binding lane](#role-binding-lane) (the rule table there is its contract) and the
+[agent release cut](#agent-release-cut). The cut is admitted only as the creation of
+`refs/heads/release/vX.Y.Z` (three numeric segments, no leading zeros) in a single-ref push
+whose remote ref is absent (zero `remote_sha`, and not in `git ls-remote --heads`), whose sha
+is the remote trunk tip from `ls-remote`, and for which conditions 3 and 4 hold against
+`git ls-remote --tags`. Updates, deletes, multi-ref pushes and any other sha stay refused,
+with the violated rule named as `[single-ref]`, `[release-name]`, `[new-ref-only]`,
+`[ls-remote]`, `[trunk-tip]`, `[tag-absent]` or `[version-greater]`. Enable it **once per
+clone and per worktree**:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-Deliberate override, when you genuinely need it — the three documented cases, all
+Deliberate override, when you genuinely need it — the documented cases (three merges), all
 from the primary clone: the fan-out merge of `origin/dev` into a live `release/v*`,
 the hotfix backmerge of `main` into `dev` ([§ Hotfix](#hotfix) step 7), and the first
 push of a freshly cut `release/v*`:

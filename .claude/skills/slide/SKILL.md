@@ -27,7 +27,7 @@ For agents making slides for Whisker. Visual and motion rules (tokens, sizes, sl
 ```mermaid
 flowchart LR
   A[Read the source] --> B[Per-slide content draft]
-  B --> C[Other-vendor model reviews the outline<br/>discuss until agreed]
+  B --> C[DECK_REVIEWER reviews the outline<br/>discuss until agreed]
   C --> D[Starter template + slide types<br/>draw Excalidraw en + zh SVG]
   D --> E[Notes + basis]
   E --> F[Self-check dev=1 / bilingual / export=1]
@@ -44,7 +44,14 @@ One Markdown file per section (`design/sections/NN-<name>.md`). Each slide answe
 3. **Copy:** the exact text of eyebrow, title, sub, cards and takeaway. Short and exact. This is the most important step.
 4. **Humanize:** the audience must get it on first hearing. An uncertain number does not go on the slide; it goes into the notes' "basis".
 
-Send the draft to a model from another vendor for review (the Notion design uses GPT-6 Astra) and discuss until you agree, then build the HTML. A slide with more than 3 groups of information becomes a two-step slide or two slides.
+Drafting uses the content role `DECK_WRITER`: the main session may draft itself when it already runs the bound writer model (`scripts/roles.sh get DECK_WRITER`), otherwise hand the drafting to a sub-agent on that binding. Then send the draft to a fresh-context `DECK_REVIEWER` sub-agent (the bound reviewer is meant to be another vendor than the writer) and discuss until you agree, then build the HTML. Run `scripts/roles.sh get DECK_REVIEWER` and start the sub-agent from its output:
+
+- `pi` prints `<model>:<effort>`: start a native sub-agent with that model and thinking level.
+- `claude` or `codex` prints `<runtime> <model> <effort>`: make that runtime's non-interactive call with the returned model and effort (argv in `docs/agents/runtime.md` § Per-runtime notes).
+
+`get` exits non-zero when the role is unusable: stop and tell the owner (`scripts/roles.sh check DECK_REVIEWER`); never substitute another model. The bindings live in `config/content-roles.conf`; this skill names no model.
+
+A slide with more than 3 groups of information becomes a two-step slide or two slides.
 
 ### 2.2 Build
 
@@ -127,6 +134,6 @@ The ten rules come from the Notion page "内容输出模板" §2 (shared by rese
 | 5 | Humanize, keep it technical | Applies: short copy, no footnote on every slide, layout speaks for itself |
 | 6 | Chinese and English | Applies: `data-zh` text and `.zh.svg` figures, L key toggle, same meaning, not word for word. Tweet cards do not apply (research posts only) |
 | 7 | Work private, Mantle colours; personal colours for personal | Applies: Mantle theme for work decks (colours and fonts fixed), Personal theme otherwise |
-| 8 | Cross-vendor review | Applies to the outline: another vendor's model reviews it before the HTML is built. The finished deck follows the self-check list |
+| 8 | Cross-vendor review | Applies to the outline: the `DECK_REVIEWER` sub-agent reviews it before the HTML is built (2.1). The finished deck follows the self-check list |
 | 9 | Self-check before delivery | Applies: `?dev=1` shows no red slide, language toggle shows no overflow, `?export=1` PDFs checked (style.md section 12). Phone screenshots do not apply: a deck is 1920×1080 |
 | 10 | Discussion phase edits only the draft | Applies: edit only the HTML while discussing; no re-export or re-write of the draft each time (2.4) |

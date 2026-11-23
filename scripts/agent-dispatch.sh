@@ -6,6 +6,11 @@
 # only in config/agent-roles.conf; this script translates it into the runtime's
 # own flags. Contract: docs/agents/runtime.md.
 #
+# The mapping is read from the primary clone's config/agent-roles.conf (the first entry of
+# `git worktree list`), so a binding change reaches every worktree at its next dispatch;
+# AGENT_ROLES_CONF overrides, and without git or a primary conf it is this repo's own copy.
+# `--probe` prints the path it used as its first line.
+#
 # Usage:
 #   scripts/agent-dispatch.sh <ROLE> <prompt-file|-> --effort <medium|high>
 #   scripts/agent-dispatch.sh --probe [ROLE ...]
@@ -29,7 +34,24 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONF="${AGENT_ROLES_CONF:-$REPO_ROOT/config/agent-roles.conf}"
+
+# The primary clone's conf: the owner changes a binding there (docs/GIT_WORKFLOW.md
+# § Role binding lane), so every linked worktree must read it, not its branch's older copy.
+# Located from this script's repo, never from the caller's $PWD. Prints nothing (fall back
+# to $REPO_ROOT) without git on PATH, outside a work tree, or when the primary has no conf.
+primary_conf() {
+    command -v git >/dev/null 2>&1 || return 0
+    local top list first
+    top="$(unset GIT_DIR GIT_WORK_TREE; git -C "$REPO_ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
+    [ "$(cd "$top" && pwd -P)" = "$(cd "$REPO_ROOT" && pwd -P)" ] || return 0
+    list="$(unset GIT_DIR GIT_WORK_TREE; git -C "$REPO_ROOT" worktree list --porcelain 2>/dev/null)" || return 0
+    first="${list%%$'\n'*}"
+    [ "${first#worktree }" != "$first" ] || return 0
+    [ -f "${first#worktree }/config/agent-roles.conf" ] && printf '%s' "${first#worktree }/config/agent-roles.conf"
+    return 0
+}
+CONF="${AGENT_ROLES_CONF:-$(primary_conf)}"
+CONF="${CONF:-$REPO_ROOT/config/agent-roles.conf}"
 ROLES="ORCHESTRATOR IMPLEMENTER REVIEWER REVIEWER_FALLBACK"
 RUNTIMES="claude codex pi"
 USAGE="usage: agent-dispatch.sh <ROLE> <prompt-file|-> --effort <medium|high> | --probe [ROLE ...]"
@@ -119,6 +141,7 @@ fallback_is_empty() {
 # --- probe mode: static configuration and PATH only --------------------------
 if [ "${1:-}" = "--probe" ]; then
     shift
+    echo "conf: $CONF"
     targets="${*:-$ROLES}"
     for role in $targets; do known_role "$role"; done
     failed=0
